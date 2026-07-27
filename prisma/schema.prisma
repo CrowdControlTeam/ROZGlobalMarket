@@ -1,5 +1,9 @@
 generator client {
   provider = "prisma-client-js"
+  // Necesario para pasar un driver adapter a PrismaClient — en producción
+  // (Neon, sobre Cloudflare Workers) el cliente usa el driver serverless de
+  // Neon en vez de una conexión TCP. Ver src/lib/prisma.ts.
+  previewFeatures = ["driverAdapters"]
 }
 
 // DATABASE_URL (pooled) y DIRECT_URL (directa, para `prisma migrate`) se
