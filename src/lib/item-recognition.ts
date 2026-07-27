@@ -14,6 +14,7 @@ import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { findBestMatch } from "@/lib/fuzzy-match";
 import { loadMarketConfig } from "@/lib/market-config";
+import { MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_MB } from "@/lib/screenshot-constants";
 
 // Hace falta el toggle activo (configurable en /admin) Y la variable de
 // entorno GEMINI_API_KEY seteada — la key nunca se guarda en base de datos.
@@ -180,6 +181,11 @@ export async function recognizeItemFromScreenshot(formData: FormData): Promise<R
   const file = formData.get("screenshot");
   if (!(file instanceof File) || file.size === 0) {
     return { status: "error", message: t("noImageReceived") };
+  }
+  // Revalidación del tope (el cliente ya lo comprueba, pero no se confía en
+  // él) — alineado con serverActions.bodySizeLimit en next.config.ts.
+  if (file.size > MAX_SCREENSHOT_BYTES) {
+    return { status: "error", message: t("imageTooLarge", { max: MAX_SCREENSHOT_MB }) };
   }
 
   // Todo lo de aquí en adelante puede fallar por motivos que no controlamos
