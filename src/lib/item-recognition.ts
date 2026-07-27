@@ -15,6 +15,13 @@ import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { findBestMatch } from "@/lib/fuzzy-match";
 import { loadMarketConfig } from "@/lib/market-config";
 import { MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_MB } from "@/lib/screenshot-constants";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+// El reconocimiento llama a Gemini (cuesta dinero), así que se limita por
+// usuario: hasta 20 escaneos por minuto. Generoso para uso humano normal
+// (subir + escanear es deliberado), suficiente para frenar un bucle abusivo.
+const RECOGNIZE_RATE_LIMIT = 20;
+const RECOGNIZE_RATE_WINDOW_MS = 60_000;
 
 // Hace falta el toggle activo (configurable en /admin) Y la variable de
 // entorno GEMINI_API_KEY seteada — la key nunca se guarda en base de datos.
@@ -167,7 +174,7 @@ export type RecognitionResult =
 // src/lib/fuzzy-match.ts), y solo lo que supera el umbral llega al
 // formulario — que además deja todo editable antes de publicar.
 export async function recognizeItemFromScreenshot(formData: FormData): Promise<RecognitionResult> {
-  await requireSession();
+  const session = await requireSession();
   const t = await getTranslations("errors");
 
   // No confiar solo en que el cliente no muestre el bloque: si lo
@@ -186,6 +193,16 @@ export async function recognizeItemFromScreenshot(formData: FormData): Promise<R
   // él) — alineado con serverActions.bodySizeLimit en next.config.ts.
   if (file.size > MAX_SCREENSHOT_BYTES) {
     return { status: "error", message: t("imageTooLarge", { max: MAX_SCREENSHOT_MB }) };
+  }
+
+  // Límite por usuario antes de gastar una llamada a Gemini.
+  const rl = await checkRateLimit(
+    `recognize:${session.user.discordId}`,
+    RECOGNIZE_RATE_LIMIT,
+    RECOGNIZE_RATE_WINDOW_MS,
+  );
+  if (!rl.ok) {
+    return { status: "error", message: t("rateLimited", { seconds: Math.ceil(rl.retryAfterMs / 1000) }) };
   }
 
   // Todo lo de aquí en adelante puede fallar por motivos que no controlamos

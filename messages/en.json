@@ -100,6 +100,7 @@
     "recognitionNotActive": "Screenshot recognition isn't active",
     "noImageReceived": "No image was received",
     "imageTooLarge": "The image can't be larger than {max} MB",
+    "rateLimited": "Too many requests. Wait {seconds}s and try again.",
     "recognitionFailed": "Automatic detection failed. Try again or fill in the item by hand."
   },
   "admin": {
