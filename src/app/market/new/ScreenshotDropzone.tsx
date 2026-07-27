@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import { buttonClass } from "@/lib/ui";
+import { MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_MB } from "@/lib/screenshot-constants";
 
 // Zona de arrastrar/pegar/clic para subir la captura del tooltip, en vez de
 // un <input type="file"> nativo — inspirado en el flujo de diablo.trade que
@@ -18,16 +19,27 @@ export function ScreenshotDropzone({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const t = useTranslations("market.form.screenshot");
 
-  const applyFile = useCallback((next: File) => {
-    setFile(next);
-    setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(next);
-    });
-  }, []);
+  const applyFile = useCallback(
+    (next: File) => {
+      // Se rechaza aquí antes de subir nada (el servidor lo revalida igual,
+      // ver recognizeItemFromScreenshot) para dar feedback inmediato.
+      if (next.size > MAX_SCREENSHOT_BYTES) {
+        setError(t("tooLarge", { max: MAX_SCREENSHOT_MB }));
+        return;
+      }
+      setError(null);
+      setFile(next);
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(next);
+      });
+    },
+    [t],
+  );
 
   // Pegar (Ctrl+V) se escucha a nivel de window, no en el propio div: hacer
   // clic en la zona abre el diálogo nativo de archivos, que al cerrarse no
@@ -60,6 +72,7 @@ export function ScreenshotDropzone({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(null);
     setPreviewUrl(null);
+    setError(null);
   }
 
   return (
@@ -95,6 +108,8 @@ export function ScreenshotDropzone({
         )}
       </div>
       <input ref={inputRef} type="file" accept="image/*" onChange={handleInputChange} className="hidden" />
+
+      {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
 
       {file && (
         <div className="mt-2 flex gap-2">

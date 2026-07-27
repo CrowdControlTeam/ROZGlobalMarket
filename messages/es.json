@@ -99,6 +99,7 @@
     "invalidWebhookUrl": "La URL del webhook debe ser un webhook de Discord (https://discord.com/api/webhooks/...)",
     "recognitionNotActive": "El reconocimiento por captura no está activo",
     "noImageReceived": "No se ha recibido ninguna imagen",
+    "imageTooLarge": "La imagen no puede superar los {max} MB",
     "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano."
   },
   "admin": {
@@ -418,7 +419,8 @@
         "hint": "Arrastra y suelta, haz clic para buscar o pega desde el portapapeles",
         "clear": "Borrar",
         "scan": "Escanear",
-        "scanning": "Escaneando..."
+        "scanning": "Escaneando...",
+        "tooLarge": "La imagen no puede superar los {max} MB"
       }
     },
     "itemPicker": {
