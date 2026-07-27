@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -8,6 +8,7 @@ import { sendContactMessage } from "@/lib/contact-messages";
 import { Sidebar } from "./Sidebar";
 import { buttonClass, inputBaseClass, labelClass } from "@/lib/ui";
 import { getErrorMessage } from "@/lib/errors";
+import { useIsClient } from "@/lib/use-is-client";
 
 type MentionItem = { id: string; name: string; iconUrl: string };
 
@@ -110,12 +111,11 @@ function ContactModal({
   // nodo real. Comprobar `typeof window` directamente en el render rompía
   // la hidratación: la primera pasada en cliente YA ve window definido, así
   // que montaba el portal de golpe mientras el servidor había devuelto null
-  // (justo el "server/client branch" que advierte el error de Next.js). Se
-  // pospone a un useEffect para que la pasada de hidratación coincida en
-  // ambos lados, y el portal se cree recién en el render posterior.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
+  // (justo el "server/client branch" que advierte el error de Next.js).
+  // useIsClient (useSyncExternalStore) devuelve false en servidor y en la
+  // primera pasada de hidratación, y true después, sin desajuste.
+  const isClient = useIsClient();
+  if (!isClient) return null;
 
   // Portal a document.body: UserMention aparece dentro de texto en línea
   // (<p>, <dd>) e incluso dentro del <Link> que envuelve toda la tarjeta en

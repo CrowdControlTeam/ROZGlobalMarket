@@ -20,15 +20,22 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
   const [mounted, setMounted] = useState(false);
   const [dragY, setDragY] = useState(0);
+  // Estado (no ref) para decidir el estilo en render sin leer un ref durante
+  // el render; draggingRef se mantiene aparte como guarda síncrona en los
+  // handlers de puntero (ver handlePointerMove).
+  const [isDragging, setIsDragging] = useState(false);
   const draggingRef = useRef(false);
   const startYRef = useRef(0);
 
   // Entra deslizándose (desde abajo en móvil, desde la derecha en
   // desktop) en vez de aparecer ya en su sitio — mismo efecto que Sidebar,
   // aquí a mano porque no hay un `open` controlado desde fuera: el panel
-  // solo existe mientras la ruta interceptada está montada.
+  // solo existe mientras la ruta interceptada está montada. El cambio de
+  // estado se difiere a requestAnimationFrame para que el navegador pinte
+  // primero la posición inicial (fuera de pantalla) y la transición se vea.
   useEffect(() => {
-    setMounted(true);
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
   function close() {
@@ -46,6 +53,7 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
 
   function handlePointerDown(e: React.PointerEvent) {
     draggingRef.current = true;
+    setIsDragging(true);
     startYRef.current = e.clientY;
   }
   function handlePointerMove(e: React.PointerEvent) {
@@ -55,6 +63,7 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
   function handlePointerUp() {
     if (!draggingRef.current) return;
     draggingRef.current = false;
+    setIsDragging(false);
     // Umbral de 100px arrastrados hacia abajo para considerar el gesto un
     // cierre intencional; si no, el panel vuelve a su sitio.
     if (dragY > 100) {
@@ -70,7 +79,7 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
         mounted ? "translate-y-0 md:translate-x-0" : "translate-y-full md:translate-x-full"
       }`}
       style={
-        draggingRef.current
+        isDragging
           ? { transform: `translateY(${dragY}px)`, transitionDuration: "0ms" }
           : undefined
       }
