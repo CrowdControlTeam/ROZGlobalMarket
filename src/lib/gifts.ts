@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { sendDirectMessage } from "@/lib/discord-bot";
+import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
@@ -139,7 +140,7 @@ export async function sendGift(formData: FormData) {
     },
   });
 
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   const itemName = formatItemDisplayName(item.name, refineLevel, cardSlots);
   await sendDirectMessage(parsed.data.recipientId, {
     title: tDiscord("dm.gifted", { username: session.user.username, item: itemName }),

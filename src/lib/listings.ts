@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
 import { sendListingCreatedWebhook } from "@/lib/discord-webhook";
 import { sendDirectMessage } from "@/lib/discord-bot";
+import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 import { formatPrice } from "@/lib/price";
 import {
@@ -242,7 +243,7 @@ export async function createListing(formData: FormData) {
     },
   });
 
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   await sendListingCreatedWebhook({
     itemName: formatItemDisplayName(item.name, refineLevel, cardSlots),
     itemIconUrl: `${appUrl}${item.iconUrl}`,
@@ -388,7 +389,7 @@ export async function purchaseListing(listingId: string, formData: FormData) {
   // Fuera de la transacción a propósito: una llamada de red no debe alargar
   // el bloqueo de DB, y un fallo de DM (norma 2.10 del plan original) nunca debe deshacer una
   // compra que ya se confirmó.
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   await sendDirectMessage(listing.posterId, {
     title: tDiscord("dm.purchased", {
       username: session.user.username,
