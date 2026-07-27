@@ -60,17 +60,16 @@ npm run cf:deploy    # despliega a Cloudflare (requiere `wrangler login`)
 
 > **Nota (Windows):** `cf:build` crea symlinks que en Windows requieren el **Modo Desarrollador** activado (o ejecutar como administrador); si no, falla con `EPERM: symlink`. En Linux, macOS y CI compila sin más — el deploy real suele hacerse desde CI/Linux.
 
-### Automatizado (CI/CD)
+### Automatizado (Cloudflare Workers Builds)
 
-El deploy se hace solo desde GitHub Actions (`.github/workflows/ci.yml`, job `deploy`), tras pasar lint + tsc + tests, en cada push a:
+El deploy lo hace la integración Git nativa de Cloudflare (**Workers Builds**), no GitHub Actions. Se usan **dos conexiones**, una por entorno, cada una vigilando su rama y con secretos/BD aislados:
 
-- **`main`** → **producción** (Worker `roz-global-market`).
-- **`develop`** → **preview** (Worker `roz-global-market-preview`, con sus propios secretos vía `wrangler secret put <N> --env preview`).
+| Worker | Production branch | Deploy command |
+|--------|-------------------|----------------|
+| `roz-global-market` (producción) | `main` | `npx opennextjs-cloudflare deploy` |
+| `roz-global-market-preview` | `develop` | `npx opennextjs-cloudflare deploy --env preview` |
 
-Requiere estos *secrets* en el repo (Settings → Secrets and variables → Actions):
-
-- `CLOUDFLARE_API_TOKEN` (plantilla *Edit Cloudflare Workers*).
-- `CLOUDFLARE_ACCOUNT_ID`.
+En ambas: build command `npx opennextjs-cloudflare build`, *"Builds for non-production branches"* **desactivado** (cada conexión solo despliega su rama de producción), y los secretos de runtime se ponen a nivel de cada Worker. El `env.preview` de `wrangler.jsonc` es lo que resuelve el `--env preview`. Al construirse en Linux, no aplica el problema de symlinks de Windows.
 
 ### Versionado (SemVer)
 
