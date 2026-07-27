@@ -2,7 +2,7 @@
 
 Mercado para la comunidad de Ragnarok Zero, con login por Discord.
 
-> Este proyecto parte de [ROGuildMarket](https://github.com/CrowdControlTeam/ROGuildMarket) a partir de la **v0.2.0**, del que se separa para evolucionar de forma independiente. La especificación funcional de aquel proyecto (el «plan original» al que hacen referencia algunos comentarios del código) pertenece a ROGuildMarket, no a este repositorio.
+> Este proyecto parte del código de [ROGuildMarket](https://github.com/CrowdControlTeam/ROGuildMarket) tal como estaba en su **v0.2.0**, del que se separa para evolucionar de forma independiente y con **su propio versionado desde 0.0.1**. La especificación funcional de aquel proyecto (el «plan original» al que hacen referencia algunos comentarios del código) pertenece a ROGuildMarket, no a este repositorio.
 
 ## Requisitos
 
