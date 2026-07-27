@@ -8,6 +8,7 @@ import { X } from "lucide-react";
 import { searchUsers } from "@/lib/gifts";
 import { inputClass } from "@/lib/ui";
 import { getErrorMessage } from "@/lib/errors";
+import { useIsClient } from "@/lib/use-is-client";
 
 export type UserResult = Awaited<ReturnType<typeof searchUsers>>[number];
 
@@ -37,10 +38,15 @@ export function UserPicker({
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   // El panel de resultados se porta a document.body (ver comentario más
-  // abajo) — necesita un nodo real, así que se pospone al montaje en
-  // cliente igual que ContactModal en UserMention.tsx.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // abajo) — necesita un nodo real, así que solo se renderiza en cliente
+  // igual que ContactModal en UserMention.tsx.
+  const isClient = useIsClient();
+
+  // Posición del panel flotante, medida desde el wrapper. Se guarda en
+  // estado (en vez de leer wrapperRef.current durante el render) porque leer
+  // un ref en render es poco fiable y no se recalcula solo — así, además, se
+  // reposiciona al hacer scroll o redimensionar mientras está abierto.
+  const [panelRect, setPanelRect] = useState<{ top: number; left: number; width: number } | null>(null);
 
   function handleChange(value: string) {
     setQuery(value);
@@ -62,6 +68,25 @@ export function UserPicker({
   }
 
   const showPanel = !selected && (isPending || !!error || results.length > 0);
+
+  // Mide la posición del wrapper cuando el panel pasa a estar visible y la
+  // mantiene actualizada al hacer scroll/resize mientras sigue abierto.
+  useEffect(() => {
+    if (!showPanel) return;
+    const el = wrapperRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setPanelRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    measure();
+    window.addEventListener("scroll", measure, true);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("scroll", measure, true);
+      window.removeEventListener("resize", measure);
+    };
+  }, [showPanel]);
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -91,16 +116,16 @@ export function UserPicker({
           empujaba/descuadraba el resto de la fila; con position:fixed y
           overflow-hidden de por medio, además quedaría recortada. El
           portal + fixed lo saca de ambos problemas de una vez. */}
-      {mounted &&
+      {isClient &&
         showPanel &&
-        wrapperRef.current &&
+        panelRect &&
         createPortal(
           <div
             style={{
               position: "fixed",
-              top: wrapperRef.current.getBoundingClientRect().bottom + 4,
-              left: wrapperRef.current.getBoundingClientRect().left,
-              width: wrapperRef.current.getBoundingClientRect().width,
+              top: panelRect.top,
+              left: panelRect.left,
+              width: panelRect.width,
             }}
             className="z-50 rounded-md border-2 border-ro-panel-border bg-ro-panel-alt shadow-lg"
           >

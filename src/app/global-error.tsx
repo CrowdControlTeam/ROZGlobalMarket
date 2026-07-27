@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import "./globals.css";
 
 // error.tsx no cubre fallos en el propio layout.tsx raíz (SiteHeader,
@@ -17,6 +18,12 @@ export default function GlobalError({
   error: Error & { digest?: string };
   unstable_retry: () => void;
 }) {
+  // Se sustituye TODO el layout, así que no hay logger de la app disponible;
+  // al menos dejar rastro del fallo en la consola en vez de descartarlo.
+  useEffect(() => {
+    console.error("Error global en el layout raíz:", error);
+  }, [error]);
+
   return (
     <html lang="es">
       <body className="flex min-h-screen items-center justify-center bg-ro-bg px-6 text-ro-text">
