@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/*
+ * Paleta "estilo RO": marrón madera + dorado, inspirada en los paneles
+ * clásicos del juego. Es un tema fijo (no sigue prefers-color-scheme):
+ * es la identidad visual de la web, no un modo claro/oscuro alternable.
+ */
+:root {
+  --ro-bg: #241708;
+  --ro-bg-alt: #34210f;
+  --ro-panel: #f3e2b9;
+  --ro-panel-alt: #fdf6e6;
+  --ro-panel-border: #6b4226;
+  --ro-panel-header: #4a2f1a;
+  --ro-gold: #d4a017;
+  --ro-gold-dark: #a87610;
+  --ro-text: #3b2410;
+  --ro-text-muted: #6e5636;
+  --ro-text-light: #f3e2b9;
+}
+
+@theme inline {
+  --color-ro-bg: var(--ro-bg);
+  --color-ro-bg-alt: var(--ro-bg-alt);
+  --color-ro-panel: var(--ro-panel);
+  --color-ro-panel-alt: var(--ro-panel-alt);
+  --color-ro-panel-border: var(--ro-panel-border);
+  --color-ro-panel-header: var(--ro-panel-header);
+  --color-ro-gold: var(--ro-gold);
+  --color-ro-gold-dark: var(--ro-gold-dark);
+  --color-ro-text: var(--ro-text);
+  --color-ro-text-muted: var(--ro-text-muted);
+  --color-ro-text-light: var(--ro-text-light);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-heading);
+}
+
+body {
+  background: var(--ro-bg);
+  background-image: radial-gradient(ellipse 80% 60% at 50% -10%, var(--ro-bg-alt), var(--ro-bg));
+  color: var(--ro-text-light);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}

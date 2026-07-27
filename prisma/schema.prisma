@@ -1,0 +1,409 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// DATABASE_URL (pooled) y DIRECT_URL (directa, para `prisma migrate`) se
+// leen del entorno — ver src/lib/prisma.ts y .env.example. En producción
+// apuntan a Neon; en local, al Postgres de docker-compose.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ItemCategory {
+  WEAPON
+  ARMOR
+  CARD
+  CONSUMABLE
+  COSTUME
+  PET
+  ENCHANT
+  ETC
+}
+
+// Slot que ocupa una armadura, o slot compatible de una carta.
+enum EquipSlot {
+  UPPER_HEADGEAR
+  MID_HEADGEAR
+  LOWER_HEADGEAR
+  ARMOR
+  SHIELD
+  GARMENT
+  FOOTGEAR
+  ACCESSORY
+  WEAPON
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+  EXPIRED
+}
+
+// SALE = venta directa (con precio). TRADE = se publica el item para
+// intercambiarlo por otro, sin precio — en el detalle, quien no es el
+// vendedor ve "Ofrecer items" en vez de "Comprar" (ver TradeOffer). BUY =
+// petición de compra ("busco X, pago hasta Y") — mismo ciclo de vida que
+// SALE/TRADE (se publica, queda abierto, algo externo lo cierra después),
+// solo que quien publica busca comprar en vez de vender. En BUY, `price`
+// significa "precio máximo que pagaría" en vez de precio de venta, y
+// `posterId` es quien compra, no quien vende — mismos campos, doble
+// sentido según `type`. Sin oferta/aceptación dentro de la app: quien
+// publica cierra la petición a mano (norma 2.4 del plan original, deliberadamente
+// simple v1).
+enum ListingType {
+  SALE
+  TRADE
+  BUY
+}
+
+// Solo relevante cuando category = WEAPON. Taxonomía estándar de tipos de
+// arma de RO — determina, vía MagicalWeaponType, de qué pool de random
+// options (ItemOptionDef) puede salir el arma. Poblado por el generator desde
+// el campo `slot` de la fuente.
+enum WeaponType {
+  DAGGER
+  ONE_HAND_SWORD
+  TWO_HAND_SWORD
+  ONE_HAND_SPEAR
+  TWO_HAND_SPEAR
+  ONE_HAND_AXE
+  TWO_HAND_AXE
+  MACE
+  ROD
+  TWO_HAND_ROD
+  BOW
+  KNUCKLE
+  INSTRUMENT
+  WHIP
+  BOOK
+  KATAR
+  REVOLVER
+  RIFLE
+  GATLING_GUN
+  SHOTGUN
+  GRENADE_LAUNCHER
+  FUUMA_SHURIKEN
+}
+
+// Grupo de equipo para el pool de random options — no todos los EquipSlot
+// tienen options (headgears/shield/accessory/card no), y las armas se
+// dividen en dos pools distintos según WeaponAttackType, de ahí que sea un
+// enum aparte en vez de reutilizar EquipSlot/ItemCategory directamente.
+enum ItemOptionGroup {
+  ARMOR
+  GARMENT
+  FOOTGEAR
+  WEAPON_PHYSICAL
+  WEAPON_MAGICAL
+}
+
+model User {
+  // Igual al id de Discord (snowflake): no hay otro proveedor de login.
+  id         String   @id
+  username   String
+  avatarUrl  String?
+  guildRoles String[] @default([])
+  createdAt  DateTime @default(now())
+
+  listings      Listing[]
+  purchases     Purchase[]
+  tradeOffers   TradeOffer[]
+  giftsSent     Gift[]       @relation("GiftsSent")
+  giftsReceived Gift[]       @relation("GiftsReceived")
+}
+
+model Item {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  category    ItemCategory
+  // Slot de equipo (armaduras) o slot en el que se puede montar (cartas).
+  slot        EquipSlot?
+  // Solo relevante para category = WEAPON — ver comentario del enum.
+  // Nullable: armas aún sin clasificar (o sin tipo, p.ej. munición) no
+  // muestran random options todavía.
+  weaponType WeaponType?
+  // Copia propia del icono (sin hotlink a la fuente externa).
+  iconUrl     String
+  // Ficha de origen de la carga de datos, para trazabilidad.
+  sourceUrl   String?
+  importedAt  DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  listings    Listing[]
+  tradeOffers TradeOffer[]
+  gifts       Gift[]
+
+  @@index([category, slot])
+  @@index([name])
+}
+
+// Fase 1 del plan original: solo venta directa. La Fase 3 añade el tipo TRADE (ver ListingType).
+// El refactor "listings" fusiona BuyRequest aquí como type=BUY. Los campos
+// de subasta se añaden en la Fase 2 (aparcada por ahora).
+model Listing {
+  id           String        @id @default(cuid())
+  // Quien publica — vendedor en SALE/TRADE, comprador en BUY (ver
+  // ListingType). Nombre neutro a propósito: "seller" no encajaría con BUY.
+  poster       User          @relation(fields: [posterId], references: [id])
+  posterId     String
+  item         Item          @relation(fields: [itemId], references: [id])
+  itemId       String
+  type         ListingType   @default(SALE)
+  quantity     Int           @default(1)
+  // Suma desnormalizada de Purchase.quantity, para no recalcularla en cada
+  // lectura. Se actualiza en la misma transacción que crea cada Purchase.
+  // Sin uso real en BUY (no hay Purchase asociada, se cierra a mano).
+  quantitySold Int           @default(0)
+  // Null solo cuando type = TRADE (no tiene precio, se intercambia por
+  // otro item — ver TradeOffer). En BUY, precio máximo que pagaría en vez
+  // de precio de venta — mismo campo, doble sentido según `type`.
+  price        Int?
+  status       ListingStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Nivel de refine (+0 a MarketConfig.maxRefineLevel) — solo relevante para
+  // equipo refinable (arma, o armadura en slot casco superior/cuerpo/
+  // escudo/prenda/calzado; accesorios y cascos medio/inferior no). 0 en
+  // cualquier otro item, y no se muestra como prefijo "+N" hasta 1.
+  refineLevel Int @default(0)
+
+  // Número de slots de carta del ejemplar concreto (no del catálogo: dos
+  // unidades del mismo item pueden tener distinto número) — arma hasta 4,
+  // armadura hasta 1 salvo casco inferior (0). Ver
+  // src/lib/card-slots-constants.ts. Se muestra como sufijo "[N]" pegado al
+  // nombre, nunca en 0.
+  cardSlots Int @default(0)
+
+  purchases   Purchase[]
+  options     ListingOption[]
+  tradeOffers TradeOffer[]
+
+  @@index([status, createdAt])
+  @@index([price])
+}
+
+// Registro inmutable de cada compra (norma 3 del plan original: las transacciones no
+// se borran). Una Listing puede tener varias Purchase de distintos
+// compradores hasta agotar su quantity.
+model Purchase {
+  id        String   @id @default(cuid())
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  listingId String
+  buyer     User     @relation(fields: [buyerId], references: [id])
+  buyerId   String
+  quantity  Int
+  unitPrice Int
+  createdAt DateTime @default(now())
+
+  @@index([listingId])
+  @@index([buyerId])
+}
+
+enum TradeOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+// Oferta de un jugador contra un Listing de tipo TRADE. El item ofrecido NO
+// tiene que estar publicado como Listing propia (decisión explícita: igual
+// de laxo que un listing de tipo BUY, no perseguimos verificar que el
+// oferente "realmente" tiene el item) — se elige libremente del catálogo. Sin
+// contraoferta en esta v1 (norma 2.5 del plan original, simplificado a propósito):
+// solo aceptar/rechazar. Al aceptar una oferta, las demás PENDING del mismo
+// listing pasan a REJECTED automáticamente.
+model TradeOffer {
+  id        String           @id @default(cuid())
+  listing   Listing          @relation(fields: [listingId], references: [id])
+  listingId String
+  offerer   User             @relation(fields: [offererId], references: [id])
+  offererId String
+  item      Item             @relation(fields: [itemId], references: [id])
+  itemId    String
+  quantity  Int              @default(1)
+  // Mismas reglas que en Listing — ver src/lib/refine-constants.ts y
+  // src/lib/card-slots-constants.ts. Sin random options en la oferta: la
+  // combinación de campos ya es bastante para un formulario secundario.
+  refineLevel   Int              @default(0)
+  cardSlots     Int              @default(0)
+  // Compensación opcional en zeny además del item (norma 2.5 del plan original: "puede
+  // incluir compensación en zeny además del objeto").
+  zenyOffered   Int              @default(0)
+  status        TradeOfferStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([listingId, status])
+}
+
+// Envío directo 1 a 1, sin coste ni publicación pública (norma 2.6 del
+// plan original): no es un listing, nadie lo navega. Sin estado — mandar el regalo
+// es instantáneo y definitivo, esta tabla es solo el registro histórico
+// (transparencia, evitar disputas) + lo que dispara el DM al destinatario.
+// Mismas reglas que Listing para refine/slots/options: un regalo es una
+// instancia real (igual que SALE/TRADE), así que sus options son un roll
+// exacto — a diferencia de TradeOffer, que sí se queda fuera de esto por
+// ser un formulario secundario. El destinatario solo puede elegir entre
+// usuarios que ya existan en la tabla User (los únicos de los que hay
+// registro).
+model Gift {
+  id          String   @id @default(cuid())
+  sender      User     @relation("GiftsSent", fields: [senderId], references: [id])
+  senderId    String
+  recipient   User     @relation("GiftsReceived", fields: [recipientId], references: [id])
+  recipientId String
+  item        Item     @relation(fields: [itemId], references: [id])
+  itemId      String
+  quantity    Int      @default(1)
+  refineLevel Int      @default(0)
+  cardSlots   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  options GiftOption[]
+
+  @@index([senderId, createdAt])
+  @@index([recipientId, createdAt])
+}
+
+// Configuración global del mercado, editable en base de datos (Prisma
+// Studio) sin desplegar código. Fila única (id fijo = 1) — ver
+// prisma/seedMarketConfig.mjs.
+model MarketConfig {
+  id Int @id @default(1)
+  // Refine real de RO Zero sin confirmar todavía (0-15 según el usuario,
+  // pero sin verificar) — 10 de arranque, se ajusta aquí cuando se sepa.
+  maxRefineLevel Int @default(10)
+
+  // Notificación de nueva venta al canal de Discord: solo se envía si hay
+  // URL Y el toggle está activo — si falta cualquiera de los dos, no se
+  // manda nada (ver src/lib/discord-webhook.ts). Editable desde /admin.
+  webhookUrl     String?
+  webhookEnabled Boolean @default(false)
+
+  // El reconocimiento de item por captura necesita esto Y la variable de
+  // entorno GEMINI_API_KEY seteada — la key en sí nunca se guarda en base
+  // de datos, solo el toggle (ver src/lib/item-recognition.ts). Si falta
+  // cualquiera de los dos, el bloque ni se renderiza en el formulario.
+  imageRecognitionEnabled Boolean @default(false)
+  // Qué modelo de Gemini usar para el reconocimiento — editable sin
+  // redesplegar (solo es un string en la URL de la llamada). Valores
+  // soportados por el desplegable de /admin: "gemini-flash-latest"
+  // (detecta bien los iconos de slot) y "gemini-flash-lite-latest" (más
+  // barato/rápido, pero puede fallar contando slots).
+  geminiModel String @default("gemini-flash-latest")
+
+  // DMs de transacción (norma 2.10 del plan original) necesitan esto Y la variable de entorno
+  // DISCORD_BOT_TOKEN seteada — el token en sí nunca se guarda en base de
+  // datos, solo el toggle (ver sendDirectMessage en src/lib/discord-bot.ts).
+  // Activo por defecto: no hay nada que "deshacer" al desactivarlo, solo
+  // deja de intentarlo.
+  dmNotificationsEnabled Boolean @default(true)
+
+  // Random options necesita esto Y que el catálogo (ItemOptionDef) tenga
+  // filas — pensado para cuando el mercado sirva a versiones de RO además
+  // de RO Zero que todavía no tengan su catálogo de options importado (ver
+  // src/lib/item-options.ts). Activo por defecto porque el catálogo actual
+  // ya está cargado.
+  optionsEnabled Boolean @default(true)
+
+  // Bloquea crear ventas y comprar para todo el mundo salvo administradores
+  // (ver src/lib/admin-guard.ts). Pensado para desplegar cambios grandes
+  // sin que se publique/compre a medio camino.
+  maintenanceModeEnabled Boolean @default(false)
+
+  // Roles de Discord con acceso a /admin, SUMADOS al permiso Administrator
+  // nativo (no lo sustituyen) — ver isGuildAdmin en src/auth.ts. IDs en
+  // crudo: el panel los muestra con nombre real si hay bot configurado
+  // (DISCORD_BOT_TOKEN, nunca en base de datos), o como entrada manual si no.
+  adminRoleIds String[] @default([])
+
+  // Idioma activo de toda la app (no es una preferencia por usuario, es
+  // global — no hay locale routing, ver src/i18n/request.ts). El catálogo
+  // de idiomas soportados vive en código (src/lib/locale-constants.ts,
+  // mismo patrón que geminiModel): un valor aquí no basta por sí solo, hace
+  // falta que exista de verdad el fichero de mensajes traducido.
+  locale String @default("es")
+
+  // Nombre de la app mostrado en la cabecera (enlaza a /market) y como
+  // <title> de la pestaña — cada guild pone el suyo. Null hasta
+  // configurarse la primera vez: el placeholder/fallback "ROZ Global
+  // Market" vive en código (DEFAULT_SITE_NAME en src/lib/market-config.ts),
+  // no aquí, para no confundir "sin configurar" con "configurado
+  // literalmente a ROZ Global Market".
+  siteName String?
+}
+
+// Qué WeaponType cuentan como "arma mágica" (pool WEAPON_MAGICAL) en vez de
+// "arma física" (WEAPON_PHYSICAL) — la presencia de una fila es la señal (no
+// hace falta columna booleana). Editable directamente en la base de datos
+// (Prisma Studio) sin necesidad de desplegar código. Seed por defecto: ROD,
+// TWO_HAND_ROD, BOOK — ver prisma/seedMagicalWeaponType.mjs.
+model MagicalWeaponType {
+  type WeaponType @id
+}
+
+// Catálogo de estadísticas de random option posibles, por grupo de equipo y
+// por slot posicional (1, 2, 3 — cada posición tiene su propio pool, no son
+// intercambiables entre sí). Poblado desde datos reales, ver
+// prisma/seedItemOptions.mjs.
+model ItemOptionDef {
+  id        String          @id @default(cuid())
+  group     ItemOptionGroup
+  slotIndex Int
+  // Identificador estable derivado del label (p.ej. "MAX_HP_PCT"), para no
+  // depender del texto exacto del label como clave.
+  statCode  String
+  label     String
+  minValue  Int
+  // Igual a minValue cuando el valor es fijo (p.ej. ASPD siempre +1).
+  maxValue  Int
+
+  selections     ListingOption[]
+  giftSelections GiftOption[]
+
+  @@unique([group, slotIndex, statCode])
+  @@index([group, slotIndex])
+}
+
+// Random option concreta de un listing — hasta MAX_OPTION_SLOTS (ver
+// src/lib/item-options.ts) por listing, siempre ocupando las posiciones
+// desde 1 en adelante sin huecos. En SALE/TRADE, `value` es el roll exacto
+// que le salió a esa instancia real. En BUY no hay instancia (se publica
+// antes de tener el item) — ahí `value` es el mínimo que el comprador pide
+// para esa stat, mismo patrón de doble sentido que `Listing.price` según
+// `type`. Validado siempre contra [def.minValue, def.maxValue] en los dos
+// casos (no tiene sentido pedir, ni tener, algo fuera del rango real).
+model ListingOption {
+  id        String        @id @default(cuid())
+  listing   Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String
+  slotIndex Int
+  def       ItemOptionDef @relation(fields: [defId], references: [id])
+  defId     String
+  value     Int
+
+  @@unique([listingId, slotIndex])
+}
+
+// Random option concreta de un regalo — mismo shape que ListingOption, en
+// tabla aparte porque Gift no es un Listing (ver comentario del modelo
+// Gift). Siempre es un roll exacto (un regalo es siempre una instancia
+// real que el remitente ya tiene), nunca el sentido "mínimo deseado" que
+// puede tener ListingOption en BUY.
+model GiftOption {
+  id        String        @id @default(cuid())
+  gift      Gift          @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  giftId    String
+  slotIndex Int
+  def       ItemOptionDef @relation(fields: [defId], references: [id])
+  defId     String
+  value     Int
+
+  @@unique([giftId, slotIndex])
+}

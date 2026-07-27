@@ -1,0 +1,466 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "send": "Enviar",
+    "search": "Buscar",
+    "reset": "Reset",
+    "searching": "Buscando...",
+    "loading": "Cargando...",
+    "genericError": "Error inesperado",
+    "searchError": "No se ha podido buscar. Inténtalo de nuevo.",
+    "you": "Tú",
+    "yourself": "ti"
+  },
+  "nav": {
+    "openMenu": "Abrir menú del mercado",
+    "newPublication": "Nueva publicación",
+    "comingSoon": "(próximamente)",
+    "account": {
+      "title": "Tu cuenta",
+      "discordId": "ID de Discord",
+      "memberSince": "Miembro desde",
+      "roles": "Roles en Discord",
+      "noRoles": "Sin roles registrados",
+      "myActivity": "Actividad",
+      "settings": "Ajustes",
+      "signOut": "Salir"
+    }
+  },
+  "myActivity": {
+    "title": "Mi actividad",
+    "listingsEmpty": "Todavía no has publicado nada.",
+    "tabs": {
+      "listings": "Mis publicaciones",
+      "gifts": "Regalos"
+    }
+  },
+  "home": {
+    "welcome": "Bienvenido",
+    "greeting": "Hola, <strong>{username}</strong>. ¿Qué se cuece hoy en el mercado de la guild?",
+    "goToMarket": "Ir al mercado",
+    "intro": "Mercado privado para miembros de la guild. Inicia sesión con Discord para entrar.",
+    "signIn": "Iniciar sesión con Discord"
+  },
+  "authError": {
+    "title": "Acceso denegado",
+    "message": "Este mercado es solo para miembros de la guild. No hemos podido verificar que tu cuenta de Discord pertenezca al servidor de la guild.",
+    "backHome": "Volver al inicio"
+  },
+  "errors": {
+    "boundary": {
+      "title": "Algo ha ido mal",
+      "message": "Ha ocurrido un error inesperado. Puedes intentarlo de nuevo."
+    },
+    "notFound": {
+      "title": "No encontrado",
+      "message": "Esta página no existe o el elemento que buscas ya no está disponible."
+    },
+    "invalidData": "Datos inválidos",
+    "selectItem": "Selecciona un item",
+    "selectRecipient": "Selecciona un destinatario",
+    "positiveQuantity": "La cantidad debe ser mayor que 0",
+    "positivePrice": "El precio debe ser mayor que 0",
+    "invalidPrice": "Precio inválido",
+    "nonNegativeZeny": "El zeny no puede ser negativo",
+    "itemNotFound": "El item seleccionado no existe",
+    "maintenanceMode": "El mercado está en modo mantenimiento; inténtalo más tarde.",
+    "positiveRefine": "El refine debe ser un número entero positivo",
+    "refineTooHigh": "El refine no puede ser mayor que +{max}",
+    "positiveCardSlots": "Los slots deben ser un número entero positivo",
+    "cardSlotsTooHigh": "Este item admite como máximo {max} slots",
+    "listingNotFound": "Publicación no encontrada",
+    "onlyPosterCancel": "Solo quien la publicó puede cancelarla",
+    "listingNotActive": "Esta publicación ya no está activa",
+    "onlyBuyFulfill": "Solo una petición de compra se puede marcar como cumplida a mano",
+    "onlyPosterFulfill": "Solo quien la publicó puede marcarla como cumplida",
+    "cannotBuyOwn": "No puedes comprar tu propia publicación",
+    "notDirectSale": "Esta publicación no es una venta directa",
+    "notEnoughStock": "Solo quedan {remaining} unidades disponibles",
+    "notTradeListing": "Esta publicación no es un intercambio",
+    "cannotOfferOwn": "No puedes ofertar en tu propia publicación",
+    "offerNotFound": "Oferta no encontrada",
+    "offerNotPending": "Esta oferta ya no está pendiente",
+    "noPermissionOffer": "No tienes permiso sobre esta oferta",
+    "cannotGiftSelf": "No puedes regalarte un item a ti mismo",
+    "recipientNotFound": "El destinatario seleccionado no existe",
+    "userNotFound": "El destinatario no existe",
+    "cannotMessageSelf": "No puedes enviarte un mensaje a ti mismo",
+    "writeMessage": "Escribe un mensaje",
+    "maxCharacters": "Máximo 500 caracteres",
+    "dmNotAvailable": "Los mensajes directos no están disponibles ahora mismo",
+    "invalidOptionData": "Datos de option inválidos",
+    "invalidOptionValue": "El valor de la option debe ser un número entero",
+    "noOptionsAllowed": "Este item no admite random options",
+    "invalidOptionForItem": "Option inválida para este item",
+    "optionValueRange": "El valor de \"{label}\" debe estar entre {min} y {max}",
+    "unsupportedGeminiModel": "Modelo de Gemini no soportado",
+    "unsupportedLocale": "Idioma no soportado",
+    "recognitionNotActive": "El reconocimiento por captura no está activo",
+    "noImageReceived": "No se ha recibido ninguna imagen",
+    "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano."
+  },
+  "admin": {
+    "title": "Configuración",
+    "statsLink": "Estadísticas",
+    "stats": {
+      "title": "Estadísticas del mercado",
+      "backToConfig": "Volver",
+      "period": {
+        "label": "Periodo",
+        "30d": "Últimos 30 días"
+      },
+      "totals": {
+        "heading": "Resumen",
+        "zenyMoved": "Zeny movido",
+        "postersCount": "Usuarios que han publicado",
+        "totalUsers": "Usuarios registrados",
+        "giftsSent": "Regalos enviados"
+      },
+      "listingsByType": {
+        "heading": "Publicaciones por tipo y estado",
+        "closed": "Cerrada"
+      },
+      "tradeOffers": {
+        "heading": "Ofertas de intercambio por estado"
+      },
+      "rankings": {
+        "topPosters": "Quién más publica",
+        "topEarners": "Top vendedores (zeny conseguido)",
+        "topSpenders": "Top compradores (zeny gastado)",
+        "topListedItems": "Items más publicados",
+        "topPurchasedItems": "Items más comprados",
+        "empty": "Sin datos en este periodo.",
+        "count": "Publicaciones",
+        "quantity": "Unidades",
+        "rank": "#",
+        "name": "Nombre"
+      }
+    },
+    "general": {
+      "legend": "General",
+      "siteNameLabel": "Nombre de la aplicación",
+      "siteNameHint": "Se muestra en la cabecera y en la pestaña del navegador. Vacío = usar \"{placeholder}\" por defecto."
+    },
+    "access": {
+      "legend": "Acceso al panel",
+      "hint": "Quien tenga el permiso \"Administrator\" del servidor de Discord ya entra siempre. Estos roles se SUMAN como vía adicional, no lo sustituyen.",
+      "rolesFetchError": "No se pudo listar los roles del servidor con nombre ({message}).",
+      "roleIdsPlaceholder": "Un ID de rol por línea (o separados por comas)",
+      "roleIdsHint": "Sin bot configurado (DISCORD_BOT_TOKEN) no se pueden mostrar los nombres de los roles — copia el ID de cada rol desde Discord (Ajustes del servidor → Roles → clic derecho → Copiar ID, con el modo desarrollador activado)."
+    },
+    "language": {
+      "legend": "Idioma",
+      "label": "Idioma de la aplicación"
+    },
+    "webhook": {
+      "legend": "Notificaciones a Discord",
+      "toggleLabel": "Enviar notificación de nueva venta al webhook",
+      "urlLabel": "URL del webhook",
+      "urlPlaceholder": "https://discord.com/api/webhooks/...",
+      "urlHintBlank": "Deja en blanco para no cambiar el valor guardado.",
+      "urlHintUnset": "Todavía no hay ninguna URL guardada."
+    },
+    "dm": {
+      "legend": "Notificaciones privadas (DM)",
+      "toggleLabel": "Avisar por DM al destinatario de una transacción (compra, trade, regalo...)",
+      "botLabel": "Bot de Discord:",
+      "botConfigured": "configurado",
+      "botNotConfigured": "no configurado (variable de entorno DISCORD_BOT_TOKEN)",
+      "requirement": "Hace falta esto Y el toggle activo para que se manden los DMs."
+    },
+    "recognition": {
+      "legend": "Reconocimiento por captura",
+      "toggleLabel": "Permitir reconocer el item desde una captura (Gemini)",
+      "apiKeyLabel": "API key de Gemini:",
+      "apiKeyConfigured": "configurada",
+      "apiKeyNotConfigured": "no configurada (variable de entorno GEMINI_API_KEY)",
+      "requirement": "Hace falta esto Y el toggle activo para que la función funcione.",
+      "modelLabel": "Modelo de Gemini",
+      "models": {
+        "gemini-flash-latest": {
+          "label": "Flash (recomendado)",
+          "description": "Detecta bien también el número de slots de carta a partir de los iconos del tooltip."
+        },
+        "gemini-flash-lite-latest": {
+          "label": "Flash Lite",
+          "description": "Más barato y rápido, pero puede fallar contando los slots de carta (iconos pequeños)."
+        }
+      }
+    },
+    "options": {
+      "legend": "Random options",
+      "toggleLabel": "Permitir estadísticas aleatorias (options) en armas/armaduras",
+      "catalogLabel": "Catálogo de options:",
+      "catalogLoaded": "{count} combinaciones cargadas",
+      "catalogEmpty": "sin cargar",
+      "requirement": "Hace falta esto Y el toggle activo — pensado para versiones de RO sin catálogo de options todavía."
+    },
+    "market": {
+      "legend": "Mercado",
+      "maintenanceToggleLabel": "Modo mantenimiento (bloquea crear ventas y comprar para todos menos administradores)",
+      "maxRefineLabel": "Refine máximo permitido"
+    }
+  },
+  "market": {
+    "title": "Mercado",
+    "metaDescription": "Mercado privado de la guild",
+    "footerDisclaimer": "Proyecto de fans, sin afiliación con Gravity Co., Ltd.",
+    "maintenance": {
+      "admin": "El mercado está en modo mantenimiento (como administrador, sí puedes publicar y comprar).",
+      "user": "El mercado está en modo mantenimiento: no se puede crear ventas ni comprar por ahora."
+    },
+    "nav": {
+      "backToMarket": "Volver al mercado"
+    },
+    "button": {
+      "save": "Guardar",
+      "retry": "Reintentar"
+    },
+    "status": {
+      "saved": "Guardado.",
+      "sending": "Enviando..."
+    },
+    "field": {
+      "options": "Options",
+      "quantity": "Cantidad",
+      "message": "Mensaje",
+      "refine": "Refine",
+      "cardSlots": "Slots de carta",
+      "minStats": "Stats mínimos",
+      "payUpTo": "Pago hasta"
+    },
+    "filters": {
+      "toggle": "Filtros",
+      "buyOptionsHint": "Busca compras que cumplan estos valores.",
+      "name": "Nombre",
+      "namePlaceholder": "Buscar item...",
+      "poster": "Usuario",
+      "type": "Tipo",
+      "all": "Todas",
+      "category": "Categoría",
+      "slot": "Armadura",
+      "any": "Cualquiera",
+      "weaponType": "Tipo de arma",
+      "refineMin": "Refine mín.",
+      "refineMax": "Refine máx.",
+      "cardSlotsMin": "Slots mín.",
+      "cardSlotsMax": "Slots máx.",
+      "priceMin": "Precio mín.",
+      "priceMax": "Precio máx.",
+      "optionPlaceholder": "-- Option {slot} --",
+      "min": "Mín",
+      "max": "Máx",
+      "value": "Valor"
+    },
+    "sort": {
+      "label": "Orden",
+      "newest": "Más recientes",
+      "oldest": "Más antiguas",
+      "price_asc": "Precio: menor a mayor",
+      "price_desc": "Precio: mayor a menor",
+      "name_asc": "Nombre: A-Z",
+      "name_desc": "Nombre: Z-A"
+    },
+    "catalog": {
+      "category": {
+        "WEAPON": "Arma",
+        "ARMOR": "Armadura",
+        "CARD": "Carta",
+        "CONSUMABLE": "Consumible",
+        "COSTUME": "Costume",
+        "PET": "Mascota",
+        "ENCHANT": "Encantamiento",
+        "ETC": "Miscelánea"
+      },
+      "slot": {
+        "UPPER_HEADGEAR": "Casco superior",
+        "MID_HEADGEAR": "Casco medio",
+        "LOWER_HEADGEAR": "Casco inferior",
+        "ARMOR": "Cuerpo",
+        "SHIELD": "Escudo",
+        "GARMENT": "Prenda",
+        "FOOTGEAR": "Calzado",
+        "ACCESSORY": "Accesorio",
+        "WEAPON": "Arma"
+      },
+      "weaponType": {
+        "DAGGER": "Daga",
+        "ONE_HAND_SWORD": "Espada 1H",
+        "TWO_HAND_SWORD": "Espada 2H",
+        "ONE_HAND_SPEAR": "Lanza 1H",
+        "TWO_HAND_SPEAR": "Lanza 2H",
+        "ONE_HAND_AXE": "Hacha 1H",
+        "TWO_HAND_AXE": "Hacha 2H",
+        "MACE": "Maza",
+        "ROD": "Báculo",
+        "TWO_HAND_ROD": "Báculo 2H",
+        "BOW": "Arco",
+        "KNUCKLE": "Knuckle",
+        "INSTRUMENT": "Instrumento",
+        "WHIP": "Látigo",
+        "BOOK": "Libro",
+        "KATAR": "Katar",
+        "REVOLVER": "Revólver",
+        "RIFLE": "Rifle",
+        "GATLING_GUN": "Gatling",
+        "SHOTGUN": "Escopeta",
+        "GRENADE_LAUNCHER": "Lanzagranadas",
+        "FUUMA_SHURIKEN": "Fuuma Shuriken"
+      },
+      "optionGroup": {
+        "ARMOR": "Armadura",
+        "GARMENT": "Prenda",
+        "FOOTGEAR": "Calzado",
+        "WEAPON_PHYSICAL": "Arma física",
+        "WEAPON_MAGICAL": "Arma mágica"
+      }
+    },
+    "listing": {
+      "type": {
+        "SALE": "Venta",
+        "TRADE": "Intercambio",
+        "BUY": "Compra"
+      },
+      "viewTitle": {
+        "SALE": "Ventas",
+        "BUY": "Compras",
+        "TRADE": "Intercambios"
+      },
+      "poster": {
+        "SALE": "Vendedor",
+        "TRADE": "Vendedor",
+        "BUY": "Comprador"
+      },
+      "status": {
+        "ACTIVE": "Activa",
+        "CANCELLED": "Cancelada",
+        "EXPIRED": "Expirada"
+      },
+      "soldStatus": {
+        "SALE": "Vendida",
+        "TRADE": "Intercambiada",
+        "BUY": "Cumplida"
+      },
+      "offerStatus": {
+        "PENDING": "Pendiente",
+        "ACCEPTED": "Aceptada",
+        "REJECTED": "Rechazada",
+        "CANCELLED": "Cancelada"
+      }
+    },
+    "results": {
+      "empty": "No hay publicaciones que coincidan con la búsqueda.",
+      "wantedBy": "buscado por",
+      "soldBy": "vendido por",
+      "available": "x{count} disponibles",
+      "upTo": "hasta ",
+      "loadMore": "Cargar más",
+      "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
+    },
+    "detail": {
+      "available": "Disponibles",
+      "unitPrice": "Precio",
+      "posted": "Publicado",
+      "sold": "Vendidos",
+      "of": "de",
+      "markFulfilled": "Completado",
+      "cancelListing": "Cancelar",
+      "tradedWith": "Intercambiado con",
+      "forItem": "por {item}",
+      "offersReceived": "Ofertas recibidas",
+      "yourOffers": "Tus ofertas",
+      "offerFrom": "De",
+      "buy": {
+        "quantityLabel": "Cantidad a comprar",
+        "total": "Total:",
+        "buying": "Comprando...",
+        "submit": "Comprar"
+      },
+      "tradeForm": {
+        "offerItem": "Ofrecer item",
+        "zeny": "Zeny adicional (opcional)",
+        "submit": "Ofrecer"
+      },
+      "tradeActions": {
+        "accept": "Aceptar",
+        "reject": "Rechazar",
+        "cancelOffer": "Cancelar"
+      }
+    },
+    "form": {
+      "typeLabel": "Tipo de publicación",
+      "typeOptions": {
+        "SALE": "Venta",
+        "BUY": "Compra",
+        "TRADE": "Intercambio",
+        "GIFT": "Regalo"
+      },
+      "submitLabels": {
+        "SALE": "Publicar",
+        "BUY": "Publicar",
+        "TRADE": "Publicar",
+        "GIFT": "Regalar"
+      },
+      "publishing": "Publicando...",
+      "recognitionLabel": "Reconocer desde captura (opcional)",
+      "itemLabel": "Item",
+      "priceLabel": "Precio (z)",
+      "payUpToLabel": "Pago hasta (z)",
+      "recipientLabel": "Destinatario",
+      "recognitionNoMatchNamed": "No se ha encontrado en el catálogo ningún item parecido a \"{name}\". Selecciónalo manualmente.",
+      "recognitionNoMatch": "No se ha podido leer el item en la captura. Selecciónalo manualmente.",
+      "recognitionDetected": "Detectado: {item}. Revisa los datos antes de publicar.",
+      "recognitionCallFailed": "Ha fallado la detección automática. Selecciona el item manualmente.",
+      "screenshot": {
+        "upload": "Subir captura del item",
+        "hint": "Arrastra y suelta, haz clic para buscar o pega desde el portapapeles",
+        "clear": "Borrar",
+        "scan": "Escanear",
+        "scanning": "Escaneando..."
+      }
+    },
+    "itemPicker": {
+      "placeholder": "Busca un item por nombre...",
+      "removeSelected": "Quitar item seleccionado"
+    },
+    "userPicker": {
+      "placeholder": "Busca un usuario por nombre...",
+      "removeSelected": "Quitar usuario seleccionado"
+    },
+    "gifts": {
+      "title": "Regalos",
+      "empty": "Todavía no has enviado ni recibido ningún regalo.",
+      "sentLabel": "Enviado",
+      "receivedLabel": "Recibido",
+      "sentTo": "Enviado a",
+      "receivedFrom": "Recibido de"
+    },
+    "contact": {
+      "writeTo": "Escribir a @{username}",
+      "sent": "Mensaje enviado."
+    }
+  },
+  "discord": {
+    "listingTitle": {
+      "SALE": "Nueva venta",
+      "TRADE": "Nuevo intercambio",
+      "BUY": "Nueva compra"
+    },
+    "fields": {
+      "price": "Precio",
+      "totalPrice": "Precio total",
+      "zenyIncluded": "Zeny incluido",
+      "yourOffer": "Tu oferta",
+      "youReceived": "Has recibido",
+      "replyTo": "Responder a"
+    },
+    "dm": {
+      "purchased": "{username} ha comprado tu {item}",
+      "tradeAcceptedForOfferer": "{username} ha aceptado tu oferta de intercambio por su {item}",
+      "tradeAcceptedForPoster": "Has aceptado la oferta de {username} por tu {item}",
+      "gifted": "{username} te ha regalado {item}",
+      "contactMessage": "{username} te ha escrito sobre {item}"
+    }
+  }
+}
