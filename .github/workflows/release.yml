@@ -1,0 +1,50 @@
+name: Release
+
+# En cada push a main (es decir, tras mergear un PR de release/hotfix):
+#   1. tagea la versión (SemVer, bump según un token #major/#minor/#patch en el
+#      mensaje del commit de merge; patch por defecto),
+#   2. publica un GitHub Release con notas autogeneradas.
+# El build/deploy NO va aquí: lo hace el job `deploy` del workflow de CI
+# (ci.yml) en el mismo push a main. Este workflow solo se encarga del
+# versionado y la publicación de la release.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-production
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag release
+        id: tag
+        uses: anothrNick/github-tag-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch
+          TAG_PREFIX: v
+          RELEASE_BRANCHES: main
+          # Lee el token de bump (#major/#minor/#patch) del mensaje completo del
+          # último commit (el de merge del PR). 'compare' (por defecto) daría un
+          # rango vacío en el primer tag e ignoraría el token.
+          BRANCH_HISTORY: last
+
+      - name: Publish GitHub Release
+        if: steps.tag.outputs.new_tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.tag.outputs.new_tag }}" \
+            --title "${{ steps.tag.outputs.new_tag }}" \
+            --generate-notes

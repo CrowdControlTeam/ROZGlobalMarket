@@ -43,3 +43,32 @@ jobs:
       # brace-expansion, así que no debe hacer fallar el CI.
       - name: Auditoría de seguridad (producción)
         run: npm audit --omit=dev --audit-level=high
+
+  # Deploy por rama, solo tras pasar los checks y solo en push (los merges de
+  # tus PRs), nunca en un PR abierto. main -> producción, develop -> preview.
+  # En Linux no existe el problema de symlinks de Windows del cf:build.
+  deploy:
+    needs: checks
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Deploy a producción (main)
+        if: github.ref == 'refs/heads/main'
+        run: npm run cf:build && npm run cf:deploy
+
+      - name: Deploy a preview (develop)
+        if: github.ref == 'refs/heads/develop'
+        run: npm run cf:build && npx opennextjs-cloudflare deploy --env preview

@@ -11,8 +11,18 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  // Entorno de preview (rama develop): mismo Worker con otro nombre/URL y sus
+  // propios secretos (se configuran con `wrangler secret put <N> --env preview`).
+  // La config de nivel raíz es producción (rama main). El deploy por rama lo
+  // hace el workflow de CI.
+  "env": {
+    "preview": {
+      "name": "roz-global-market-preview"
+    }
   }
-  // Los secretos (DATABASE_URL, DIRECT_URL, AUTH_SECRET, DISCORD_*, GEMINI_API_KEY)
-  // NO van aquí: se cargan con `wrangler secret put <NOMBRE>` o desde el
-  // dashboard de Cloudflare. Ver README (sección Despliegue).
+  // Los secretos (DATABASE_URL, AUTH_SECRET, DISCORD_*, APP_URL, GEMINI_API_KEY)
+  // NO van aquí: se cargan con `wrangler secret put <NOMBRE>` (por entorno) o
+  // desde el dashboard de Cloudflare. El Worker NO necesita DIRECT_URL (las
+  // migraciones se lanzan aparte). Ver README (sección Despliegue).
 }

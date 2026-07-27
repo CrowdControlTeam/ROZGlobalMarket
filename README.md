@@ -60,6 +60,23 @@ npm run cf:deploy    # despliega a Cloudflare (requiere `wrangler login`)
 
 > **Nota (Windows):** `cf:build` crea symlinks que en Windows requieren el **Modo Desarrollador** activado (o ejecutar como administrador); si no, falla con `EPERM: symlink`. En Linux, macOS y CI compila sin más — el deploy real suele hacerse desde CI/Linux.
 
+### Automatizado (CI/CD)
+
+El deploy se hace solo desde GitHub Actions (`.github/workflows/ci.yml`, job `deploy`), tras pasar lint + tsc + tests, en cada push a:
+
+- **`main`** → **producción** (Worker `roz-global-market`).
+- **`develop`** → **preview** (Worker `roz-global-market-preview`, con sus propios secretos vía `wrangler secret put <N> --env preview`).
+
+Requiere estos *secrets* en el repo (Settings → Secrets and variables → Actions):
+
+- `CLOUDFLARE_API_TOKEN` (plantilla *Edit Cloudflare Workers*).
+- `CLOUDFLARE_ACCOUNT_ID`.
+
+### Versionado (SemVer)
+
+- **`release.yml`**: en cada push a `main`, tagea la versión y publica un GitHub Release con notas automáticas. El *bump* se controla con un token `#major` / `#minor` / `#patch` en el mensaje del commit de merge (patch por defecto).
+- **`prerelease.yml`**: on-demand desde `develop` (Actions → *Run workflow*), saca un tag de prerelease `vX.Y.Z-rc.N`.
+
 ## Prisma
 
 - Esquema: `prisma/schema.prisma`
