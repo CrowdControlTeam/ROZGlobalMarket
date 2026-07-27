@@ -12,13 +12,13 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  // Entorno de preview (rama develop): mismo Worker con otro nombre/URL y sus
-  // propios secretos (se configuran con `wrangler secret put <N> --env preview`).
-  // La config de nivel raíz es producción (rama main). El deploy por rama lo
-  // hace el workflow de CI.
+  // Entorno "dev" (rama develop): Worker aparte con su propia URL, secretos y
+  // BD, para no tocar producción. Lo despliega la conexión de Cloudflare
+  // Workers Builds de develop con `deploy --env dev`. La config de nivel raíz
+  // es producción (rama main).
   "env": {
-    "preview": {
-      "name": "roz-global-market-preview"
+    "dev": {
+      "name": "roz-global-market-dev"
     }
   }
   // Los secretos (DATABASE_URL, AUTH_SECRET, DISCORD_*, APP_URL, GEMINI_API_KEY)

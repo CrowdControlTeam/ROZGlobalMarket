@@ -67,9 +67,9 @@ El deploy lo hace la integración Git nativa de Cloudflare (**Workers Builds**),
 | Worker | Production branch | Deploy command |
 |--------|-------------------|----------------|
 | `roz-global-market` (producción) | `main` | `npx opennextjs-cloudflare deploy` |
-| `roz-global-market-preview` | `develop` | `npx opennextjs-cloudflare deploy --env preview` |
+| `roz-global-market-dev` | `develop` | `npx opennextjs-cloudflare deploy --env dev` |
 
-En ambas: build command `npx opennextjs-cloudflare build`, *"Builds for non-production branches"* **desactivado** (cada conexión solo despliega su rama de producción), y los secretos de runtime se ponen a nivel de cada Worker. El `env.preview` de `wrangler.jsonc` es lo que resuelve el `--env preview`. Al construirse en Linux, no aplica el problema de symlinks de Windows.
+En ambas: build command `npx opennextjs-cloudflare build`, *"Builds for non-production branches"* **desactivado** (cada conexión solo despliega su rama de producción), y los secretos de runtime se ponen a nivel de cada Worker. El `env.dev` de `wrangler.jsonc` es lo que resuelve el `--env dev`. Al construirse en Linux, no aplica el problema de symlinks de Windows.
 
 ### Versionado (SemVer)
 
