@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "roz-global-market",
+  "name": "roz-global-market-dev",
   // Worker generado por OpenNext (`npm run cf:build`). Ver .gitignore:
   // .open-next/ no se sube, se regenera en cada build/deploy.
   "main": ".open-next/worker.js",
