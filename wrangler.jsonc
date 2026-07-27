@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "roz-global-market",
+  // Worker generado por OpenNext (`npm run cf:build`). Ver .gitignore:
+  // .open-next/ no se sube, se regenera en cada build/deploy.
+  "main": ".open-next/worker.js",
+  // nodejs_compat es imprescindible para que Next/Prisma/next-auth corran en
+  // Workers; requiere compatibility_date >= 2024-09-23.
+  "compatibility_date": "2025-03-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  }
+  // Los secretos (DATABASE_URL, DIRECT_URL, AUTH_SECRET, DISCORD_*, GEMINI_API_KEY)
+  // NO van aquí: se cargan con `wrangler secret put <NOMBRE>` o desde el
+  // dashboard de Cloudflare. Ver README (sección Despliegue).
+}

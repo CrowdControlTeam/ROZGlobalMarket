@@ -30,9 +30,35 @@ Mercado para la comunidad de Ragnarok Zero, con login por Discord.
 
 En local, `DATABASE_URL`/`DIRECT_URL` apuntan al Postgres de `docker-compose.yml` (puerto 5434). El webhook de Discord ya no es una variable de entorno: se configura desde `/admin`.
 
-## Despliegue
+## Despliegue (Cloudflare Workers + Neon)
 
-Objetivo de despliegue: **Cloudflare** (Workers, vía OpenNext) con **Neon** como base de datos Postgres serverless. En producción, `DATABASE_URL` usa el endpoint *pooled* de Neon y `DIRECT_URL` el directo (este último para `prisma migrate`). La configuración del adaptador de Cloudflare está pendiente y se añadirá más adelante.
+La app se despliega en **Cloudflare Workers** vía [OpenNext](https://opennext.js.org/cloudflare), con **Neon** como Postgres serverless. Config: `wrangler.jsonc` y `open-next.config.ts`.
+
+### Base de datos (Neon)
+
+1. Crea un proyecto en Neon y copia las dos cadenas de conexión:
+   - `DATABASE_URL` → endpoint **pooled** (host con `-pooler`).
+   - `DIRECT_URL` → endpoint **directo** (sin `-pooler`), para `prisma migrate`.
+2. Aplica las migraciones contra Neon:
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+En Workers, [prisma.ts](src/lib/prisma.ts) detecta el host de Neon (`neon.tech`) y usa el driver serverless (`@prisma/adapter-neon`, WebSocket) en vez de una conexión TCP; en local se sigue usando el cliente estándar contra el Postgres de docker.
+
+### Secretos en Cloudflare
+
+Configúralos con `wrangler secret put <NOMBRE>` (o desde el dashboard): `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`, `APP_URL` (dominio del Worker) y, opcionalmente, `DISCORD_BOT_TOKEN` y `GEMINI_API_KEY`.
+
+### Build y deploy
+
+```bash
+npm run cf:build     # genera el Worker en .open-next/
+npm run cf:preview   # prueba local del Worker (workerd)
+npm run cf:deploy    # despliega a Cloudflare (requiere `wrangler login`)
+```
+
+> **Nota (Windows):** `cf:build` crea symlinks que en Windows requieren el **Modo Desarrollador** activado (o ejecutar como administrador); si no, falla con `EPERM: symlink`. En Linux, macOS y CI compila sin más — el deploy real suele hacerse desde CI/Linux.
 
 ## Prisma
 
