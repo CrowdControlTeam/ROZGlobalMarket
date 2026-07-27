@@ -3,10 +3,16 @@ import Discord from "next-auth/providers/discord";
 import { prisma } from "@/lib/prisma";
 import { loadMarketConfig } from "@/lib/market-config";
 
-const GUILD_ID = process.env.DISCORD_GUILD_ID;
-
-if (!GUILD_ID) {
-  throw new Error("Falta la variable de entorno DISCORD_GUILD_ID");
+// Se lee de forma perezosa (no a nivel de módulo) para que `next build` no
+// exija DISCORD_GUILD_ID en tiempo de compilación — el Worker se construye en
+// Cloudflare sin los secretos de runtime. Sigue fallando rápido en el primer
+// login si de verdad faltara en el entorno de ejecución.
+function getGuildId(): string {
+  const id = process.env.DISCORD_GUILD_ID;
+  if (!id) {
+    throw new Error("Falta la variable de entorno DISCORD_GUILD_ID");
+  }
+  return id;
 }
 
 const DISCORD_ADMINISTRATOR_PERMISSION = BigInt(0x8);
@@ -27,7 +33,7 @@ async function isGuildAdmin(accessToken: string): Promise<boolean> {
     owner?: boolean;
     permissions?: string;
   }[];
-  const guild = guilds.find((g) => g.id === GUILD_ID);
+  const guild = guilds.find((g) => g.id === getGuildId());
   if (!guild) return false;
   if (guild.owner) return true;
   if (!guild.permissions) return false;
@@ -66,7 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!account?.access_token || !profile) return false;
 
       const res = await fetch(
-        `https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`,
+        `https://discord.com/api/users/@me/guilds/${getGuildId()}/member`,
         { headers: { Authorization: `Bearer ${account.access_token}` } },
       );
       if (!res.ok) return false;

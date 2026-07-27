@@ -11,8 +11,18 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  // Entorno "dev" (rama develop): Worker aparte con su propia URL, secretos y
+  // BD, para no tocar producción. Lo despliega la conexión de Cloudflare
+  // Workers Builds de develop con `deploy --env dev`. La config de nivel raíz
+  // es producción (rama main).
+  "env": {
+    "dev": {
+      "name": "roz-global-market-dev"
+    }
   }
-  // Los secretos (DATABASE_URL, DIRECT_URL, AUTH_SECRET, DISCORD_*, GEMINI_API_KEY)
-  // NO van aquí: se cargan con `wrangler secret put <NOMBRE>` o desde el
-  // dashboard de Cloudflare. Ver README (sección Despliegue).
+  // Los secretos (DATABASE_URL, AUTH_SECRET, DISCORD_*, APP_URL, GEMINI_API_KEY)
+  // NO van aquí: se cargan con `wrangler secret put <NOMBRE>` (por entorno) o
+  // desde el dashboard de Cloudflare. El Worker NO necesita DIRECT_URL (las
+  // migraciones se lanzan aparte). Ver README (sección Despliegue).
 }

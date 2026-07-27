@@ -60,6 +60,22 @@ npm run cf:deploy    # despliega a Cloudflare (requiere `wrangler login`)
 
 > **Nota (Windows):** `cf:build` crea symlinks que en Windows requieren el **Modo Desarrollador** activado (o ejecutar como administrador); si no, falla con `EPERM: symlink`. En Linux, macOS y CI compila sin más — el deploy real suele hacerse desde CI/Linux.
 
+### Automatizado (Cloudflare Workers Builds)
+
+El deploy lo hace la integración Git nativa de Cloudflare (**Workers Builds**), no GitHub Actions. Se usan **dos conexiones**, una por entorno, cada una vigilando su rama y con secretos/BD aislados:
+
+| Worker | Production branch | Deploy command |
+|--------|-------------------|----------------|
+| `roz-global-market` (producción) | `main` | `npx opennextjs-cloudflare deploy` |
+| `roz-global-market-dev` | `develop` | `npx opennextjs-cloudflare deploy --env dev` |
+
+En ambas: build command `npx opennextjs-cloudflare build`, *"Builds for non-production branches"* **desactivado** (cada conexión solo despliega su rama de producción), y los secretos de runtime se ponen a nivel de cada Worker. El `env.dev` de `wrangler.jsonc` es lo que resuelve el `--env dev`. Al construirse en Linux, no aplica el problema de symlinks de Windows.
+
+### Versionado (SemVer)
+
+- **`release.yml`**: en cada push a `main`, tagea la versión y publica un GitHub Release con notas automáticas. El *bump* se controla con un token `#major` / `#minor` / `#patch` en el mensaje del commit de merge (patch por defecto).
+- **`prerelease.yml`**: on-demand desde `develop` (Actions → *Run workflow*), saca un tag de prerelease `vX.Y.Z-rc.N`.
+
 ## Prisma
 
 - Esquema: `prisma/schema.prisma`
