@@ -96,6 +96,7 @@
     "optionValueRange": "\"{label}\" must be between {min} and {max}",
     "unsupportedGeminiModel": "Unsupported Gemini model",
     "unsupportedLocale": "Unsupported language",
+    "invalidWebhookUrl": "The webhook URL must be a Discord webhook (https://discord.com/api/webhooks/...)",
     "recognitionNotActive": "Screenshot recognition isn't active",
     "noImageReceived": "No image was received",
     "recognitionFailed": "Automatic detection failed. Try again or fill in the item by hand."
