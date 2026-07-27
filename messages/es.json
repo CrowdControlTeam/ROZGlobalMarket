@@ -100,6 +100,7 @@
     "recognitionNotActive": "El reconocimiento por captura no está activo",
     "noImageReceived": "No se ha recibido ninguna imagen",
     "imageTooLarge": "La imagen no puede superar los {max} MB",
+    "rateLimited": "Demasiadas peticiones. Espera {seconds} s e inténtalo de nuevo.",
     "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano."
   },
   "admin": {

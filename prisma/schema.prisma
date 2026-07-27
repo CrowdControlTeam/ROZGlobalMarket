@@ -407,3 +407,14 @@ model GiftOption {
 
   @@unique([giftId, slotIndex])
 }
+
+// Contador de rate-limit por ventana fija, respaldado en BD para que
+// funcione entre instancias (serverless/Cloudflare Workers), a diferencia de
+// un contador en memoria que se reinicia por instancia. `key` identifica el
+// límite (p.ej. "recognize:<discordId>"), `count` las peticiones en la
+// ventana actual y `windowStart` cuándo empezó — ver src/lib/rate-limit.ts.
+model RateLimit {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+}
