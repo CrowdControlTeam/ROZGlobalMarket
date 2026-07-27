@@ -11,6 +11,28 @@ import { prisma } from "@/lib/prisma";
 
 export type RateLimitResult = { ok: true } | { ok: false; retryAfterMs: number };
 
+export type RateLimitDecision =
+  | { kind: "reset" } // arranca ventana nueva (count = 1)
+  | { kind: "increment" } // dentro de ventana y por debajo del límite
+  | { kind: "blocked"; retryAfterMs: number };
+
+// Lógica pura de la ventana fija, separada del acceso a BD para poder
+// testearla sin base de datos.
+export function decideRateLimit(
+  existing: { count: number; windowStartMs: number } | null,
+  nowMs: number,
+  limit: number,
+  windowMs: number,
+): RateLimitDecision {
+  if (!existing || nowMs - existing.windowStartMs >= windowMs) {
+    return { kind: "reset" };
+  }
+  if (existing.count >= limit) {
+    return { kind: "blocked", retryAfterMs: windowMs - (nowMs - existing.windowStartMs) };
+  }
+  return { kind: "increment" };
+}
+
 export async function checkRateLimit(
   key: string,
   limit: number,
@@ -20,22 +42,27 @@ export async function checkRateLimit(
 
   return prisma.$transaction(async (tx) => {
     const existing = await tx.rateLimit.findUnique({ where: { key } });
+    const decision = decideRateLimit(
+      existing ? { count: existing.count, windowStartMs: existing.windowStart.getTime() } : null,
+      now,
+      limit,
+      windowMs,
+    );
 
-    // Sin registro, o la ventana anterior ya expiró: arranca una nueva.
-    if (!existing || now - existing.windowStart.getTime() >= windowMs) {
+    if (decision.kind === "blocked") {
+      return { ok: false, retryAfterMs: decision.retryAfterMs };
+    }
+
+    if (decision.kind === "reset") {
       await tx.rateLimit.upsert({
         where: { key },
         create: { key, count: 1, windowStart: new Date(now) },
         update: { count: 1, windowStart: new Date(now) },
       });
-      return { ok: true };
+    } else {
+      await tx.rateLimit.update({ where: { key }, data: { count: { increment: 1 } } });
     }
 
-    if (existing.count >= limit) {
-      return { ok: false, retryAfterMs: windowMs - (now - existing.windowStart.getTime()) };
-    }
-
-    await tx.rateLimit.update({ where: { key }, data: { count: { increment: 1 } } });
     return { ok: true };
   });
 }

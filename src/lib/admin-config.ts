@@ -10,6 +10,7 @@ import { getOptionsCatalogCount } from "@/lib/item-options";
 import { fetchGuildRoles } from "@/lib/discord-bot";
 import { GEMINI_MODEL_VALUES, isGeminiModel } from "@/lib/gemini-model-constants";
 import { LOCALE_OPTIONS, isAppLocale } from "@/lib/locale-constants";
+import { isDiscordWebhookUrl } from "@/lib/discord-webhook-constants";
 
 // El valor real de un secreto nunca sale del servidor una vez guardado —
 // esto es lo único que llega al cliente para representarlo en el formulario.
@@ -64,14 +65,6 @@ export async function getMarketConfig() {
 // texto libre en el caso sin bot, conviene ser tolerante.
 const SNOWFLAKE = /^\d{15,25}$/;
 
-// La URL del webhook la usa el servidor para hacer POST (ver
-// src/lib/discord-webhook.ts), así que se restringe al host de Discord: sin
-// esto, un admin podría apuntarla a cualquier URL interna y usar el servidor
-// como proxy (SSRF). Se aceptan los hosts canónicos de webhook de Discord
-// (discord.com / discordapp.com, con subdominios ptb/canary) y la ruta
-// /api[/vN]/webhooks/<id>/<token>.
-const DISCORD_WEBHOOK_RE =
-  /^https:\/\/(?:(?:canary|ptb)\.)?discord(?:app)?\.com\/api(?:\/v\d+)?\/webhooks\/\d+\/[\w-]+$/;
 
 function parseAdminRoleIds(formData: FormData): string[] {
   // Modo con bot: <select multiple name="adminRoleIds"> manda varias
@@ -103,11 +96,11 @@ export async function updateMarketConfig(formData: FormData) {
     // Vacío = no tocar el valor ya guardado (patrón "enmascarado + reemplazar":
     // el formulario nunca recibe el valor real, así que no puede reenviarlo).
     // Cuando sí viene un valor, debe ser un webhook de Discord (ver
-    // DISCORD_WEBHOOK_RE) para no permitir SSRF a hosts arbitrarios.
+    // isDiscordWebhookUrl) para no permitir SSRF a hosts arbitrarios.
     webhookUrl: z
       .string()
       .trim()
-      .refine((v) => DISCORD_WEBHOOK_RE.test(v), t("invalidWebhookUrl"))
+      .refine(isDiscordWebhookUrl, t("invalidWebhookUrl"))
       .optional(),
     // A diferencia de webhookUrl, este campo no está enmascarado — vacío
     // aquí sí significa "volver a sin configurar" (cae al placeholder).
