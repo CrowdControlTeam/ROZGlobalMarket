@@ -4,20 +4,14 @@ import { prisma } from "@/lib/prisma";
 // Labels vía sortLabel(t, sort) en market-labels.ts (messages/es.json,
 // namespace market.sort.*) — este array solo fija el orden y los valores
 // válidos, no el texto mostrado.
-export const SORT_VALUES = [
-  "newest",
-  "oldest",
-  "price_asc",
-  "price_desc",
-  "name_asc",
-  "name_desc",
-] as const;
-
-export type MarketSort = (typeof SORT_VALUES)[number];
-
-export function isMarketSort(value: string): value is MarketSort {
-  return (SORT_VALUES as readonly string[]).includes(value);
-}
+// Re-exportado desde market-sort.ts (módulo sin Prisma) para que los
+// componentes cliente lo importen desde ahí sin arrastrar este módulo —y el
+// cliente de Prisma— al bundle del navegador. El código de servidor puede
+// seguir importándolo desde "@/lib/market". MarketSort se importa además para
+// uso interno (el re-export no lo trae al scope local).
+export { SORT_VALUES, isMarketSort } from "@/lib/market-sort";
+import type { MarketSort } from "@/lib/market-sort";
+export type { MarketSort };
 
 export type MarketFilters = {
   q?: string;

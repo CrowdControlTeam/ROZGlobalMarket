@@ -1,8 +1,10 @@
 generator client {
   provider = "prisma-client-js"
-  // Necesario para pasar un driver adapter a PrismaClient — en producción
-  // (Neon, sobre Cloudflare Workers) el cliente usa el driver serverless de
-  // Neon en vez de una conexión TCP. Ver src/lib/prisma.ts.
+  // driverAdapters: permite pasar un driver adapter a PrismaClient para la
+  // conexión (Neon serverless en Workers, pg en local) — ver src/lib/prisma.ts.
+  // El que en Workers se use el motor WASM (y no el binario nativo, que haría
+  // fs.readdir -> 500) lo consigue OpenNext parcheando el cliente: para ello
+  // Prisma va como serverExternalPackage en next.config.ts.
   previewFeatures = ["driverAdapters"]
 }
 
