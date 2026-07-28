@@ -98,7 +98,7 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
           type="button"
           onClick={close}
           aria-label={t("close")}
-          className="text-lg leading-none text-ro-gold hover:text-ro-text-light"
+          className="text-lg leading-none text-ro-text-muted hover:text-ro-text"
         >
           ✕
         </button>
