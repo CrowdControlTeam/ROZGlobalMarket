@@ -13,6 +13,7 @@ import {
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { findBestMatch } from "@/lib/fuzzy-match";
+import { getAllCatalogItems } from "@/lib/item-catalog";
 import { loadMarketConfig } from "@/lib/market-config";
 import { MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_MB } from "@/lib/screenshot-constants";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -220,9 +221,7 @@ export async function recognizeItemFromScreenshot(formData: FormData): Promise<R
       return { status: "no_match", detectedName: null };
     }
 
-    const candidates = await prisma.item.findMany({
-      select: { id: true, name: true, iconUrl: true, category: true, slot: true, weaponType: true },
-    });
+    const candidates = getAllCatalogItems();
 
     // El catálogo tiene bastantes nombres duplicados (p.ej. dos "Arc Wand":
     // un báculo real y un costume cosmético) — el nombre solo no basta para

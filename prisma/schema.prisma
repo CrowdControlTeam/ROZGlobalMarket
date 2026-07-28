@@ -120,7 +120,11 @@ model User {
 }
 
 model Item {
-  id          String       @id @default(cuid())
+  // ID estable del catálogo (el id de item de RO, p.ej. "501") — no un cuid
+  // generado: así el mismo id sirve en catálogo, BD, bundle de búsqueda y en
+  // Listing/TradeOffer/Gift.itemId, y el import puede hacer upsert idempotente
+  // por id. La app nunca crea Items (solo el import), así que no necesita default.
+  id          String       @id
   name        String
   description String?
   category    ItemCategory
@@ -134,6 +138,10 @@ model Item {
   iconUrl     String
   // Ficha de origen de la carga de datos, para trazabilidad.
   sourceUrl   String?
+  // false si el generador no pudo verificar el item (nombre duplicado o fallo
+  // de red al consultar la fuente) — se importa igual, es solo una marca de
+  // calidad del dato para repasarlo luego. Ver prisma/importCatalog.mjs.
+  verified    Boolean      @default(true)
   importedAt  DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
