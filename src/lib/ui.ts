@@ -9,9 +9,9 @@ const BUTTON_BASE =
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   // Acción principal: rojo ROZ (comprar, publicar, enviar).
   primary: "border-ro-red bg-ro-red text-white hover:opacity-90",
-  // Acción secundaria sobre el fondo de la página: perfil dorado.
+  // Acción secundaria: neutro sutil (raised), sin dorado.
   secondary:
-    "border-ro-gold bg-transparent text-ro-gold hover:bg-ro-gold/10",
+    "border-ro-panel-border bg-ro-panel-alt text-ro-text hover:bg-ro-panel-border/30",
   // Sobre superficie de panel: contorno neutro.
   outline:
     "border-ro-panel-border bg-transparent text-ro-text hover:bg-ro-panel-border/40",
