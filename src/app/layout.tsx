@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono, Press_Start_2P } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -41,16 +42,21 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
   const locale = await getLocale();
+  // Tema resuelto en servidor desde la cookie (sin parpadeo). Por defecto
+  // oscuro cuando no hay preferencia guardada; el usuario lo cambia con el
+  // toggle de la cabecera, que actualiza el atributo y la cookie.
+  const theme = (await cookies()).get("theme")?.value === "light" ? "light" : "dark";
 
   return (
     <html
       lang={locale}
+      data-theme={theme}
       className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider>
           <Suspense fallback={<SiteHeaderFallback />}>
-            <SiteHeader user={session?.user ?? null} />
+            <SiteHeader user={session?.user ?? null} theme={theme} />
           </Suspense>
           <div className="flex-1">{children}</div>
           <SiteFooter />

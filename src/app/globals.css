@@ -1,22 +1,50 @@
 @import "tailwindcss";
 
 /*
- * Paleta "estilo RO": marrón madera + dorado, inspirada en los paneles
- * clásicos del juego. Es un tema fijo (no sigue prefers-color-scheme):
- * es la identidad visual de la web, no un modo claro/oscuro alternable.
+ * Identidad "ROZ": navy + dorado + rojo, inspirada en Ragnarok Zero. Tema
+ * claro y oscuro seleccionables por el usuario (toggle en la cabecera): el
+ * layout fija data-theme="light|dark" en <html> a partir de una cookie
+ * (ver src/app/layout.tsx y src/components/ThemeToggle.tsx), con el tema
+ * claro como base y el oscuro como override. Los nombres de token se
+ * mantienen (--ro-*) para no reescribir cada componente; lo que cambia es su
+ * valor por tema. --ro-text y --ro-text-light apuntan al mismo texto primario
+ * (dentro de un tema todas las superficies comparten luminancia); --ro-navy /
+ * --ro-red / --ro-on-navy son fijos de marca (la cabecera es navy en ambos).
  */
 :root {
-  --ro-bg: #241708;
-  --ro-bg-alt: #34210f;
-  --ro-panel: #f3e2b9;
-  --ro-panel-alt: #fdf6e6;
-  --ro-panel-border: #6b4226;
-  --ro-panel-header: #4a2f1a;
-  --ro-gold: #d4a017;
+  color-scheme: light;
+  --ro-bg: #eef1f7;
+  --ro-bg-alt: #e4e9f2;
+  --ro-panel: #ffffff;
+  --ro-panel-alt: #f3f5fa;
+  --ro-panel-border: #dbe1ec;
+  --ro-panel-header: #eef2f8;
+  --ro-gold: #c6942a;
   --ro-gold-dark: #a87610;
-  --ro-text: #3b2410;
-  --ro-text-muted: #6e5636;
-  --ro-text-light: #f3e2b9;
+  --ro-text: #14233f;
+  --ro-text-muted: #5f6b86;
+  --ro-text-light: #14233f;
+  --ro-navy: #012553;
+  --ro-on-navy: #ffffff;
+  --ro-red: #e23a32;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ro-bg: #0a0e1a;
+  --ro-bg-alt: #0c1322;
+  --ro-panel: #141b2e;
+  --ro-panel-alt: #0e1526;
+  --ro-panel-border: #26314c;
+  --ro-panel-header: #1a2338;
+  --ro-gold: #e4b857;
+  --ro-gold-dark: #c79a3e;
+  --ro-text: #eef2fb;
+  --ro-text-muted: #8f9bb8;
+  --ro-text-light: #eef2fb;
+  --ro-navy: #0c1322;
+  --ro-on-navy: #e9eef8;
+  --ro-red: #e8483f;
 }
 
 @theme inline {
@@ -31,6 +59,9 @@
   --color-ro-text: var(--ro-text);
   --color-ro-text-muted: var(--ro-text-muted);
   --color-ro-text-light: var(--ro-text-light);
+  --color-ro-navy: var(--ro-navy);
+  --color-ro-on-navy: var(--ro-on-navy);
+  --color-ro-red: var(--ro-red);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-heading);
@@ -38,7 +69,6 @@
 
 body {
   background: var(--ro-bg);
-  background-image: radial-gradient(ellipse 80% 60% at 50% -10%, var(--ro-bg-alt), var(--ro-bg));
-  color: var(--ro-text-light);
+  color: var(--ro-text);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
