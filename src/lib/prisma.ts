@@ -23,13 +23,29 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient();
 }
 
-// Evita crear una nueva instancia en cada hot-reload durante el desarrollo.
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+// El cliente se crea de forma PEREZOSA (en el primer acceso, ya dentro de una
+// petición) en vez de al cargar el módulo. En Cloudflare Workers las variables
+// de entorno / secrets solo están disponibles dentro del contexto de la
+// petición, no en el ámbito de módulo: si el cliente se creara al importar,
+// process.env.DATABASE_URL sería undefined, no se aplicaría el adaptador de
+// Neon y Prisma caería al motor binario (instantiateLibrary ->
+// getCurrentBinaryTarget -> fs.readdir), inexistente en Workers -> 500. El
+// singleton (globalForPrisma) evita además recrearlo en cada hot-reload en dev.
+function getClient(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getClient();
+    const value = Reflect.get(client, prop, client);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+}) as PrismaClient;
