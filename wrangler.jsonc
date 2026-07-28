@@ -12,6 +12,19 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Workers Logs (logs persistidos y consultables en el dashboard). Es un
+  // campo heredable, así que este bloque de nivel raíz aplica a producción y
+  // al entorno "dev". logs.enabled=true activa los logs; invocation_logs=true
+  // incluye la línea de resumen por invocación (petición/respuesta — útil para
+  // depurar); head_sampling_rate 1 = 100% de las peticiones (se puede bajar si
+  // el volumen crece).
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "head_sampling_rate": 1
+    }
+  },
   // Entorno "dev" (rama develop): Worker aparte con su propia URL, secretos y
   // BD, para no tocar producción. Lo despliega la conexión de Cloudflare
   // Workers Builds de develop con `deploy --env dev`. La config de nivel raíz
