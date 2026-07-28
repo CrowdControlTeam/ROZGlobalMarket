@@ -90,7 +90,7 @@ export async function MarketPageContent({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <h1 className="mb-6 font-heading text-lg text-ro-gold">{pageTitle}</h1>
+      <h1 className="mb-6 font-heading text-lg text-ro-text">{pageTitle}</h1>
 
       {/* Nada de lo de aquí arriba toca la base de datos (MarketFilters es
           "use client" y busca sus propios datos aparte) — solo el grid de

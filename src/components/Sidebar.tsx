@@ -45,7 +45,7 @@ export function Sidebar({
         }`}
       >
         <div className="flex items-center justify-between border-b-4 border-ro-panel-border bg-ro-panel-header px-4 py-3">
-          <h2 className="font-heading text-xs text-ro-gold">{title}</h2>
+          <h2 className="font-heading text-xs text-ro-text">{title}</h2>
           <button
             type="button"
             onClick={onClose}

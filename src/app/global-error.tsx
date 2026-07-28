@@ -28,7 +28,7 @@ export default function GlobalError({
     <html lang="es">
       <body className="flex min-h-screen items-center justify-center bg-ro-bg px-6 text-ro-text">
         <div className="w-full max-w-md rounded-lg border-4 border-ro-panel-border bg-ro-panel p-6 text-center shadow-lg">
-          <h1 className="font-heading text-lg text-ro-gold">Algo ha ido mal</h1>
+          <h1 className="font-heading text-lg text-ro-text">Algo ha ido mal</h1>
           <p className="mt-2 text-sm text-ro-text-muted">
             Ha ocurrido un error inesperado al cargar la página.
           </p>
