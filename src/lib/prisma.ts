@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
@@ -10,15 +11,16 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 //     del despliegue (ver .env.example).
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
-  // En Cloudflare Workers (producción) no hay sockets TCP, así que el cliente
-  // estándar de Prisma no puede conectar: se usa el driver serverless de Neon
-  // vía adaptador. Se elige PrismaNeon (WebSocket/Pool) y no PrismaNeonHTTP
-  // porque la app usa transacciones interactivas (compras, trades, rate
-  // limit), que el modo HTTP no soporta. En local (docker Postgres, host que
-  // no es de Neon) se mantiene el cliente estándar sin cambios.
+  // En Cloudflare Workers (producción) no hay sockets TCP, así que se conecta
+  // con el driver serverless de Neon vía adaptador. Además, para que en Workers
+  // Prisma use el motor WASM (y no el binario nativo, que haría fs.readdir ->
+  // 500) el cliente va como serverExternalPackage y OpenNext lo parchea — ver
+  // next.config.ts. Se elige PrismaNeon (WebSocket/Pool) y no PrismaNeonHTTP
+  // porque la app usa transacciones interactivas (compras, trades, rate limit),
+  // que el modo HTTP no soporta. En local (docker Postgres, host que no es de
+  // Neon) se usa el cliente estándar sobre el motor nativo, sin adaptador.
   if (connectionString && connectionString.includes("neon.tech")) {
-    const adapter = new PrismaNeon({ connectionString });
-    return new PrismaClient({ adapter });
+    return new PrismaClient({ adapter: new PrismaNeon({ connectionString }) });
   }
   return new PrismaClient();
 }
@@ -27,20 +29,22 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// El cliente se crea de forma PEREZOSA (en el primer acceso, ya dentro de una
-// petición) en vez de al cargar el módulo. En Cloudflare Workers las variables
-// de entorno / secrets solo están disponibles dentro del contexto de la
-// petición, no en el ámbito de módulo: si el cliente se creara al importar,
-// process.env.DATABASE_URL sería undefined, no se aplicaría el adaptador de
-// Neon y Prisma caería al motor binario (instantiateLibrary ->
-// getCurrentBinaryTarget -> fs.readdir), inexistente en Workers -> 500. El
-// singleton (globalForPrisma) evita además recrearlo en cada hot-reload en dev.
-function getClient(): PrismaClient {
-  if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = createPrismaClient();
-  }
-  return globalForPrisma.prisma;
-}
+// El cliente se obtiene de forma PEREZOSA (en el primer acceso, ya dentro de
+// una petición) en vez de al cargar el módulo: en Cloudflare Workers los
+// secrets (DATABASE_URL) solo están disponibles dentro del contexto de la
+// petición, no en el ámbito de módulo.
+//
+// Además, en Workers no se puede reutilizar una conexión (I/O) entre
+// peticiones distintas, así que un cliente global compartido fallaría a partir
+// de la 2ª petición. Por eso en producción (Worker) se crea POR PETICIÓN con
+// cache() de React (memoiza dentro de la misma petición, uno nuevo en la
+// siguiente). En desarrollo (Node, proceso de larga vida) crear un pool por
+// petición filtraría conexiones, así que ahí se reutiliza un singleton. La
+// rama se resuelve en build (NODE_ENV es constante), no en runtime.
+const getClient: () => PrismaClient =
+  process.env.NODE_ENV === "production"
+    ? cache(createPrismaClient)
+    : () => (globalForPrisma.prisma ??= createPrismaClient());
 
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop) {

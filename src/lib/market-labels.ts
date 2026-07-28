@@ -6,7 +6,7 @@ import {
   ListingType,
   TradeOfferStatus,
 } from "@prisma/client";
-import type { MarketSort } from "@/lib/market";
+import type { MarketSort } from "@/lib/market-sort";
 
 // Traductor ya escopado al namespace "market" (useTranslations("market") en
 // cliente, getTranslations("market") en servidor) — cada helper de aquí
