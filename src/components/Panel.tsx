@@ -17,7 +17,7 @@ export function Panel({
     >
       {title && (
         <div className="flex items-center justify-between gap-3 border-b-4 border-ro-panel-border bg-ro-panel-header px-4 py-2">
-          <h2 className="font-heading text-xs tracking-wide text-ro-gold">
+          <h2 className="font-heading text-xs tracking-wide text-ro-text">
             {title}
           </h2>
           {headerAction}

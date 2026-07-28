@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { auth, signIn } from "@/auth";
 import { Panel } from "@/components/Panel";
+import { DiscordIcon } from "@/components/DiscordIcon";
 import { buttonClass } from "@/lib/ui";
 
 export default async function Home() {
@@ -33,6 +34,7 @@ export default async function Home() {
               }}
             >
               <button type="submit" className={buttonClass("discord")}>
+                <DiscordIcon size={18} />
                 {t("signIn")}
               </button>
             </form>

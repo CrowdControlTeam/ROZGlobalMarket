@@ -40,7 +40,7 @@
     "greeting": "Hola, <strong>{username}</strong>. ¿Qué se cuece hoy en el mercado de la guild?",
     "goToMarket": "Ir al mercado",
     "intro": "Mercado privado para miembros de la guild. Inicia sesión con Discord para entrar.",
-    "signIn": "Iniciar sesión con Discord"
+    "signIn": "Entrar con Discord"
   },
   "authError": {
     "title": "Acceso denegado",

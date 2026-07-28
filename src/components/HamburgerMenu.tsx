@@ -27,9 +27,9 @@ export function HamburgerMenu() {
         aria-label={tNav("openMenu")}
         className="flex flex-col gap-1 p-1"
       >
-        <span className="block h-0.5 w-5 bg-ro-gold" />
-        <span className="block h-0.5 w-5 bg-ro-gold" />
-        <span className="block h-0.5 w-5 bg-ro-gold" />
+        <span className="block h-0.5 w-5 bg-ro-on-navy" />
+        <span className="block h-0.5 w-5 bg-ro-on-navy" />
+        <span className="block h-0.5 w-5 bg-ro-on-navy" />
       </button>
 
       <Sidebar side="left" open={open} onClose={() => setOpen(false)} title={t("title")}>

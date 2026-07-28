@@ -59,7 +59,7 @@ export function AdminConfigForm({ config }: { config: Config }) {
                   name="adminRoleIds"
                   value={role.id}
                   defaultChecked={config.adminRoleIds.includes(role.id)}
-                  className="accent-ro-gold"
+                  className="accent-emerald-600"
                 />
                 {role.name}
               </label>
