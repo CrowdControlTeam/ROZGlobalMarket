@@ -17,6 +17,20 @@ function getGuildId(): string {
 
 const DISCORD_ADMINISTRATOR_PERMISSION = BigInt(0x8);
 
+// Lista opcional de IDs de usuario de Discord con acceso de admin, separados
+// por comas (p.ej. "123,456"). Pensada para dar acceso al panel a alguien que
+// NO tiene el permiso Administrator en el servidor (típico cuando el mercado
+// corre en un servidor que no administras). Se SUMA a las otras dos vías
+// (permiso nativo de Discord y roles configurados en /admin), no las
+// sustituye. Ausente o vacía => nadie entra por aquí. Se lee de forma perezosa
+// (no a nivel de módulo) para no exigirla en `next build`.
+function getEnvAdminIds(): string[] {
+  return (process.env.DISCORD_ADMIN_IDS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+}
+
 // El endpoint de member (guilds.members.read) no trae los permisos
 // calculados del usuario, así que hace falta /users/@me/guilds (scope
 // "guilds") y buscar la entrada de nuestro guild ahí — trae "permissions"
@@ -151,7 +165,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           : false;
         const { adminRoleIds } = await loadMarketConfig();
         const hasAdminRole = guildRoles.some((r) => adminRoleIds.includes(r));
-        token.isAdmin = hasAdminPermission || hasAdminRole;
+        // Tercera vía: ID de usuario en la lista DISCORD_ADMIN_IDS (ver arriba).
+        const isEnvAdmin = getEnvAdminIds().includes(discordId);
+        token.isAdmin = hasAdminPermission || hasAdminRole || isEnvAdmin;
       }
       return token;
     },

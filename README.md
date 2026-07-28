@@ -13,7 +13,7 @@ Mercado para la comunidad de Ragnarok Zero, con login por Discord.
 
 1. Crea los dos archivos de entorno a partir de `.env.example` (ninguno se sube al repo):
    - `.env` → solo `DATABASE_URL` y `DIRECT_URL` (lo lee el CLI de Prisma, que no ve `.env.local`).
-   - `.env.local` → el resto: credenciales de Discord (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`), `AUTH_SECRET`, `APP_URL` y, opcionalmente, `GEMINI_API_KEY`.
+   - `.env.local` → el resto: credenciales de Discord (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`), `AUTH_SECRET`, `APP_URL` y, opcionalmente, `DISCORD_ADMIN_IDS` y `GEMINI_API_KEY`.
 2. Levanta la base de datos local:
    ```bash
    docker compose up -d db
@@ -48,7 +48,7 @@ En Workers, [prisma.ts](src/lib/prisma.ts) detecta el host de Neon (`neon.tech`)
 
 ### Secretos en Cloudflare
 
-Configúralos con `wrangler secret put <NOMBRE>` (o desde el dashboard): `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`, `APP_URL` (dominio del Worker) y, opcionalmente, `DISCORD_BOT_TOKEN` y `GEMINI_API_KEY`.
+Configúralos con `wrangler secret put <NOMBRE>` (o desde el dashboard): `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`, `APP_URL` (dominio del Worker) y, opcionalmente, `DISCORD_ADMIN_IDS` (IDs de usuario con acceso a `/admin`, separados por comas), `DISCORD_BOT_TOKEN` y `GEMINI_API_KEY`.
 
 ### Build y deploy
 
