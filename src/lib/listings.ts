@@ -21,25 +21,14 @@ import {
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
 import { loadMarketConfig } from "@/lib/market-config";
+import { searchCatalog } from "@/lib/item-catalog";
 
 export async function searchItems(query: string) {
   await requireSession();
-  const trimmed = query.trim();
-  if (trimmed.length < 2) return [];
-
-  const items = await prisma.item.findMany({
-    where: { name: { contains: trimmed, mode: "insensitive" } },
-    orderBy: { name: "asc" },
-    take: 20,
-    select: {
-      id: true,
-      name: true,
-      iconUrl: true,
-      category: true,
-      slot: true,
-      weaponType: true,
-    },
-  });
+  // Búsqueda en memoria (catálogo empaquetado, ver src/lib/item-catalog.ts) en
+  // vez de pegar a la BD en cada tecla.
+  const items = searchCatalog(query, 20);
+  if (items.length === 0) return [];
 
   const [magicalTypes, optionsAvailable] = await Promise.all([
     loadMagicalWeaponTypes(),

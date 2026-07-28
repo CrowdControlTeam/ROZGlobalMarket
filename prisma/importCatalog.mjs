@@ -16,7 +16,7 @@
 //   (por defecto ../ro-guild-market-generator/data/catalog.json)
 
 import { PrismaClient, ItemCategory, EquipSlot, WeaponType } from "@prisma/client";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
 const prisma = new PrismaClient();
 
@@ -89,10 +89,26 @@ async function main() {
     process.stdout.write(`\r  procesados ${Math.min(i + CHUNK, valid.length)}/${valid.length}`);
   }
 
+  // Bundle de búsqueda: subconjunto de campos que necesita el autocompletado y
+  // el reconocimiento, empaquetado con la app y cargado en memoria (ver
+  // src/lib/item-catalog.ts) para no pegar a la BD en cada tecla. Se genera de
+  // los mismos `valid` que van a la BD, así van sincronizados.
+  const searchCatalog = valid.map(({ id, name, iconUrl, category, slot, weaponType }) => ({
+    id,
+    name,
+    iconUrl,
+    category,
+    slot,
+    weaponType,
+  }));
+  mkdirSync("src/data", { recursive: true });
+  writeFileSync("src/data/catalog-search.json", JSON.stringify(searchCatalog));
+
   const unverified = valid.filter((r) => !r.verified).length;
   console.log(
     `\nHecho — creados: ${created}, actualizados: ${updated}, saltados (incompletos): ${skipped}, sin verificar: ${unverified}`,
   );
+  console.log(`Bundle de búsqueda: src/data/catalog-search.json (${searchCatalog.length} items)`);
 }
 
 main()
