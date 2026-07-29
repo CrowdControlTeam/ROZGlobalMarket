@@ -3,28 +3,30 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { purchaseListing } from "@/lib/listings";
+import { reserveListing } from "@/lib/listings";
 import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { getErrorMessage } from "@/lib/errors";
 
-export function BuyForm({
+// Reserva de una venta a precio fijo: crea un Deal PENDING que retiene stock
+// hasta que el vendedor lo confirma o rechaza (ver reserveListing en
+// listings.ts). Sustituye a la compra instantánea (BuyForm).
+export function ReserveForm({
   listingId,
-  remaining,
+  available,
   unitPrice,
 }: {
   listingId: string;
-  remaining: number;
+  available: number;
   unitPrice: number;
 }) {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const t = useTranslations("market.detail.buy");
-  // useTransition por sí solo no basta: disabled={isPending} solo se
-  // refleja en el DOM tras el siguiente render, y clics muy seguidos
-  // pueden dispararse antes de ese commit — ver NewPublicationForm.tsx.
+  const t = useTranslations("market.detail.reserve");
+  // Mismo guard que el resto de formularios contra el mash-click (ver
+  // NewPublicationForm.tsx).
   const submittingRef = useRef(false);
 
   return (
@@ -35,7 +37,7 @@ export function BuyForm({
         setError(null);
         startTransition(async () => {
           try {
-            await purchaseListing(listingId, formData);
+            await reserveListing(listingId, formData);
             router.refresh();
           } catch (err) {
             setError(getErrorMessage(err));
@@ -52,7 +54,7 @@ export function BuyForm({
           type="number"
           name="quantity"
           min={1}
-          max={remaining}
+          max={available}
           value={quantity}
           onChange={(e) => setQuantity(Number(e.target.value))}
           className={inputClass}
@@ -69,7 +71,7 @@ export function BuyForm({
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <button type="submit" disabled={isPending} className={buttonClass("primary")}>
-        {isPending ? t("buying") : t("submit")}
+        {isPending ? t("reserving") : t("submit")}
       </button>
     </form>
   );

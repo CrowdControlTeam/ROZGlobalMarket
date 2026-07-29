@@ -391,6 +391,21 @@
         "accept": "Aceptar",
         "reject": "Rechazar",
         "cancelOffer": "Cancelar"
+      },
+      "reserve": {
+        "quantityLabel": "Cantidad a reservar",
+        "total": "Total (si se confirma):",
+        "reserving": "Reservando...",
+        "submit": "Reservar"
+      },
+      "reservationsReceived": "Reservas por confirmar",
+      "yourReservations": "Tus reservas",
+      "reservedBy": "Reservado por",
+      "reserved": "Reservados",
+      "reservationActions": {
+        "confirm": "Confirmar venta",
+        "reject": "Rechazar",
+        "cancel": "Cancelar reserva"
       }
     },
     "form": {
@@ -463,6 +478,9 @@
     },
     "dm": {
       "purchased": "{username} ha comprado tu {item}",
+      "reserveRequested": "{username} quiere reservar tu {item}",
+      "reserveAccepted": "{username} ha confirmado tu reserva de {item}",
+      "reserveRejected": "{username} ha rechazado tu reserva de {item}",
       "tradeAcceptedForOfferer": "{username} ha aceptado tu oferta de intercambio por su {item}",
       "tradeAcceptedForPoster": "Has aceptado la oferta de {username} por tu {item}",
       "gifted": "{username} te ha regalado {item}",

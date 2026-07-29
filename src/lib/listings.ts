@@ -22,6 +22,7 @@ import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
 import { loadMarketConfig } from "@/lib/market-config";
 import { searchCatalog } from "@/lib/item-catalog";
+import { listingStatusOnClose } from "@/lib/deals";
 
 export async function searchItems(query: string) {
   await requireSession();
@@ -252,17 +253,17 @@ export async function createListing(formData: FormData) {
   return { id: listing.id };
 }
 
-// Quien publica cierra la publicación con stock restante sin vender (p.ej.
-// lo vendió fuera de la web), o retira una petición de compra que ya no
-// quiere. SOLD queda reservado para cuando se agota por compras hechas
-// aquí (SALE, ver purchaseListing) o se marca cumplida a mano (BUY, ver
-// fulfillListing) o se acepta una oferta (TRADE, ver trade-offers.ts).
+// Quien publica cierra la publicación. Regla de cierre (ver deals.ts): si hubo
+// algún trato cerrado (Deal ACCEPTED) se da por COMPLETED —se comerció algo—; si
+// no, CANCELLED. Las reservas/ofertas aún PENDING se rechazan al cerrar (no
+// pueden cumplirse ya).
 export async function cancelListing(listingId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
 
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
+    include: { deals: { select: { status: true } } },
   });
   if (!listing) throw new Error(t("listingNotFound"));
   if (listing.posterId !== session.user.discordId) {
@@ -272,9 +273,13 @@ export async function cancelListing(listingId: string) {
     throw new Error(t("listingNotActive"));
   }
 
-  await prisma.listing.update({
-    where: { id: listingId },
-    data: { status: "CANCELLED" },
+  const status = listingStatusOnClose(listing.deals);
+  await prisma.$transaction(async (tx) => {
+    await tx.deal.updateMany({
+      where: { listingId, status: "PENDING" },
+      data: { status: "REJECTED" },
+    });
+    await tx.listing.update({ where: { id: listingId }, data: { status } });
   });
 
   revalidatePath("/market");
@@ -312,7 +317,7 @@ export async function fulfillListing(listingId: string) {
   revalidatePath(`/market/${listingId}`);
 }
 
-export async function purchaseListing(listingId: string, formData: FormData) {
+export async function reserveListing(listingId: string, formData: FormData) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
@@ -323,11 +328,11 @@ export async function purchaseListing(listingId: string, formData: FormData) {
     throw new Error(t("maintenanceMode"));
   }
 
-  const purchaseSchema = z.object({
+  const reserveSchema = z.object({
     quantity: z.coerce.number().int().positive(t("positiveQuantity")),
   });
 
-  const parsed = purchaseSchema.safeParse({
+  const parsed = reserveSchema.safeParse({
     quantity: formData.get("quantity"),
   });
   if (!parsed.success) {
@@ -335,9 +340,9 @@ export async function purchaseListing(listingId: string, formData: FormData) {
   }
   const { quantity } = parsed.data;
 
-  const { listing, unitPrice } = await prisma.$transaction(async (tx) => {
-    // Bloqueo de la fila del listing: serializa compras concurrentes para no
-    // sobrevender el último stock. Ver el núcleo del rediseño en deals.ts.
+  const listing = await prisma.$transaction(async (tx) => {
+    // Bloqueo de la fila: serializa reservas concurrentes para no reservar más
+    // stock del disponible. Ver el núcleo del rediseño en deals.ts.
     await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`;
 
     const listing = await tx.listing.findUnique({ where: { id: listingId }, include: { item: true } });
@@ -351,45 +356,42 @@ export async function purchaseListing(listingId: string, formData: FormData) {
     if (listing.type !== "SALE" || listing.price === null) {
       throw new Error(t("notDirectSale"));
     }
-    const unitPrice = listing.price;
 
-    const remaining = listing.quantity - listing.quantitySold;
-    if (quantity > remaining) {
-      throw new Error(t("notEnoughStock", { remaining }));
+    // Disponible = cantidad − vendido − reservado. Las reservas PENDING retienen
+    // stock; vendido/reservado se derivan de los Deal (ver deals.ts).
+    const agg = await tx.deal.groupBy({
+      by: ["status"],
+      where: { listingId, status: { in: ["ACCEPTED", "PENDING"] } },
+      _sum: { quantity: true },
+    });
+    const sold = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
+    const reserved = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
+    const available = listing.quantity - sold - reserved;
+    if (quantity > available) {
+      throw new Error(t("notEnoughStock", { remaining: available }));
     }
 
-    // Compra directa: un Deal ya cerrado (ACCEPTED), sin paso de reserva —
-    // eso llega en 3.3b. Sustituye a la antigua fila Purchase. quantitySold se
-    // mantiene sincronizado (las lecturas aún lo usan; pasan a calcularse de
-    // los Deal en 3.3b).
+    // Reserva: un Deal PENDING que retiene stock hasta que el vendedor lo
+    // confirma (acceptSaleReservation) o lo rechaza. No toca quantitySold aún.
     await tx.deal.create({
       data: {
         listingId,
         userId: session.user.discordId,
         quantity,
-        status: "ACCEPTED",
-        unitPrice,
+        status: "PENDING",
+        unitPrice: listing.price,
       },
     });
 
-    const newSold = listing.quantitySold + quantity;
-    await tx.listing.update({
-      where: { id: listingId },
-      data: {
-        quantitySold: newSold,
-        status: newSold >= listing.quantity ? "COMPLETED" : "ACTIVE",
-      },
-    });
-
-    return { listing, unitPrice };
+    return listing;
   });
 
-  // Fuera de la transacción a propósito: una llamada de red no debe alargar
-  // el bloqueo de DB, y un fallo de DM (norma 2.10 del plan original) nunca debe deshacer una
-  // compra que ya se confirmó.
+  // Aviso al vendedor de que hay una reserva por confirmar (best-effort; el
+  // canal real es la ficha y la futura página de gestión). Fuera de la
+  // transacción: una llamada de red no debe alargar el bloqueo de DB.
   const appUrl = getAppUrl();
   await sendDirectMessage(listing.posterId, {
-    title: tDiscord("dm.purchased", {
+    title: tDiscord("dm.reserveRequested", {
       username: session.user.username,
       item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
     }),
@@ -398,10 +400,114 @@ export async function purchaseListing(listingId: string, formData: FormData) {
     itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
-      { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
+      { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * listing.price!), inline: true },
     ],
   });
 
   revalidatePath("/market");
   revalidatePath(`/market/${listingId}`);
+}
+
+// Ownership + estado compartidos entre aceptar/rechazar (vendedor) y cancelar
+// (comprador) una reserva de venta.
+async function loadOwnedPendingSaleDeal(
+  dealId: string,
+  expectedOwner: "poster" | "buyer",
+  discordId: string,
+  t: Awaited<ReturnType<typeof getTranslations>>,
+) {
+  const deal = await prisma.deal.findUnique({
+    where: { id: dealId },
+    include: { listing: { include: { item: true } }, user: true },
+  });
+  if (!deal) throw new Error(t("offerNotFound"));
+  if (deal.status !== "PENDING") throw new Error(t("offerNotPending"));
+  if (deal.listing.type !== "SALE") throw new Error(t("notDirectSale"));
+  const ownerId = expectedOwner === "poster" ? deal.listing.posterId : deal.userId;
+  if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
+  return deal;
+}
+
+// El vendedor CONFIRMA una reserva: pasa a vendida (ACCEPTED) y suma a
+// quantitySold; si se agota el stock, el listing pasa a COMPLETED.
+export async function acceptSaleReservation(dealId: string) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+  const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
+
+  const deal = await loadOwnedPendingSaleDeal(dealId, "poster", session.user.discordId, t);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${deal.listingId} FOR UPDATE`;
+    const cur = await tx.deal.findUnique({ where: { id: dealId }, select: { status: true, quantity: true } });
+    if (!cur || cur.status !== "PENDING") throw new Error(t("offerNotPending"));
+    const listing = await tx.listing.findUnique({
+      where: { id: deal.listingId },
+      select: { quantity: true, quantitySold: true, status: true },
+    });
+    if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+
+    await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
+    const newSold = listing.quantitySold + cur.quantity;
+    await tx.listing.update({
+      where: { id: deal.listingId },
+      data: { quantitySold: newSold, status: newSold >= listing.quantity ? "COMPLETED" : "ACTIVE" },
+    });
+  });
+
+  const appUrl = getAppUrl();
+  await sendDirectMessage(deal.userId, {
+    title: tDiscord("dm.reserveAccepted", {
+      username: session.user.username,
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+    }),
+    url: `${appUrl}/market/${deal.listingId}`,
+    color: DISCORD_EMBED_COLOR.SALE,
+    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
+    fields: [
+      { name: tField("quantity"), value: String(deal.quantity), inline: true },
+      {
+        name: tDiscord("fields.totalPrice"),
+        value: formatPrice(deal.quantity * (deal.unitPrice ?? 0)),
+        inline: true,
+      },
+    ],
+  });
+
+  revalidatePath("/market");
+  revalidatePath(`/market/${deal.listingId}`);
+}
+
+// El vendedor RECHAZA una reserva: libera el stock retenido.
+export async function rejectSaleReservation(dealId: string) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+  const tDiscord = await getTranslations("discord");
+
+  const deal = await loadOwnedPendingSaleDeal(dealId, "poster", session.user.discordId, t);
+  await prisma.deal.update({ where: { id: dealId }, data: { status: "REJECTED" } });
+
+  const appUrl = getAppUrl();
+  await sendDirectMessage(deal.userId, {
+    title: tDiscord("dm.reserveRejected", {
+      username: session.user.username,
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+    }),
+    url: `${appUrl}/market/${deal.listingId}`,
+    color: DISCORD_EMBED_COLOR.SALE,
+    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
+    fields: [],
+  });
+
+  revalidatePath(`/market/${deal.listingId}`);
+}
+
+// El comprador CANCELA su propia reserva pendiente.
+export async function cancelSaleReservation(dealId: string) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+  const deal = await loadOwnedPendingSaleDeal(dealId, "buyer", session.user.discordId, t);
+  await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
+  revalidatePath(`/market/${deal.listingId}`);
 }

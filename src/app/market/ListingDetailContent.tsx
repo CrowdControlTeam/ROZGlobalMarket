@@ -17,7 +17,8 @@ import { labelClass } from "@/lib/ui";
 import { UserMention } from "@/components/UserMention";
 import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { CancelListingButton } from "./[id]/CancelListingButton";
-import { BuyForm } from "./[id]/BuyForm";
+import { ReserveForm } from "./[id]/ReserveForm";
+import { SaleReservationActions } from "./[id]/SaleReservationActions";
 import { TradeOfferForm } from "./[id]/TradeOfferForm";
 import { TradeOfferActions } from "./[id]/TradeOfferActions";
 
@@ -54,6 +55,13 @@ export async function ListingDetailContent({ id }: { id: string }) {
   const remaining = listing.quantity - listing.quantitySold;
   const isTrade = listing.type === "TRADE";
   const isBuy = listing.type === "BUY";
+  const isSale = listing.type === "SALE";
+  // En una venta, las reservas PENDING retienen stock: lo que aún se puede
+  // reservar = vendido restante − reservado. Se deriva de los Deal.
+  const reserved = isSale
+    ? listing.deals.filter((d) => d.status === "PENDING").reduce((s, d) => s + d.quantity, 0)
+    : 0;
+  const available = remaining - reserved;
   const pendingOffers = listing.deals.filter((d) => d.status === "PENDING");
   const myOffers = listing.deals.filter((d) => d.userId === session.user.discordId);
 
@@ -89,7 +97,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <div>
           <dt className="text-xs text-ro-text-muted">{isBuy ? t("field.quantity") : t("detail.available")}</dt>
-          <dd>{isBuy ? listing.quantity : remaining}</dd>
+          <dd>{isBuy ? listing.quantity : isSale ? available : remaining}</dd>
         </div>
         {!isTrade && listing.price !== null && (
           <div>
@@ -127,6 +135,12 @@ export async function ListingDetailContent({ id }: { id: string }) {
             </dd>
           </div>
         )}
+        {isSale && reserved > 0 && (
+          <div>
+            <dt className="text-xs text-ro-text-muted">{t("detail.reserved")}</dt>
+            <dd>{reserved}</dd>
+          </div>
+        )}
       </dl>
 
       {listing.options.length > 0 && (
@@ -162,10 +176,10 @@ export async function ListingDetailContent({ id }: { id: string }) {
             <CancelListingButton listingId={listing.id} showFulfill={isBuy} />
           ) : isTrade ? (
             <TradeOfferForm listingId={listing.id} />
-          ) : listing.type === "SALE" && listing.price !== null ? (
-            <BuyForm
+          ) : listing.type === "SALE" && listing.price !== null && available > 0 ? (
+            <ReserveForm
               listingId={listing.id}
-              remaining={remaining}
+              available={available}
               unitPrice={listing.price}
             />
           ) : null}
@@ -244,6 +258,49 @@ export async function ListingDetailContent({ id }: { id: string }) {
                 {offer.status === "PENDING" && (
                   <div className="mt-2">
                     <TradeOfferActions offerId={offer.id} role={isPoster ? "seller" : "offerer"} />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {isSale && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
+        <div className="mt-3">
+          <p className={labelClass}>
+            {isPoster ? t("detail.reservationsReceived") : t("detail.yourReservations")}
+          </p>
+          <ul className="mt-2 flex flex-col gap-3">
+            {(isPoster ? pendingOffers : myOffers).map((deal) => (
+              <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">
+                    x{deal.quantity}
+                    <span className="ml-1 font-normal text-ro-text-muted">
+                      · {formatPrice(deal.quantity * (deal.unitPrice ?? 0))}
+                    </span>
+                  </span>
+                  {!isPoster && (
+                    <span className="text-xs text-ro-text-muted">{offerStatusLabel(t, deal.status)}</span>
+                  )}
+                </div>
+                {isPoster && (
+                  <p className="mt-1 text-ro-text-muted">
+                    {t("detail.reservedBy")}{" "}
+                    <UserMention
+                      userId={deal.userId}
+                      username={deal.user.username}
+                      viewerId={session.user.discordId}
+                      item={listing.item}
+                      listingId={listing.id}
+                      dmAvailable={dmAvailable}
+                    />
+                  </p>
+                )}
+                {deal.status === "PENDING" && (
+                  <div className="mt-2">
+                    <SaleReservationActions dealId={deal.id} role={isPoster ? "seller" : "buyer"} />
                   </div>
                 )}
               </li>
