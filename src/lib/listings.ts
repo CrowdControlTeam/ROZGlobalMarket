@@ -336,6 +336,10 @@ export async function purchaseListing(listingId: string, formData: FormData) {
   const { quantity } = parsed.data;
 
   const { listing, unitPrice } = await prisma.$transaction(async (tx) => {
+    // Bloqueo de la fila del listing: serializa compras concurrentes para no
+    // sobrevender el último stock. Ver el núcleo del rediseño en deals.ts.
+    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`;
+
     const listing = await tx.listing.findUnique({ where: { id: listingId }, include: { item: true } });
     if (!listing) throw new Error(t("listingNotFound"));
     if (listing.posterId === session.user.discordId) {
@@ -354,11 +358,16 @@ export async function purchaseListing(listingId: string, formData: FormData) {
       throw new Error(t("notEnoughStock", { remaining }));
     }
 
-    await tx.purchase.create({
+    // Compra directa: un Deal ya cerrado (ACCEPTED), sin paso de reserva —
+    // eso llega en 3.3b. Sustituye a la antigua fila Purchase. quantitySold se
+    // mantiene sincronizado (las lecturas aún lo usan; pasan a calcularse de
+    // los Deal en 3.3b).
+    await tx.deal.create({
       data: {
         listingId,
-        buyerId: session.user.discordId,
+        userId: session.user.discordId,
         quantity,
+        status: "ACCEPTED",
         unitPrice,
       },
     });
@@ -368,7 +377,7 @@ export async function purchaseListing(listingId: string, formData: FormData) {
       where: { id: listingId },
       data: {
         quantitySold: newSold,
-        status: newSold >= listing.quantity ? "SOLD" : "ACTIVE",
+        status: newSold >= listing.quantity ? "COMPLETED" : "ACTIVE",
       },
     });
 
