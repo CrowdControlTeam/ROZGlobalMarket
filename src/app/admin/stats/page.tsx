@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { ListingType, TradeOfferStatus } from "@prisma/client";
+import { ListingType, DealStatus } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getMarketStats } from "@/lib/admin-stats";
 import { isStatsPeriod, type StatsPeriod } from "@/lib/admin-stats-constants";
@@ -11,7 +11,7 @@ import { AdminStatsPeriodSelect } from "./AdminStatsPeriodSelect";
 
 const LISTING_STATUSES = ["ACTIVE", "SOLD", "CANCELLED", "EXPIRED"] as const;
 const TYPES = Object.values(ListingType);
-const OFFER_STATUSES = Object.values(TradeOfferStatus);
+const OFFER_STATUSES = Object.values(DealStatus);
 
 function RankingTable({
   rows,
