@@ -391,6 +391,21 @@
         "accept": "Accept",
         "reject": "Reject",
         "cancelOffer": "Cancel"
+      },
+      "reserve": {
+        "quantityLabel": "Quantity to reserve",
+        "total": "Total (if confirmed):",
+        "reserving": "Reserving...",
+        "submit": "Reserve"
+      },
+      "reservationsReceived": "Reservations to confirm",
+      "yourReservations": "Your reservations",
+      "reservedBy": "Reserved by",
+      "reserved": "Reserved",
+      "reservationActions": {
+        "confirm": "Confirm sale",
+        "reject": "Reject",
+        "cancel": "Cancel reservation"
       }
     },
     "form": {
@@ -463,6 +478,9 @@
     },
     "dm": {
       "purchased": "{username} bought your {item}",
+      "reserveRequested": "{username} wants to reserve your {item}",
+      "reserveAccepted": "{username} confirmed your reservation of {item}",
+      "reserveRejected": "{username} rejected your reservation of {item}",
       "tradeAcceptedForOfferer": "{username} accepted your trade offer for their {item}",
       "tradeAcceptedForPoster": "You accepted {username}'s offer for your {item}",
       "gifted": "{username} sent you a gift: {item}",
