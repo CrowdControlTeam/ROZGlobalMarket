@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { getOptionsCatalogCount } from "@/lib/item-options";
-import { fetchGuildRoles } from "@/lib/discord-bot";
+import { fetchGuildRoles, getBotStatus } from "@/lib/discord-bot";
 import { GEMINI_MODEL_VALUES, isGeminiModel } from "@/lib/gemini-model-constants";
 import { LOCALE_OPTIONS, isAppLocale } from "@/lib/locale-constants";
 import { isDiscordWebhookUrl } from "@/lib/discord-webhook-constants";
@@ -21,10 +21,11 @@ function maskSecret(value: string): string {
 export async function getMarketConfig() {
   await requireAdmin();
 
-  const [config, optionsCatalogCount, guildRolesResult, rawConfig, t] = await Promise.all([
+  const [config, optionsCatalogCount, guildRolesResult, botStatus, rawConfig, t] = await Promise.all([
     loadMarketConfig(),
     getOptionsCatalogCount(),
     fetchGuildRoles(),
+    getBotStatus(),
     prisma.marketConfig.findUnique({ where: { id: 1 }, select: { siteName: true } }),
     getTranslations("admin.recognition.models"),
   ]);
@@ -49,7 +50,7 @@ export async function getMarketConfig() {
     geminiModel: config.geminiModel,
     geminiModelOptions,
     dmNotificationsEnabled: config.dmNotificationsEnabled,
-    hasDiscordBotToken: !!process.env.DISCORD_BOT_TOKEN,
+    botStatus,
     maintenanceModeEnabled: config.maintenanceModeEnabled,
     optionsEnabled: config.optionsEnabled,
     optionsCatalogCount,

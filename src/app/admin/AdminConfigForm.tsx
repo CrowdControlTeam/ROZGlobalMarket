@@ -128,10 +128,14 @@ export function AdminConfigForm({ config }: { config: Config }) {
         />
         <p className="text-xs text-ro-text-muted">
           {t("dm.botLabel")}{" "}
-          {config.hasDiscordBotToken ? (
-            <span className="text-green-700">{t("dm.botConfigured")}</span>
-          ) : (
+          {config.botStatus === "ok" ? (
+            <span className="text-green-700">{t("dm.botInServer")}</span>
+          ) : config.botStatus === "not_in_guild" ? (
+            <span className="text-red-700">{t("dm.botNotInServer")}</span>
+          ) : config.botStatus === "no_token" ? (
             <span className="text-red-700">{t("dm.botNotConfigured")}</span>
+          ) : (
+            <span className="text-red-700">{t("dm.botCheckError")}</span>
           )}
           . {t("dm.requirement")}
         </p>
