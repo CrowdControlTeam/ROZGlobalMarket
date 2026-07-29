@@ -174,16 +174,20 @@ export function NewPublicationForm({
 
   return (
     <form
+      // Aviso visual instantáneo del precio (borde rojo) en onSubmit, NO dentro
+      // de `action`: si falta el precio hacemos preventDefault y así el `action`
+      // no llega a ejecutarse, evitando el reset automático del formulario que
+      // React 19 dispara al terminar una función `action` — ese reset vaciaba
+      // las options ya rellenadas. La validación real sigue en el servidor
+      // (createListing en listings.ts); esto es solo UX.
+      onSubmit={(e) => {
+        const priceRequired = type === "SALE" || type === "BUY";
+        const priceEmpty = priceRequired && !new FormData(e.currentTarget).get("price");
+        setPriceMissing(priceEmpty);
+        if (priceEmpty) e.preventDefault();
+      }}
       action={(formData) => {
         if (submittingRef.current) return;
-
-        // Aviso visual instantáneo (borde rojo), sin esperar al viaje al
-        // servidor — que sigue siendo la validación real (ver
-        // createListing en listings.ts), esto es solo UX.
-        const priceRequired = type === "SALE" || type === "BUY";
-        const priceEmpty = priceRequired && !formData.get("price");
-        setPriceMissing(priceEmpty);
-        if (priceEmpty) return;
 
         submittingRef.current = true;
         setError(null);

@@ -51,10 +51,11 @@ enum ListingStatus {
 // SALE = venta directa (con precio). TRADE = se publica el item para
 // intercambiarlo por otro, sin precio — en el detalle, quien no es el
 // vendedor ve "Ofrecer items" en vez de "Comprar" (ver TradeOffer). BUY =
-// petición de compra ("busco X, pago hasta Y") — mismo ciclo de vida que
+// petición de compra ("busco X, pago Y por unidad") — mismo ciclo de vida que
 // SALE/TRADE (se publica, queda abierto, algo externo lo cierra después),
 // solo que quien publica busca comprar en vez de vender. En BUY, `price`
-// significa "precio máximo que pagaría" en vez de precio de venta, y
+// es el precio fijo que paga por unidad (no un máximo a negociar: si se
+// quiere negociar, se hace fuera de la app) en vez de precio de venta, y
 // `posterId` es quien compra, no quien vende — mismos campos, doble
 // sentido según `type`. Sin oferta/aceptación dentro de la app: quien
 // publica cierra la petición a mano (norma 2.4 del plan original, deliberadamente
@@ -173,8 +174,9 @@ model Listing {
   // Sin uso real en BUY (no hay Purchase asociada, se cierra a mano).
   quantitySold Int           @default(0)
   // Null solo cuando type = TRADE (no tiene precio, se intercambia por
-  // otro item — ver TradeOffer). En BUY, precio máximo que pagaría en vez
-  // de precio de venta — mismo campo, doble sentido según `type`.
+  // otro item — ver TradeOffer). En BUY, precio fijo por unidad que paga
+  // (no un máximo a negociar) en vez de precio de venta — mismo campo,
+  // doble sentido según `type`.
   price        Int?
   status       ListingStatus @default(ACTIVE)
   createdAt    DateTime      @default(now())
