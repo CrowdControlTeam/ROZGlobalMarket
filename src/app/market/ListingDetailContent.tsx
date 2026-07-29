@@ -56,7 +56,12 @@ export async function ListingDetailContent({ id }: { id: string }) {
   if (!listing) notFound();
 
   const isPoster = listing.posterId === session.user.discordId;
-  const remaining = listing.quantity - listing.quantitySold;
+  // Vendido/entregado = Σ cantidad de los Deal ACCEPTED (ya no hay contador
+  // quantitySold; todo se deriva de los Deal — ver deals.ts).
+  const sold = listing.deals
+    .filter((d) => d.status === "ACCEPTED")
+    .reduce((s, d) => s + d.quantity, 0);
+  const remaining = listing.quantity - sold;
   const isTrade = listing.type === "TRADE";
   const isBuy = listing.type === "BUY";
   const isSale = listing.type === "SALE";
@@ -141,7 +146,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
               {isGift ? t("detail.given") : t("detail.sold")}
             </dt>
             <dd>
-              {listing.quantitySold} {t("detail.of")} {listing.quantity}
+              {sold} {t("detail.of")} {listing.quantity}
             </dd>
           </div>
         )}

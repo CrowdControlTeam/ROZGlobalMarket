@@ -23,7 +23,7 @@ export default async function MyListingsPage() {
   return (
     <ul className="flex flex-col gap-3">
       {listings.map((listing) => {
-        const remaining = listing.quantity - listing.quantitySold;
+        const remaining = listing.quantity - listing.sold;
         const isBuy = listing.type === "BUY";
         return (
           <li key={listing.id}>

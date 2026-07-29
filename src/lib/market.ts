@@ -278,5 +278,15 @@ export async function getListings(filters: MarketFilters) {
         })
       : null;
 
-  return { listings: page, nextCursor };
+  // Vendido por listing derivado de los Deal ACCEPTED (ya no hay quantitySold).
+  // Un groupBy para toda la página en vez de una consulta por card.
+  const soldByListing = await prisma.deal.groupBy({
+    by: ["listingId"],
+    where: { listingId: { in: page.map((l) => l.id) }, status: "ACCEPTED" },
+    _sum: { quantity: true },
+  });
+  const soldMap = new Map(soldByListing.map((g) => [g.listingId, g._sum.quantity ?? 0]));
+  const pageWithSold = page.map((l) => ({ ...l, sold: soldMap.get(l.id) ?? 0 }));
+
+  return { listings: pageWithSold, nextCursor };
 }

@@ -175,14 +175,11 @@ model Listing {
   itemId       String
   type         ListingType   @default(SALE)
   quantity     Int           @default(1)
-  // Suma desnormalizada de Purchase.quantity, para no recalcularla en cada
-  // lectura. Se actualiza en la misma transacción que crea cada Purchase.
-  // Sin uso real en BUY (no hay Purchase asociada, se cierra a mano).
-  quantitySold Int           @default(0)
-  // Null solo cuando type = TRADE (no tiene precio, se intercambia por
-  // otro item — ver TradeOffer). En BUY, precio fijo por unidad que paga
-  // (no un máximo a negociar) en vez de precio de venta — mismo campo,
-  // doble sentido según `type`.
+  // Lo vendido/entregado/cumplido se calcula de los Deal ACCEPTED, no hay
+  // contador denormalizado — ver deals.ts / computeListingQuantities.
+  // price: null cuando type = TRADE o GIFT (no tienen precio). En BUY es el
+  // precio fijo por unidad que paga (no un máximo a negociar) en vez de precio
+  // de venta — mismo campo, doble sentido según `type`.
   price        Int?
   status       ListingStatus @default(ACTIVE)
   createdAt    DateTime      @default(now())
