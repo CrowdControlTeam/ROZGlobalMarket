@@ -254,7 +254,7 @@ export function NewPublicationForm({
             <input type="hidden" name="quantity" value={1} />
           </>
         ) : (
-          <>
+          <div className="flex items-center gap-3">
             <input
               type="number"
               name="quantity"
@@ -262,10 +262,10 @@ export function NewPublicationForm({
               defaultValue={1}
               required={!unlimited}
               disabled={canBeUnlimited && unlimited}
-              className={inputClass}
+              className={`${inputClass} min-w-0 flex-1`}
             />
             {canBeUnlimited && (
-              <label className="mt-2 flex items-center gap-2 text-sm text-ro-text-muted">
+              <label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-ro-text-muted">
                 <input
                   type="checkbox"
                   name="unlimited"
@@ -275,7 +275,7 @@ export function NewPublicationForm({
                 {t("unlimitedLabel")}
               </label>
             )}
-          </>
+          </div>
         )}
       </div>
 
