@@ -315,7 +315,7 @@ export async function cancelListing(listingId: string) {
 // Cierre manual de una petición de compra (type=BUY) cuando ya se ha
 // resuelto fuera de la app (Discord, en persona) — sin oferta/aceptación
 // dentro de la app (norma 2.4 del plan original, deliberadamente simple v1). Se
-// reutiliza ListingStatus.SOLD, la UI lo muestra como "Cumplida".
+// se marca COMPLETED, la UI lo muestra como "Cumplida".
 export async function fulfillListing(listingId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");

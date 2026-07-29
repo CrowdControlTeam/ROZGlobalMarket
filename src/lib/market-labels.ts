@@ -4,7 +4,6 @@ import {
   ItemOptionGroup,
   WeaponType,
   ListingType,
-  TradeOfferStatus,
   DealStatus,
 } from "@prisma/client";
 import type { MarketSort } from "@/lib/market-sort";
@@ -49,17 +48,14 @@ export function posterLabel(t: T, type: ListingType): string {
   return t(`listing.poster.${type}`);
 }
 
-// COMPLETED (y el histórico SOLD, que se retira al final del cutover) = "cerrado
-// con éxito" en todos los tipos — el texto mostrado cambia según qué significa
-// cerrarse en cada uno (ver soldStatus.{type} en i18n).
+// COMPLETED = "cerrado con éxito" en todos los tipos — el texto mostrado cambia
+// según qué significa cerrarse en cada uno (ver soldStatus.{type} en i18n).
 export function listingStatusLabel(t: T, status: string, type: ListingType): string {
-  if (status === "COMPLETED" || status === "SOLD") return t(`listing.soldStatus.${type}`);
+  if (status === "COMPLETED") return t(`listing.soldStatus.${type}`);
   return t(`listing.status.${status}`);
 }
 
-// Acepta TradeOfferStatus (histórico, aún leído por admin-stats) y DealStatus
-// (nuevo flujo) — comparten etiquetas, así que la misma clave i18n vale.
-export function offerStatusLabel(t: T, status: TradeOfferStatus | DealStatus): string {
+export function offerStatusLabel(t: T, status: DealStatus): string {
   return t(`listing.offerStatus.${status}`);
 }
 

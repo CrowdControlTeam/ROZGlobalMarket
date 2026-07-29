@@ -204,7 +204,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
-      {isTrade && (listing.status === "COMPLETED" || listing.status === "SOLD") && (
+      {isTrade && listing.status === "COMPLETED" && (
         <p className="mt-3 text-sm text-ro-text-muted">
           {(() => {
             const accepted = listing.deals.find((d) => d.status === "ACCEPTED");

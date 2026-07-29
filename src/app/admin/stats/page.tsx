@@ -9,7 +9,7 @@ import { formatPrice, priceColorClass } from "@/lib/price";
 import { listingTypeLabel, offerStatusLabel } from "@/lib/market-labels";
 import { AdminStatsPeriodSelect } from "./AdminStatsPeriodSelect";
 
-const LISTING_STATUSES = ["ACTIVE", "SOLD", "CANCELLED", "EXPIRED"] as const;
+const LISTING_STATUSES = ["ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"] as const;
 const TYPES = Object.values(ListingType);
 const OFFER_STATUSES = Object.values(DealStatus);
 
@@ -106,7 +106,7 @@ export default async function AdminStatsPage({
               <th className="pb-1 font-normal" />
               {LISTING_STATUSES.map((status) => (
                 <th key={status} className="pb-1 text-right font-normal">
-                  {status === "SOLD" ? t("listingsByType.closed") : tMarket(`listing.status.${status}`)}
+                  {status === "COMPLETED" ? t("listingsByType.closed") : tMarket(`listing.status.${status}`)}
                 </th>
               ))}
             </tr>
