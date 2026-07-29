@@ -326,17 +326,20 @@
       "type": {
         "SALE": "Venta",
         "TRADE": "Intercambio",
-        "BUY": "Compra"
+        "BUY": "Compra",
+        "GIFT": "Regalo"
       },
       "viewTitle": {
         "SALE": "Ventas",
         "BUY": "Compras",
-        "TRADE": "Intercambios"
+        "TRADE": "Intercambios",
+        "GIFT": "Regalos"
       },
       "poster": {
         "SALE": "Vendedor",
         "TRADE": "Vendedor",
-        "BUY": "Comprador"
+        "BUY": "Comprador",
+        "GIFT": "Remitente"
       },
       "status": {
         "ACTIVE": "Activa",
@@ -346,7 +349,8 @@
       "soldStatus": {
         "SALE": "Vendida",
         "TRADE": "Intercambiada",
-        "BUY": "Cumplida"
+        "BUY": "Cumplida",
+        "GIFT": "Regalado"
       },
       "offerStatus": {
         "PENDING": "Pendiente",

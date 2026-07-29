@@ -326,17 +326,20 @@
       "type": {
         "SALE": "Sale",
         "TRADE": "Trade",
-        "BUY": "Buy"
+        "BUY": "Buy",
+        "GIFT": "Gift"
       },
       "viewTitle": {
         "SALE": "Sales",
         "BUY": "Purchases",
-        "TRADE": "Trades"
+        "TRADE": "Trades",
+        "GIFT": "Gifts"
       },
       "poster": {
         "SALE": "Seller",
         "TRADE": "Seller",
-        "BUY": "Buyer"
+        "BUY": "Buyer",
+        "GIFT": "Sender"
       },
       "status": {
         "ACTIVE": "Active",
@@ -346,7 +349,8 @@
       "soldStatus": {
         "SALE": "Sold",
         "TRADE": "Traded",
-        "BUY": "Fulfilled"
+        "BUY": "Fulfilled",
+        "GIFT": "Gifted"
       },
       "offerStatus": {
         "PENDING": "Pending",
