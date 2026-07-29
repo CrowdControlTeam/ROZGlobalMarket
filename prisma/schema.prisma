@@ -44,11 +44,8 @@ enum EquipSlot {
 enum ListingStatus {
   ACTIVE
   // Cerrado con éxito (hubo ≥1 Deal ACCEPTED). Genérico para todos los tipos —
-  // la etiqueta visible cambia por tipo (ver listingStatusLabel). Sustituye a
-  // SOLD, que se conserva durante el cutover por flujos y se retira en la
-  // limpieza final. Ver plan del rediseño (fase "núcleo Deal").
+  // la etiqueta visible cambia por tipo (ver listingStatusLabel).
   COMPLETED
-  SOLD
   CANCELLED
   EXPIRED
 }
@@ -125,14 +122,10 @@ model User {
   guildRoles String[] @default([])
   createdAt  DateTime @default(now())
 
-  listings      Listing[]
-  purchases     Purchase[]
-  tradeOffers   TradeOffer[]
-  giftsSent     Gift[]       @relation("GiftsSent")
-  giftsReceived Gift[]       @relation("GiftsReceived")
+  listings Listing[]
   // Tratos donde este usuario es la contraparte (comprador/vendedor/oferente/
-  // reclamante) — ver model Deal. Se cablea en fases posteriores.
-  deals         Deal[]
+  // reclamante) — ver model Deal.
+  deals    Deal[]
 }
 
 model Item {
@@ -161,9 +154,7 @@ model Item {
   importedAt  DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  listings    Listing[]
-  tradeOffers TradeOffer[]
-  gifts       Gift[]
+  listings       Listing[]
   // Deals en los que este item es la contraoferta de un trade (Deal.offeredItem).
   offeredInDeals Deal[]
 
@@ -210,68 +201,11 @@ model Listing {
   // nombre, nunca en 0.
   cardSlots Int @default(0)
 
-  purchases   Purchase[]
-  options     ListingOption[]
-  tradeOffers TradeOffer[]
-  deals       Deal[]
+  options ListingOption[]
+  deals   Deal[]
 
   @@index([status, createdAt])
   @@index([price])
-}
-
-// Registro inmutable de cada compra (norma 3 del plan original: las transacciones no
-// se borran). Una Listing puede tener varias Purchase de distintos
-// compradores hasta agotar su quantity.
-model Purchase {
-  id        String   @id @default(cuid())
-  listing   Listing  @relation(fields: [listingId], references: [id])
-  listingId String
-  buyer     User     @relation(fields: [buyerId], references: [id])
-  buyerId   String
-  quantity  Int
-  unitPrice Int
-  createdAt DateTime @default(now())
-
-  @@index([listingId])
-  @@index([buyerId])
-}
-
-enum TradeOfferStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-  CANCELLED
-}
-
-// Oferta de un jugador contra un Listing de tipo TRADE. El item ofrecido NO
-// tiene que estar publicado como Listing propia (decisión explícita: igual
-// de laxo que un listing de tipo BUY, no perseguimos verificar que el
-// oferente "realmente" tiene el item) — se elige libremente del catálogo. Sin
-// contraoferta en esta v1 (norma 2.5 del plan original, simplificado a propósito):
-// solo aceptar/rechazar. Al aceptar una oferta, las demás PENDING del mismo
-// listing pasan a REJECTED automáticamente.
-model TradeOffer {
-  id        String           @id @default(cuid())
-  listing   Listing          @relation(fields: [listingId], references: [id])
-  listingId String
-  offerer   User             @relation(fields: [offererId], references: [id])
-  offererId String
-  item      Item             @relation(fields: [itemId], references: [id])
-  itemId    String
-  quantity  Int              @default(1)
-  // Mismas reglas que en Listing — ver src/lib/refine-constants.ts y
-  // src/lib/card-slots-constants.ts. Sin random options en la oferta: la
-  // combinación de campos ya es bastante para un formulario secundario.
-  refineLevel   Int              @default(0)
-  cardSlots     Int              @default(0)
-  // Compensación opcional en zeny además del item (norma 2.5 del plan original: "puede
-  // incluir compensación en zeny además del objeto").
-  zenyOffered   Int              @default(0)
-  status        TradeOfferStatus @default(PENDING)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-
-  @@index([listingId, status])
 }
 
 enum DealStatus {
@@ -318,35 +252,6 @@ model Deal {
 
   @@index([listingId, status])
   @@index([userId])
-}
-
-// Envío directo 1 a 1, sin coste ni publicación pública (norma 2.6 del
-// plan original): no es un listing, nadie lo navega. Sin estado — mandar el regalo
-// es instantáneo y definitivo, esta tabla es solo el registro histórico
-// (transparencia, evitar disputas) + lo que dispara el DM al destinatario.
-// Mismas reglas que Listing para refine/slots/options: un regalo es una
-// instancia real (igual que SALE/TRADE), así que sus options son un roll
-// exacto — a diferencia de TradeOffer, que sí se queda fuera de esto por
-// ser un formulario secundario. El destinatario solo puede elegir entre
-// usuarios que ya existan en la tabla User (los únicos de los que hay
-// registro).
-model Gift {
-  id          String   @id @default(cuid())
-  sender      User     @relation("GiftsSent", fields: [senderId], references: [id])
-  senderId    String
-  recipient   User     @relation("GiftsReceived", fields: [recipientId], references: [id])
-  recipientId String
-  item        Item     @relation(fields: [itemId], references: [id])
-  itemId      String
-  quantity    Int      @default(1)
-  refineLevel Int      @default(0)
-  cardSlots   Int      @default(0)
-  createdAt   DateTime @default(now())
-
-  options GiftOption[]
-
-  @@index([senderId, createdAt])
-  @@index([recipientId, createdAt])
 }
 
 // Configuración global del mercado, editable en base de datos (Prisma
@@ -442,8 +347,7 @@ model ItemOptionDef {
   // Igual a minValue cuando el valor es fijo (p.ej. ASPD siempre +1).
   maxValue  Int
 
-  selections     ListingOption[]
-  giftSelections GiftOption[]
+  selections ListingOption[]
 
   @@unique([group, slotIndex, statCode])
   @@index([group, slotIndex])
@@ -467,23 +371,6 @@ model ListingOption {
   value     Int
 
   @@unique([listingId, slotIndex])
-}
-
-// Random option concreta de un regalo — mismo shape que ListingOption, en
-// tabla aparte porque Gift no es un Listing (ver comentario del modelo
-// Gift). Siempre es un roll exacto (un regalo es siempre una instancia
-// real que el remitente ya tiene), nunca el sentido "mínimo deseado" que
-// puede tener ListingOption en BUY.
-model GiftOption {
-  id        String        @id @default(cuid())
-  gift      Gift          @relation(fields: [giftId], references: [id], onDelete: Cascade)
-  giftId    String
-  slotIndex Int
-  def       ItemOptionDef @relation(fields: [defId], references: [id])
-  defId     String
-  value     Int
-
-  @@unique([giftId, slotIndex])
 }
 
 // Contador de rate-limit por ventana fija, respaldado en BD para que

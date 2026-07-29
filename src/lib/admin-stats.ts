@@ -87,10 +87,10 @@ export async function getMarketStats(period: StatsPeriod = "30d") {
 
   // --- Totales ---
   const listingsByTypeStatus: Record<ListingType, Record<ListingStatus, number>> = {
-    SALE: { ACTIVE: 0, COMPLETED: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
-    BUY: { ACTIVE: 0, COMPLETED: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
-    TRADE: { ACTIVE: 0, COMPLETED: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
-    GIFT: { ACTIVE: 0, COMPLETED: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
+    SALE: { ACTIVE: 0, COMPLETED: 0, CANCELLED: 0, EXPIRED: 0 },
+    BUY: { ACTIVE: 0, COMPLETED: 0, CANCELLED: 0, EXPIRED: 0 },
+    TRADE: { ACTIVE: 0, COMPLETED: 0, CANCELLED: 0, EXPIRED: 0 },
+    GIFT: { ACTIVE: 0, COMPLETED: 0, CANCELLED: 0, EXPIRED: 0 },
   };
   const posterIds = new Set<string>();
   for (const l of listings) {
