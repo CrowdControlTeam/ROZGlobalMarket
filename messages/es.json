@@ -231,7 +231,7 @@
       "refine": "Refine",
       "cardSlots": "Slots de carta",
       "minStats": "Stats mínimos",
-      "payUpTo": "Pago hasta"
+      "payUpTo": "Pago/ud"
     },
     "filters": {
       "toggle": "Filtros",
@@ -363,7 +363,7 @@
     },
     "detail": {
       "available": "Disponibles",
-      "unitPrice": "Precio",
+      "unitPrice": "Precio/ud",
       "posted": "Publicado",
       "sold": "Vendidos",
       "of": "de",
@@ -408,8 +408,8 @@
       "publishing": "Publicando...",
       "recognitionLabel": "Reconocer desde captura (opcional)",
       "itemLabel": "Item",
-      "priceLabel": "Precio (z)",
-      "payUpToLabel": "Pago hasta (z)",
+      "priceLabel": "Precio/ud",
+      "payUpToLabel": "Pago/ud",
       "recipientLabel": "Destinatario",
       "recognitionNoMatchNamed": "No se ha encontrado en el catálogo ningún item parecido a \"{name}\". Selecciónalo manualmente.",
       "recognitionNoMatch": "No se ha podido leer el item en la captura. Selecciónalo manualmente.",
@@ -452,7 +452,7 @@
       "BUY": "Nueva compra"
     },
     "fields": {
-      "price": "Precio",
+      "price": "Precio/ud",
       "totalPrice": "Precio total",
       "zenyIncluded": "Zeny incluido",
       "yourOffer": "Tu oferta",

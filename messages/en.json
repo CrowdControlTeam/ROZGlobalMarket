@@ -231,7 +231,7 @@
       "refine": "Refine",
       "cardSlots": "Card slots",
       "minStats": "Minimum stats",
-      "payUpTo": "Pay up to"
+      "payUpTo": "Pay/ea"
     },
     "filters": {
       "toggle": "Filters",
@@ -363,7 +363,7 @@
     },
     "detail": {
       "available": "Available",
-      "unitPrice": "Price",
+      "unitPrice": "Price/ea",
       "posted": "Posted",
       "sold": "Sold",
       "of": "of",
@@ -408,8 +408,8 @@
       "publishing": "Posting...",
       "recognitionLabel": "Recognize from screenshot (optional)",
       "itemLabel": "Item",
-      "priceLabel": "Price (z)",
-      "payUpToLabel": "Pay up to (z)",
+      "priceLabel": "Price/ea",
+      "payUpToLabel": "Pay/ea",
       "recipientLabel": "Recipient",
       "recognitionNoMatchNamed": "No item in the catalog looks like \"{name}\". Select it manually.",
       "recognitionNoMatch": "Couldn't read the item in the screenshot. Select it manually.",
@@ -452,7 +452,7 @@
       "BUY": "New buy request"
     },
     "fields": {
-      "price": "Price",
+      "price": "Price/ea",
       "totalPrice": "Total price",
       "zenyIncluded": "Zeny included",
       "yourOffer": "Your offer",
