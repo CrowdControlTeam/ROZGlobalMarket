@@ -9,7 +9,7 @@ type ListingWebhookPayload = {
   itemIconUrl: string; // absoluta
   type: "SALE" | "TRADE" | "BUY";
   price: number | null; // null cuando type = TRADE; en BUY es el precio máximo a pagar
-  quantity: number;
+  quantity: number | null; // null = ilimitado ("los que tengas"), solo SALE/BUY
   posterUsername: string;
   posterAvatarUrl: string | null;
   listingUrl: string; // absoluta
@@ -48,7 +48,11 @@ export async function sendListingCreatedWebhook(payload: ListingWebhookPayload) 
                   inline: true,
                 },
               ]),
-          { name: tField("quantity"), value: String(payload.quantity), inline: true },
+          {
+            name: tField("quantity"),
+            value: payload.quantity === null ? "∞" : String(payload.quantity),
+            inline: true,
+          },
           ...(payload.options && payload.options.length > 0
             ? [
                 {

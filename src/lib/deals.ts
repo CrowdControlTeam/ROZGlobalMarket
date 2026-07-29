@@ -38,6 +38,23 @@ export function computeListingQuantities(
   return { sold, reserved, available };
 }
 
+// Disponible para reservar/ofertar/reclamar: null = ILIMITADO (Listing.quantity
+// null, p.ej. compra de materiales "los que tengas"). Si hay tope: cantidad −
+// vendido − reservado (nunca negativo).
+export function availableFrom(
+  quantity: number | null,
+  sold: number,
+  reserved: number,
+): number | null {
+  return quantity === null ? null : Math.max(0, quantity - sold - reserved);
+}
+
+// ¿Se agotó el stock? Solo los listings con tope (quantity no null) se cierran
+// solos al agotarse; los ilimitados los cierra el poster a mano.
+export function isSoldOut(quantity: number | null, sold: number): boolean {
+  return quantity !== null && sold >= quantity;
+}
+
 // Regla de cierre: al cerrar un listing, si tuvo al menos un trato cerrado
 // (Deal ACCEPTED) se da por COMPLETED; si no, CANCELLED. Distingue "se
 // comerció algo" de "se retiró sin nada" para las estadísticas del servidor.

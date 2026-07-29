@@ -18,7 +18,7 @@ export function OfferToFulfillForm({
   unitPrice,
 }: {
   listingId: string;
-  available: number;
+  available: number | null; // null = compra ilimitada ("los que tengas")
   unitPrice: number;
 }) {
   const router = useRouter();
@@ -53,7 +53,7 @@ export function OfferToFulfillForm({
           type="number"
           name="quantity"
           min={1}
-          max={available}
+          max={available ?? undefined}
           value={quantity}
           onChange={(e) => setQuantity(Number(e.target.value))}
           className={inputClass}

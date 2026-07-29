@@ -14,6 +14,7 @@ import {
   formatOptionAmount,
 } from "@/lib/market-labels";
 import { labelClass } from "@/lib/ui";
+import { availableFrom } from "@/lib/deals";
 import { UserMention } from "@/components/UserMention";
 import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { CancelListingButton } from "./[id]/CancelListingButton";
@@ -25,6 +26,11 @@ import { ClaimGiftForm } from "./[id]/ClaimGiftForm";
 import { GiftClaimActions } from "./[id]/GiftClaimActions";
 import { TradeOfferForm } from "./[id]/TradeOfferForm";
 import { TradeOfferActions } from "./[id]/TradeOfferActions";
+
+// Cantidad para mostrar: ∞ cuando es ilimitada (null, "los que tengas").
+function fmtQty(n: number | null): string {
+  return n === null ? "∞" : String(n);
+}
 
 // Ficha de un listing — compartida entre la página completa
 // (market/[id]/page.tsx, visita directa/enlace compartido) y el panel de
@@ -61,7 +67,8 @@ export async function ListingDetailContent({ id }: { id: string }) {
   const sold = listing.deals
     .filter((d) => d.status === "ACCEPTED")
     .reduce((s, d) => s + d.quantity, 0);
-  const remaining = listing.quantity - sold;
+  // null = ilimitado ("los que tengas", solo SALE/BUY): sin resto que mostrar.
+  const remaining = listing.quantity === null ? null : listing.quantity - sold;
   const isTrade = listing.type === "TRADE";
   const isBuy = listing.type === "BUY";
   const isSale = listing.type === "SALE";
@@ -74,7 +81,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
     isSale || isBuy || isGift
       ? listing.deals.filter((d) => d.status === "PENDING").reduce((s, d) => s + d.quantity, 0)
       : 0;
-  const available = remaining - reserved;
+  const available = availableFrom(listing.quantity, sold, reserved);
   const pendingOffers = listing.deals.filter((d) => d.status === "PENDING");
   const myOffers = listing.deals.filter((d) => d.userId === session.user.discordId);
 
@@ -110,7 +117,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <div>
           <dt className="text-xs text-ro-text-muted">{isBuy ? t("field.quantity") : t("detail.available")}</dt>
-          <dd>{isBuy ? listing.quantity : isSale || isGift ? available : remaining}</dd>
+          <dd>{fmtQty(isBuy ? listing.quantity : isSale || isGift ? available : remaining)}</dd>
         </div>
         {!isTrade && listing.price !== null && (
           <div>
@@ -140,13 +147,17 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
         {/* Con 1 sola unidad, "Vendidos: 0 de 1" no aporta nada que
             "Disponibles" ya no diga. quantitySold no se usa en BUY. */}
-        {!isBuy && listing.quantity > 1 && (
+        {!isBuy && (listing.quantity === null || listing.quantity > 1) && (
           <div>
             <dt className="text-xs text-ro-text-muted">
               {isGift ? t("detail.given") : t("detail.sold")}
             </dt>
+            {/* Ilimitado (quantity null): "0 de ∞" no aporta —el tope no existe—,
+                así que se muestra solo lo vendido. */}
             <dd>
-              {sold} {t("detail.of")} {listing.quantity}
+              {listing.quantity === null
+                ? sold
+                : `${sold} ${t("detail.of")} ${listing.quantity}`}
             </dd>
           </div>
         )}
@@ -191,19 +202,19 @@ export async function ListingDetailContent({ id }: { id: string }) {
             <CancelListingButton listingId={listing.id} showFulfill={isBuy} />
           ) : isTrade ? (
             <TradeOfferForm listingId={listing.id} />
-          ) : listing.type === "SALE" && listing.price !== null && available > 0 ? (
+          ) : listing.type === "SALE" && listing.price !== null && (available === null || available > 0) ? (
             <ReserveForm
               listingId={listing.id}
               available={available}
               unitPrice={listing.price}
             />
-          ) : isBuy && listing.price !== null && available > 0 ? (
+          ) : isBuy && listing.price !== null && (available === null || available > 0) ? (
             <OfferToFulfillForm
               listingId={listing.id}
               available={available}
               unitPrice={listing.price}
             />
-          ) : isGift && available > 0 ? (
+          ) : isGift && (available === null || available > 0) ? (
             <ClaimGiftForm listingId={listing.id} available={available} />
           ) : null}
         </div>

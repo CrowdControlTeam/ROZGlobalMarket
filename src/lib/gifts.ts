@@ -19,6 +19,7 @@ import {
   parseOptionsFromFormData,
   validateOptions,
 } from "@/lib/item-options";
+import { availableFrom, isSoldOut } from "@/lib/deals";
 
 // El destinatario solo se puede elegir entre usuarios que ya han iniciado
 // sesión alguna vez (los únicos de los que hay registro en User) — mismo
@@ -232,7 +233,9 @@ export async function getMyGifts() {
         options: l.options,
         refineLevel: l.refineLevel,
         cardSlots: l.cardSlots,
-        quantity: l.quantity,
+        // Un GIFT siempre tiene tope (nunca es "ilimitado"), pero Listing.quantity
+        // es nullable a nivel de esquema; el ?? 1 es solo para el tipo.
+        quantity: l.quantity ?? 1,
         createdAt: l.createdAt,
       };
     })
@@ -276,8 +279,12 @@ export async function claimGift(listingId: string, formData: FormData) {
     });
     const claimed = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
     const reserved = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
-    const available = listing.quantity - claimed - reserved;
-    if (quantity > available) throw new Error(t("notEnoughStock", { remaining: available }));
+    // Un GIFT siempre tiene tope, así que available nunca es null aquí; se usa
+    // el helper para no repetir la resta y por consistencia con el resto.
+    const available = availableFrom(listing.quantity, claimed, reserved);
+    if (available !== null && quantity > available) {
+      throw new Error(t("notEnoughStock", { remaining: available }));
+    }
 
     await tx.deal.create({
       data: { listingId, userId: session.user.discordId, quantity, status: "PENDING", unitPrice: null },
@@ -348,7 +355,7 @@ export async function acceptGiftClaim(dealId: string) {
     const claimed = claimedAgg._sum.quantity ?? 0;
     await tx.listing.update({
       where: { id: deal.listingId },
-      data: { status: claimed >= listing.quantity ? "COMPLETED" : "ACTIVE" },
+      data: { status: isSoldOut(listing.quantity, claimed) ? "COMPLETED" : "ACTIVE" },
     });
   });
 

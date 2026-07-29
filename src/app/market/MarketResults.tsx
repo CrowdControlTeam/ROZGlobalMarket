@@ -20,7 +20,7 @@ type ListingOption = { slotIndex: number; value: number; def: { label: string } 
 type Listing = {
   id: string;
   type: "SALE" | "TRADE" | "BUY" | "GIFT";
-  quantity: number;
+  quantity: number | null; // null = ilimitado ("los que tengas")
   sold: number;
   price: number | null;
   refineLevel: number;
@@ -97,7 +97,11 @@ export function MarketResults({
           const posterLine = (
             <p className="text-sm text-ro-text-muted">
               {listing.type !== "BUY" &&
-                `${t("results.available", { count: listing.quantity - listing.sold })} · `}
+                `${
+                  listing.quantity === null
+                    ? t("results.availableUnlimited")
+                    : t("results.available", { count: listing.quantity - listing.sold })
+                } · `}
               {listing.type === "BUY" ? t("results.wantedBy") : t("results.soldBy")}{" "}
               <UserMention
                 userId={listing.poster.id}

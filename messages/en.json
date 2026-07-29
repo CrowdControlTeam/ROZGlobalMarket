@@ -370,6 +370,7 @@
       "wantedBy": "wanted by",
       "soldBy": "sold by",
       "available": "x{count} available",
+      "availableUnlimited": "∞",
       "upTo": "up to ",
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
@@ -466,6 +467,7 @@
       "itemLabel": "Item",
       "priceLabel": "Price/ea",
       "payUpToLabel": "Pay/ea",
+      "unlimitedLabel": "Unlimited",
       "recipientLabel": "Recipient (optional — without one, anyone can claim it)",
       "recognitionNoMatchNamed": "No item in the catalog looks like \"{name}\". Select it manually.",
       "recognitionNoMatch": "Couldn't read the item in the screenshot. Select it manually.",

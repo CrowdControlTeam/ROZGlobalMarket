@@ -15,7 +15,9 @@ export function ClaimGiftForm({
   available,
 }: {
   listingId: string;
-  available: number;
+  // Un GIFT siempre tiene tope; el null solo existe por el tipo compartido con
+  // el resto de forms (SALE/BUY sí pueden ser ilimitados).
+  available: number | null;
 }) {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
@@ -43,7 +45,7 @@ export function ClaimGiftForm({
       }}
       className="flex flex-col gap-3"
     >
-      {available > 1 ? (
+      {available !== null && available > 1 ? (
         <div>
           <label className={labelClass}>{t("quantityLabel")}</label>
           <input

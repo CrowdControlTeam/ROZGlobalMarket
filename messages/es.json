@@ -370,6 +370,7 @@
       "wantedBy": "buscado por",
       "soldBy": "vendido por",
       "available": "x{count} disponibles",
+      "availableUnlimited": "∞",
       "upTo": "hasta ",
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
@@ -466,6 +467,7 @@
       "itemLabel": "Item",
       "priceLabel": "Precio/ud",
       "payUpToLabel": "Pago/ud",
+      "unlimitedLabel": "Ilimitados",
       "recipientLabel": "Destinatario (opcional — sin él, cualquiera puede reclamarlo)",
       "recognitionNoMatchNamed": "No se ha encontrado en el catálogo ningún item parecido a \"{name}\". Selecciónalo manualmente.",
       "recognitionNoMatch": "No se ha podido leer el item en la captura. Selecciónalo manualmente.",
