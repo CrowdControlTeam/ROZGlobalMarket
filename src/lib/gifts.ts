@@ -119,25 +119,44 @@ export async function sendGift(formData: FormData) {
     }
   }
 
-  const gift = await prisma.gift.create({
-    data: {
-      senderId: session.user.discordId,
-      recipientId: parsed.data.recipientId,
-      itemId: parsed.data.itemId,
-      quantity,
-      refineLevel,
-      cardSlots,
-      options:
-        rawOptions.length > 0
-          ? {
-              create: rawOptions.map((o) => ({
-                slotIndex: o.slotIndex,
-                defId: o.defId,
-                value: o.value,
-              })),
-            }
-          : undefined,
-    },
+  // Regalo con destinatario = envío directo instantáneo: un Listing(GIFT) ya
+  // cerrado (COMPLETED) + un Deal ACCEPTED para el destinatario. Sustituye a la
+  // antigua fila Gift (ver el rediseño de listings). El regalo se entrega
+  // entero, así que quantitySold = quantity.
+  const listing = await prisma.$transaction(async (tx) => {
+    const created = await tx.listing.create({
+      data: {
+        posterId: session.user.discordId,
+        itemId: parsed.data.itemId,
+        type: "GIFT",
+        quantity,
+        quantitySold: quantity,
+        price: null,
+        status: "COMPLETED",
+        refineLevel,
+        cardSlots,
+        options:
+          rawOptions.length > 0
+            ? {
+                create: rawOptions.map((o) => ({
+                  slotIndex: o.slotIndex,
+                  defId: o.defId,
+                  value: o.value,
+                })),
+              }
+            : undefined,
+      },
+    });
+    await tx.deal.create({
+      data: {
+        listingId: created.id,
+        userId: parsed.data.recipientId,
+        quantity,
+        status: "ACCEPTED",
+        unitPrice: null,
+      },
+    });
+    return created;
   });
 
   const appUrl = getAppUrl();
@@ -164,22 +183,50 @@ export async function sendGift(formData: FormData) {
   });
 
   revalidatePath("/market/gifts");
-  return { id: gift.id };
+  return { id: listing.id };
 }
 
+// Regalos enviados/recibidos, leídos ya del modelo unificado (Listing type=GIFT
+// + Deal). Se mapean a la forma que espera GiftsHistory (sender/recipient/…)
+// para no tocar la UI: el remitente es el poster; el destinatario es la
+// contraparte del Deal (en un regalo con destinatario, único y ACCEPTED).
 export async function getMyGifts() {
   const session = await requireSession();
 
-  return prisma.gift.findMany({
+  const listings = await prisma.listing.findMany({
     where: {
-      OR: [{ senderId: session.user.discordId }, { recipientId: session.user.discordId }],
+      type: "GIFT",
+      OR: [
+        { posterId: session.user.discordId },
+        { deals: { some: { userId: session.user.discordId } } },
+      ],
     },
     orderBy: { createdAt: "desc" },
     include: {
       item: true,
-      sender: true,
-      recipient: true,
+      poster: true,
       options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
+      deals: { include: { user: true } },
     },
   });
+
+  return listings
+    .map((l) => {
+      const recipientDeal = l.deals[0];
+      if (!recipientDeal) return null;
+      return {
+        id: l.id,
+        senderId: l.posterId,
+        sender: l.poster,
+        recipientId: recipientDeal.userId,
+        recipient: recipientDeal.user,
+        item: l.item,
+        options: l.options,
+        refineLevel: l.refineLevel,
+        cardSlots: l.cardSlots,
+        quantity: l.quantity,
+        createdAt: l.createdAt,
+      };
+    })
+    .filter((g): g is NonNullable<typeof g> => g !== null);
 }

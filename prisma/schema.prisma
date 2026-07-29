@@ -69,6 +69,11 @@ enum ListingType {
   SALE
   TRADE
   BUY
+  // Regalo. Con destinatario = envío directo instantáneo (Deal ACCEPTED al
+  // crear). Sin destinatario = reclamable por cualquiera (reserva→confirmación,
+  // como una venta pero gratis). Funde la antigua tabla Gift. price siempre
+  // null. Ver el rediseño de listings.
+  GIFT
 }
 
 // Solo relevante cuando category = WEAPON. Taxonomía estándar de tipos de

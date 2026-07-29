@@ -77,6 +77,7 @@ export const LISTING_TYPE_BADGE_CLASS: Record<ListingType, string> = {
   SALE: "border-ro-gold-dark/50 bg-ro-gold/10 text-ro-gold-dark",
   TRADE: "border-blue-500/50 bg-blue-500/10 text-blue-600",
   BUY: "border-green-600/50 bg-green-600/10 text-green-700",
+  GIFT: "border-rose-500/50 bg-rose-500/10 text-rose-600",
 };
 
 // SALE/TRADE/GIFT muestran el roll exacto de una instancia real ("+20");

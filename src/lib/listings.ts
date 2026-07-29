@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { ItemOptionGroup, ListingType } from "@prisma/client";
+import { ItemOptionGroup } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
@@ -121,7 +121,8 @@ export async function createListing(formData: FormData) {
   // request — reconstruir el schema en cada llamada no tiene coste real.
   const createListingSchema = z.object({
     itemId: z.string().min(1, t("selectItem")),
-    type: z.enum(ListingType).default("SALE"),
+    // GIFT no entra por aquí: los regalos se crean con sendGift (gifts.ts).
+    type: z.enum(["SALE", "BUY", "TRADE"]).default("SALE"),
     quantity: z.coerce.number().int().positive(t("positiveQuantity")),
   });
 
@@ -237,7 +238,7 @@ export async function createListing(formData: FormData) {
   await sendListingCreatedWebhook({
     itemName: formatItemDisplayName(item.name, refineLevel, cardSlots),
     itemIconUrl: `${appUrl}${item.iconUrl}`,
-    type: listing.type,
+    type: parsed.data.type,
     price: listing.price,
     quantity: listing.quantity,
     posterUsername: session.user.username,

@@ -19,7 +19,7 @@ type Poster = { id: string; username: string };
 type ListingOption = { slotIndex: number; value: number; def: { label: string } };
 type Listing = {
   id: string;
-  type: "SALE" | "TRADE" | "BUY";
+  type: "SALE" | "TRADE" | "BUY" | "GIFT";
   quantity: number;
   quantitySold: number;
   price: number | null;
