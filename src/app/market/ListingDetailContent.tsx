@@ -152,8 +152,12 @@ export async function ListingDetailContent({ id }: { id: string }) {
             <dt className="text-xs text-ro-text-muted">
               {isGift ? t("detail.given") : t("detail.sold")}
             </dt>
+            {/* Ilimitado (quantity null): "0 de ∞" no aporta —el tope no existe—,
+                así que se muestra solo lo vendido. */}
             <dd>
-              {sold} {t("detail.of")} {fmtQty(listing.quantity)}
+              {listing.quantity === null
+                ? sold
+                : `${sold} ${t("detail.of")} ${listing.quantity}`}
             </dd>
           </div>
         )}
