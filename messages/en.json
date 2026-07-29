@@ -30,8 +30,12 @@
   "myActivity": {
     "title": "My activity",
     "listingsEmpty": "You haven't posted anything yet.",
+    "pendingEmpty": "Nothing pending.",
+    "pendingIncoming": "To confirm",
+    "pendingOutgoing": "My requests",
     "tabs": {
       "listings": "My listings",
+      "pending": "Pending",
       "gifts": "Gifts"
     }
   },
