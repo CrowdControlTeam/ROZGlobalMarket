@@ -120,6 +120,9 @@ model User {
   tradeOffers   TradeOffer[]
   giftsSent     Gift[]       @relation("GiftsSent")
   giftsReceived Gift[]       @relation("GiftsReceived")
+  // Tratos donde este usuario es la contraparte (comprador/vendedor/oferente/
+  // reclamante) — ver model Deal. Se cablea en fases posteriores.
+  deals         Deal[]
 }
 
 model Item {
@@ -151,6 +154,8 @@ model Item {
   listings    Listing[]
   tradeOffers TradeOffer[]
   gifts       Gift[]
+  // Deals en los que este item es la contraoferta de un trade (Deal.offeredItem).
+  offeredInDeals Deal[]
 
   @@index([category, slot])
   @@index([name])
@@ -198,6 +203,7 @@ model Listing {
   purchases   Purchase[]
   options     ListingOption[]
   tradeOffers TradeOffer[]
+  deals       Deal[]
 
   @@index([status, createdAt])
   @@index([price])
@@ -256,6 +262,49 @@ model TradeOffer {
   updatedAt     DateTime         @updatedAt
 
   @@index([listingId, status])
+}
+
+enum DealStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+// Trato/oferta/reserva de una contraparte contra un Listing. Unifica y
+// sustituirá a Purchase (compra) y TradeOffer (oferta de trade) — ver el plan
+// del rediseño de listings. Una fila = "userId quiere/cerró `quantity` de este
+// listing". Ciclo: PENDING (reserva u oferta en curso) -> ACCEPTED (cerrado) /
+// REJECTED / CANCELLED. Las filas ACCEPTED son además la trazabilidad de con
+// quién se resolvió (evita un `takerId` en Listing, que no valdría para ventas
+// multi-comprador). AÚN NO se usa en runtime: se cablea en fases posteriores.
+model Deal {
+  id        String     @id @default(cuid())
+  listing   Listing    @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String
+  // La contraparte: comprador (SALE), vendedor (BUY), oferente (TRADE),
+  // reclamante (GIFT). Nombre neutro a propósito.
+  user      User       @relation(fields: [userId], references: [id])
+  userId    String
+  quantity  Int
+  status    DealStatus @default(PENDING)
+  // Precio unitario acordado: precio fijo = precio del listing; sin-precio =
+  // precio ofertado; TRADE/GIFT = null.
+  unitPrice Int?
+
+  // Contraoferta, solo en TRADE (el item que se ofrece a cambio). Sin random
+  // options en la oferta, igual que el antiguo TradeOffer.
+  offeredItem      Item?   @relation(fields: [offeredItemId], references: [id])
+  offeredItemId    String?
+  offeredRefine    Int?
+  offeredCardSlots Int?
+  zenyOffered      Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId, status])
+  @@index([userId])
 }
 
 // Envío directo 1 a 1, sin coste ni publicación pública (norma 2.6 del
