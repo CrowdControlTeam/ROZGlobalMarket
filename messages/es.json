@@ -30,8 +30,12 @@
   "myActivity": {
     "title": "Mi actividad",
     "listingsEmpty": "Todavía no has publicado nada.",
+    "pendingEmpty": "No tienes nada pendiente.",
+    "pendingIncoming": "Por confirmar",
+    "pendingOutgoing": "Mis solicitudes",
     "tabs": {
       "listings": "Mis publicaciones",
+      "pending": "Pendientes",
       "gifts": "Regalos"
     }
   },

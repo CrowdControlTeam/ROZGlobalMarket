@@ -81,6 +81,31 @@ export async function getMyListings() {
   });
 }
 
+// Para la página de gestión (/my/pending): todo lo que tengo pendiente de
+// resolver, sin entrar listing por listing.
+//   - entrantes: Deal PENDING sobre MIS listings (reservas/ofertas/reclamaciones
+//     por confirmar) — los acepto/rechazo.
+//   - salientes: MIS Deal PENDING (donde soy la contraparte) — puedo cancelarlos.
+export async function getMyPendingDeals() {
+  const session = await requireSession();
+  const me = session.user.discordId;
+
+  const [incoming, outgoing] = await Promise.all([
+    prisma.deal.findMany({
+      where: { status: "PENDING", listing: { posterId: me } },
+      orderBy: { createdAt: "asc" },
+      include: { listing: { include: { item: true } }, user: true, offeredItem: true },
+    }),
+    prisma.deal.findMany({
+      where: { status: "PENDING", userId: me },
+      orderBy: { createdAt: "desc" },
+      include: { listing: { include: { item: true, poster: true } }, offeredItem: true },
+    }),
+  ]);
+
+  return { incoming, outgoing };
+}
+
 // Devuelve el catálogo de options posibles de un grupo, ya ordenado por
 // slot posicional — el formulario de publicar lo usa así, atado al grupo
 // real del item elegido (ahí sí importa: el roll es de una instancia
