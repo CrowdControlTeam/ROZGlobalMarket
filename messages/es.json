@@ -370,7 +370,7 @@
       "wantedBy": "buscado por",
       "soldBy": "vendido por",
       "available": "x{count} disponibles",
-      "availableUnlimited": "Sin tope",
+      "availableUnlimited": "∞ disponibles",
       "upTo": "hasta ",
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
