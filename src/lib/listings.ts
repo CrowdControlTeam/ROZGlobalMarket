@@ -71,7 +71,7 @@ export async function getMaxRefineLevel() {
 export async function getMyListings() {
   const session = await requireSession();
 
-  return prisma.listing.findMany({
+  const listings = await prisma.listing.findMany({
     where: { posterId: session.user.discordId },
     orderBy: { createdAt: "desc" },
     include: {
@@ -79,6 +79,15 @@ export async function getMyListings() {
       options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
     },
   });
+
+  // Vendido por listing derivado de los Deal ACCEPTED (ya no hay quantitySold).
+  const soldByListing = await prisma.deal.groupBy({
+    by: ["listingId"],
+    where: { listingId: { in: listings.map((l) => l.id) }, status: "ACCEPTED" },
+    _sum: { quantity: true },
+  });
+  const soldMap = new Map(soldByListing.map((g) => [g.listingId, g._sum.quantity ?? 0]));
+  return listings.map((l) => ({ ...l, sold: soldMap.get(l.id) ?? 0 }));
 }
 
 // Para la página de gestión (/my/pending): todo lo que tengo pendiente de
@@ -403,7 +412,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
     }
 
     // Reserva: un Deal PENDING que retiene stock hasta que el vendedor lo
-    // confirma (acceptSaleReservation) o lo rechaza. No toca quantitySold aún.
+    // confirma (acceptSaleReservation) o lo rechaza — aún no cuenta como vendido.
     await tx.deal.create({
       data: {
         listingId,
@@ -459,8 +468,8 @@ async function loadOwnedPendingSaleDeal(
   return deal;
 }
 
-// El vendedor CONFIRMA una reserva: pasa a vendida (ACCEPTED) y suma a
-// quantitySold; si se agota el stock, el listing pasa a COMPLETED.
+// El vendedor CONFIRMA una reserva: pasa a vendida (ACCEPTED); si con eso se
+// agota el stock (vendido calculado de los Deal), el listing pasa a COMPLETED.
 export async function acceptSaleReservation(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
@@ -475,15 +484,20 @@ export async function acceptSaleReservation(dealId: string) {
     if (!cur || cur.status !== "PENDING") throw new Error(t("offerNotPending"));
     const listing = await tx.listing.findUnique({
       where: { id: deal.listingId },
-      select: { quantity: true, quantitySold: true, status: true },
+      select: { quantity: true, status: true },
     });
     if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
 
     await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
-    const newSold = listing.quantitySold + cur.quantity;
+    // Vendido = Σ cantidad de los Deal ACCEPTED (incluido el recién aceptado).
+    const soldAgg = await tx.deal.aggregate({
+      where: { listingId: deal.listingId, status: "ACCEPTED" },
+      _sum: { quantity: true },
+    });
+    const sold = soldAgg._sum.quantity ?? 0;
     await tx.listing.update({
       where: { id: deal.listingId },
-      data: { quantitySold: newSold, status: newSold >= listing.quantity ? "COMPLETED" : "ACTIVE" },
+      data: { status: sold >= listing.quantity ? "COMPLETED" : "ACTIVE" },
     });
   });
 
@@ -655,15 +669,20 @@ export async function acceptFulfillOffer(dealId: string) {
     if (!cur || cur.status !== "PENDING") throw new Error(t("offerNotPending"));
     const listing = await tx.listing.findUnique({
       where: { id: deal.listingId },
-      select: { quantity: true, quantitySold: true, status: true },
+      select: { quantity: true, status: true },
     });
     if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
 
     await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
-    const newFulfilled = listing.quantitySold + cur.quantity;
+    // Cumplido = Σ cantidad de los Deal ACCEPTED (incluido el recién aceptado).
+    const fulfilledAgg = await tx.deal.aggregate({
+      where: { listingId: deal.listingId, status: "ACCEPTED" },
+      _sum: { quantity: true },
+    });
+    const fulfilled = fulfilledAgg._sum.quantity ?? 0;
     await tx.listing.update({
       where: { id: deal.listingId },
-      data: { quantitySold: newFulfilled, status: newFulfilled >= listing.quantity ? "COMPLETED" : "ACTIVE" },
+      data: { status: fulfilled >= listing.quantity ? "COMPLETED" : "ACTIVE" },
     });
   });
 

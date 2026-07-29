@@ -132,7 +132,6 @@ export async function sendGift(formData: FormData) {
         itemId: parsed.data.itemId,
         type: "GIFT",
         quantity,
-        quantitySold: recipientId ? quantity : 0,
         price: null,
         status: recipientId ? "COMPLETED" : "ACTIVE",
         refineLevel,
@@ -336,15 +335,20 @@ export async function acceptGiftClaim(dealId: string) {
     if (!cur || cur.status !== "PENDING") throw new Error(t("offerNotPending"));
     const listing = await tx.listing.findUnique({
       where: { id: deal.listingId },
-      select: { quantity: true, quantitySold: true, status: true },
+      select: { quantity: true, status: true },
     });
     if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
 
     await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
-    const newClaimed = listing.quantitySold + cur.quantity;
+    // Entregado = Σ cantidad de los Deal ACCEPTED (incluido el recién aceptado).
+    const claimedAgg = await tx.deal.aggregate({
+      where: { listingId: deal.listingId, status: "ACCEPTED" },
+      _sum: { quantity: true },
+    });
+    const claimed = claimedAgg._sum.quantity ?? 0;
     await tx.listing.update({
       where: { id: deal.listingId },
-      data: { quantitySold: newClaimed, status: newClaimed >= listing.quantity ? "COMPLETED" : "ACTIVE" },
+      data: { status: claimed >= listing.quantity ? "COMPLETED" : "ACTIVE" },
     });
   });
 
