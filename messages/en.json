@@ -168,8 +168,10 @@
       "legend": "Private notifications (DM)",
       "toggleLabel": "Notify the recipient of a transaction by DM (purchase, trade, gift...)",
       "botLabel": "Discord bot:",
-      "botConfigured": "configured",
+      "botInServer": "in the server",
+      "botNotInServer": "configured, but not in the server (did you invite it?)",
       "botNotConfigured": "not configured (DISCORD_BOT_TOKEN environment variable)",
+      "botCheckError": "couldn't verify (error querying Discord)",
       "requirement": "This AND the toggle both need to be on for DMs to be sent."
     },
     "recognition": {
