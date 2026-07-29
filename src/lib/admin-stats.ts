@@ -91,10 +91,13 @@ export async function getMarketStats(period: StatsPeriod = "30d") {
   ]);
 
   // --- Totales ---
+  // COMPLETED es el sustituto genérico de SOLD (ver rediseño); durante el
+  // cutover por flujos conviven ambos. admin-stats se migrará a leer Deal en la
+  // limpieza final — de momento se cuenta el estado tal cual esté en Listing.
   const listingsByTypeStatus: Record<ListingType, Record<ListingStatus, number>> = {
-    SALE: { ACTIVE: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
-    BUY: { ACTIVE: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
-    TRADE: { ACTIVE: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
+    SALE: { ACTIVE: 0, COMPLETED: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
+    BUY: { ACTIVE: 0, COMPLETED: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
+    TRADE: { ACTIVE: 0, COMPLETED: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
   };
   const posterIds = new Set<string>();
   for (const l of listings) {

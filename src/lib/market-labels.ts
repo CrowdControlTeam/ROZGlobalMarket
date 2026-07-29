@@ -48,11 +48,11 @@ export function posterLabel(t: T, type: ListingType): string {
   return t(`listing.poster.${type}`);
 }
 
-// SOLD se reutiliza para "cerrado con éxito" en los tres tipos (ver
-// comentarios en trade-offers.ts y listings.ts) — el texto mostrado
-// cambia según qué significa cerrarse en cada uno.
+// COMPLETED (y el histórico SOLD, que se retira al final del cutover) = "cerrado
+// con éxito" en todos los tipos — el texto mostrado cambia según qué significa
+// cerrarse en cada uno (ver soldStatus.{type} en i18n).
 export function listingStatusLabel(t: T, status: string, type: ListingType): string {
-  if (status === "SOLD") return t(`listing.soldStatus.${type}`);
+  if (status === "COMPLETED" || status === "SOLD") return t(`listing.soldStatus.${type}`);
   return t(`listing.status.${status}`);
 }
 

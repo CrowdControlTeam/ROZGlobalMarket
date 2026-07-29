@@ -43,6 +43,11 @@ enum EquipSlot {
 
 enum ListingStatus {
   ACTIVE
+  // Cerrado con éxito (hubo ≥1 Deal ACCEPTED). Genérico para todos los tipos —
+  // la etiqueta visible cambia por tipo (ver listingStatusLabel). Sustituye a
+  // SOLD, que se conserva durante el cutover por flujos y se retira en la
+  // limpieza final. Ver plan del rediseño (fase "núcleo Deal").
+  COMPLETED
   SOLD
   CANCELLED
   EXPIRED
