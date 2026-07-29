@@ -163,7 +163,9 @@ export function NewPublicationForm({
     });
   }
 
-  const canSubmit = selectedItem !== null && (type !== "GIFT" || selectedRecipient !== null);
+  // El destinatario de un regalo es OPCIONAL: sin él, el regalo es reclamable
+  // por cualquiera (ver sendGift en gifts.ts).
+  const canSubmit = selectedItem !== null;
   // useTransition por sí solo no basta: disabled={isPending} solo se
   // refleja en el DOM tras el siguiente render, y varios clics muy
   // seguidos (mash-click) pueden dispararse antes de ese commit — se

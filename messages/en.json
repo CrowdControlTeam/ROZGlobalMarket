@@ -84,6 +84,8 @@
     "offerNotPending": "This offer is no longer pending",
     "noPermissionOffer": "You don't have permission over this offer",
     "cannotGiftSelf": "You can't gift an item to yourself",
+    "cannotClaimOwn": "You can't claim your own gift",
+    "notClaimableGift": "This gift can't be claimed",
     "recipientNotFound": "The selected recipient doesn't exist",
     "userNotFound": "The recipient doesn't exist",
     "cannotMessageSelf": "You can't message yourself",
@@ -373,6 +375,7 @@
       "unitPrice": "Price/ea",
       "posted": "Posted",
       "sold": "Sold",
+      "given": "Given",
       "of": "of",
       "markFulfilled": "Completed",
       "cancelListing": "Cancel",
@@ -425,6 +428,19 @@
         "confirm": "Confirm purchase",
         "reject": "Reject",
         "cancel": "Cancel offer"
+      },
+      "claimForm": {
+        "quantityLabel": "Quantity to claim",
+        "claiming": "Claiming...",
+        "submit": "Claim"
+      },
+      "claimsReceived": "Claims to confirm",
+      "yourClaims": "Your claims",
+      "claimedBy": "Claimed by",
+      "claimActions": {
+        "confirm": "Hand over",
+        "reject": "Reject",
+        "cancel": "Cancel claim"
       }
     },
     "form": {
@@ -446,7 +462,7 @@
       "itemLabel": "Item",
       "priceLabel": "Price/ea",
       "payUpToLabel": "Pay/ea",
-      "recipientLabel": "Recipient",
+      "recipientLabel": "Recipient (optional — without one, anyone can claim it)",
       "recognitionNoMatchNamed": "No item in the catalog looks like \"{name}\". Select it manually.",
       "recognitionNoMatch": "Couldn't read the item in the screenshot. Select it manually.",
       "recognitionDetected": "Detected: {item}. Review the data before posting.",
@@ -506,6 +522,9 @@
       "tradeAcceptedForOfferer": "{username} accepted your trade offer for their {item}",
       "tradeAcceptedForPoster": "You accepted {username}'s offer for your {item}",
       "gifted": "{username} sent you a gift: {item}",
+      "giftClaimRequested": "{username} wants to claim your gift of {item}",
+      "giftClaimAccepted": "{username} handed you the gift of {item}",
+      "giftClaimRejected": "{username} rejected your claim of {item}",
       "contactMessage": "{username} wrote to you about {item}"
     }
   }

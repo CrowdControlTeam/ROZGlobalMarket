@@ -21,6 +21,8 @@ import { ReserveForm } from "./[id]/ReserveForm";
 import { SaleReservationActions } from "./[id]/SaleReservationActions";
 import { OfferToFulfillForm } from "./[id]/OfferToFulfillForm";
 import { BuyOfferActions } from "./[id]/BuyOfferActions";
+import { ClaimGiftForm } from "./[id]/ClaimGiftForm";
+import { GiftClaimActions } from "./[id]/GiftClaimActions";
 import { TradeOfferForm } from "./[id]/TradeOfferForm";
 import { TradeOfferActions } from "./[id]/TradeOfferActions";
 
@@ -58,11 +60,13 @@ export async function ListingDetailContent({ id }: { id: string }) {
   const isTrade = listing.type === "TRADE";
   const isBuy = listing.type === "BUY";
   const isSale = listing.type === "SALE";
+  const isGift = listing.type === "GIFT";
   // Los Deal PENDING retienen cupo: en venta son reservas de comprador; en
-  // compra, ofertas de vendedores por confirmar. En ambos, lo que aún se puede
-  // reservar/ofertar = restante − pendiente. Se deriva de los Deal.
+  // compra, ofertas de vendedores; en regalo, reclamaciones. En todos, lo que
+  // aún se puede reservar/ofertar/reclamar = restante − pendiente. Se deriva de
+  // los Deal.
   const reserved =
-    isSale || isBuy
+    isSale || isBuy || isGift
       ? listing.deals.filter((d) => d.status === "PENDING").reduce((s, d) => s + d.quantity, 0)
       : 0;
   const available = remaining - reserved;
@@ -101,7 +105,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <div>
           <dt className="text-xs text-ro-text-muted">{isBuy ? t("field.quantity") : t("detail.available")}</dt>
-          <dd>{isBuy ? listing.quantity : isSale ? available : remaining}</dd>
+          <dd>{isBuy ? listing.quantity : isSale || isGift ? available : remaining}</dd>
         </div>
         {!isTrade && listing.price !== null && (
           <div>
@@ -133,7 +137,9 @@ export async function ListingDetailContent({ id }: { id: string }) {
             "Disponibles" ya no diga. quantitySold no se usa en BUY. */}
         {!isBuy && listing.quantity > 1 && (
           <div>
-            <dt className="text-xs text-ro-text-muted">{t("detail.sold")}</dt>
+            <dt className="text-xs text-ro-text-muted">
+              {isGift ? t("detail.given") : t("detail.sold")}
+            </dt>
             <dd>
               {listing.quantitySold} {t("detail.of")} {listing.quantity}
             </dd>
@@ -192,6 +198,8 @@ export async function ListingDetailContent({ id }: { id: string }) {
               available={available}
               unitPrice={listing.price}
             />
+          ) : isGift && available > 0 ? (
+            <ClaimGiftForm listingId={listing.id} available={available} />
           ) : null}
         </div>
       )}
@@ -354,6 +362,44 @@ export async function ListingDetailContent({ id }: { id: string }) {
                 {deal.status === "PENDING" && (
                   <div className="mt-2">
                     <BuyOfferActions dealId={deal.id} role={isPoster ? "buyer" : "seller"} />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {isGift && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
+        <div className="mt-3">
+          <p className={labelClass}>
+            {isPoster ? t("detail.claimsReceived") : t("detail.yourClaims")}
+          </p>
+          <ul className="mt-2 flex flex-col gap-3">
+            {(isPoster ? pendingOffers : myOffers).map((deal) => (
+              <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">x{deal.quantity}</span>
+                  {!isPoster && (
+                    <span className="text-xs text-ro-text-muted">{offerStatusLabel(t, deal.status)}</span>
+                  )}
+                </div>
+                {isPoster && (
+                  <p className="mt-1 text-ro-text-muted">
+                    {t("detail.claimedBy")}{" "}
+                    <UserMention
+                      userId={deal.userId}
+                      username={deal.user.username}
+                      viewerId={session.user.discordId}
+                      item={listing.item}
+                      listingId={listing.id}
+                      dmAvailable={dmAvailable}
+                    />
+                  </p>
+                )}
+                {deal.status === "PENDING" && (
+                  <div className="mt-2">
+                    <GiftClaimActions dealId={deal.id} role={isPoster ? "giver" : "claimer"} />
                   </div>
                 )}
               </li>
