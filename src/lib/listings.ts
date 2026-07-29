@@ -22,7 +22,7 @@ import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
 import { loadMarketConfig } from "@/lib/market-config";
 import { searchCatalog } from "@/lib/item-catalog";
-import { listingStatusOnClose } from "@/lib/deals";
+import { listingStatusOnClose, availableFrom, isSoldOut } from "@/lib/deals";
 
 export async function searchItems(query: string) {
   await requireSession();
@@ -157,13 +157,11 @@ export async function createListing(formData: FormData) {
     itemId: z.string().min(1, t("selectItem")),
     // GIFT no entra por aquí: los regalos se crean con sendGift (gifts.ts).
     type: z.enum(["SALE", "BUY", "TRADE"]).default("SALE"),
-    quantity: z.coerce.number().int().positive(t("positiveQuantity")),
   });
 
   const parsed = createListingSchema.safeParse({
     itemId: formData.get("itemId"),
     type: formData.get("type") || "SALE",
-    quantity: formData.get("quantity"),
   });
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
@@ -217,7 +215,31 @@ export async function createListing(formData: FormData) {
   // listing entero.
   const forcesQuantityOne =
     parsed.data.type === "TRADE" || (parsed.data.type === "SALE" && optionGroup !== null);
-  const quantity = forcesQuantityOne ? 1 : parsed.data.quantity;
+
+  // Cantidad. Ilimitado ("los que tengas" → null) solo tiene sentido en
+  // SALE/BUY de materiales; TRADE cierra el listing entero y un item con
+  // options es un ejemplar único, así que ahí siempre hay tope. La señal de
+  // ilimitado es el checkbox `unlimited` del form, no un campo vacío (no se
+  // confía en lo que mande el cliente: si no se permite, se ignora).
+  let quantity: number | null;
+  if (forcesQuantityOne) {
+    quantity = 1;
+  } else if (
+    (parsed.data.type === "SALE" || parsed.data.type === "BUY") &&
+    formData.get("unlimited") === "on"
+  ) {
+    quantity = null;
+  } else {
+    const qParsed = z.coerce
+      .number()
+      .int()
+      .positive(t("positiveQuantity"))
+      .safeParse(formData.get("quantity"));
+    if (!qParsed.success) {
+      throw new Error(qParsed.error.issues[0]?.message ?? t("positiveQuantity"));
+    }
+    quantity = qParsed.data;
+  }
 
   const refineEligible = isRefineEligible(item);
   let refineLevel = 0;
@@ -406,8 +428,9 @@ export async function reserveListing(listingId: string, formData: FormData) {
     });
     const sold = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
     const reserved = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
-    const available = listing.quantity - sold - reserved;
-    if (quantity > available) {
+    // available null = ilimitado ("los que tengas"): no hay tope que comprobar.
+    const available = availableFrom(listing.quantity, sold, reserved);
+    if (available !== null && quantity > available) {
       throw new Error(t("notEnoughStock", { remaining: available }));
     }
 
@@ -495,9 +518,11 @@ export async function acceptSaleReservation(dealId: string) {
       _sum: { quantity: true },
     });
     const sold = soldAgg._sum.quantity ?? 0;
+    // Un listing ilimitado (quantity null) nunca se agota solo: lo cierra el
+    // poster a mano (isSoldOut devuelve false ahí).
     await tx.listing.update({
       where: { id: deal.listingId },
-      data: { status: sold >= listing.quantity ? "COMPLETED" : "ACTIVE" },
+      data: { status: isSoldOut(listing.quantity, sold) ? "COMPLETED" : "ACTIVE" },
     });
   });
 
@@ -599,8 +624,11 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
     });
     const fulfilled = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
     const offered = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
-    const available = listing.quantity - fulfilled - offered;
-    if (quantity > available) throw new Error(t("notEnoughStock", { remaining: available }));
+    // available null = compra ilimitada ("los que tengas"): sin cupo que topar.
+    const available = availableFrom(listing.quantity, fulfilled, offered);
+    if (available !== null && quantity > available) {
+      throw new Error(t("notEnoughStock", { remaining: available }));
+    }
 
     await tx.deal.create({
       data: {
@@ -680,9 +708,11 @@ export async function acceptFulfillOffer(dealId: string) {
       _sum: { quantity: true },
     });
     const fulfilled = fulfilledAgg._sum.quantity ?? 0;
+    // Compra ilimitada (quantity null): nunca se cierra sola, la cierra el
+    // comprador a mano (isSoldOut devuelve false).
     await tx.listing.update({
       where: { id: deal.listingId },
-      data: { status: fulfilled >= listing.quantity ? "COMPLETED" : "ACTIVE" },
+      data: { status: isSoldOut(listing.quantity, fulfilled) ? "COMPLETED" : "ACTIVE" },
     });
   });
 

@@ -174,9 +174,14 @@ model Listing {
   item         Item          @relation(fields: [itemId], references: [id])
   itemId       String
   type         ListingType   @default(SALE)
-  quantity     Int           @default(1)
-  // Lo vendido/entregado/cumplido se calcula de los Deal ACCEPTED, no hay
-  // contador denormalizado — ver deals.ts / computeListingQuantities.
+  // null = ILIMITADO ("los que tengas") — solo en SALE/BUY de materiales; nunca
+  // se cierra solo por recuento, lo cierra el poster a mano. TRADE/GIFT siempre
+  // tienen tope. Lo vendido/entregado/cumplido se calcula de los Deal ACCEPTED,
+  // no hay contador denormalizado — ver deals.ts / computeListingQuantities.
+  quantity     Int?
+  // price: null cuando type = TRADE o GIFT (no tienen precio). En BUY es el
+  // precio fijo por unidad que paga (no un máximo a negociar) en vez de precio
+  // de venta — mismo campo, doble sentido según `type`.
   // price: null cuando type = TRADE o GIFT (no tienen precio). En BUY es el
   // precio fijo por unidad que paga (no un máximo a negociar) en vez de precio
   // de venta — mismo campo, doble sentido según `type`.

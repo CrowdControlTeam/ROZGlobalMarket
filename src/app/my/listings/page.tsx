@@ -23,7 +23,6 @@ export default async function MyListingsPage() {
   return (
     <ul className="flex flex-col gap-3">
       {listings.map((listing) => {
-        const remaining = listing.quantity - listing.sold;
         const isBuy = listing.type === "BUY";
         return (
           <li key={listing.id}>
@@ -43,8 +42,10 @@ export default async function MyListingsPage() {
                 </p>
                 <p className="text-sm text-ro-text-muted">
                   {listingStatusLabel(t, listing.status, listing.type)}
-                  {!isBuy && listing.status === "ACTIVE" && listing.quantity > 1 &&
-                    ` · ${t("results.available", { count: remaining })}`}
+                  {!isBuy && listing.status === "ACTIVE" && listing.quantity === null &&
+                    ` · ${t("results.availableUnlimited")}`}
+                  {!isBuy && listing.status === "ACTIVE" && listing.quantity !== null && listing.quantity > 1 &&
+                    ` · ${t("results.available", { count: listing.quantity - listing.sold })}`}
                 </p>
                 {listing.options.length > 0 && (
                   <p className="mt-1 flex flex-wrap gap-1">

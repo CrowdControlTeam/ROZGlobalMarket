@@ -43,6 +43,9 @@ export function NewPublicationForm({
   );
   const [refineLevel, setRefineLevel] = useState(0);
   const [cardSlots, setCardSlots] = useState(0);
+  // "Sin tope" ("los que tengas"): solo SALE/BUY de materiales. Envía
+  // unlimited=on y oculta el campo de cantidad (el server pone quantity null).
+  const [unlimited, setUnlimited] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [priceMissing, setPriceMissing] = useState(false);
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
@@ -66,6 +69,9 @@ export function NewPublicationForm({
   // idénticas. BUY se queda fuera: ahí las options son un mínimo deseado,
   // no el roll de un ejemplar concreto, así que no ata la cantidad.
   const quantityLocked = type === "TRADE" || ((type === "SALE" || type === "GIFT") && optionGroup !== null);
+  // "Sin tope" solo tiene sentido en materiales de venta/compra: un TRADE cierra
+  // el listing entero y un GIFT siempre reparte una cantidad concreta.
+  const canBeUnlimited = !quantityLocked && (type === "SALE" || type === "BUY");
 
   // El reset de optionSelections se dispara desde el evento de selección de
   // item (handleItemSelect más abajo), no aquí: sincronizar dos piezas de
@@ -248,14 +254,28 @@ export function NewPublicationForm({
             <input type="hidden" name="quantity" value={1} />
           </>
         ) : (
-          <input
-            type="number"
-            name="quantity"
-            min={1}
-            defaultValue={1}
-            required
-            className={inputClass}
-          />
+          <>
+            <input
+              type="number"
+              name="quantity"
+              min={1}
+              defaultValue={1}
+              required={!unlimited}
+              disabled={canBeUnlimited && unlimited}
+              className={inputClass}
+            />
+            {canBeUnlimited && (
+              <label className="mt-2 flex items-center gap-2 text-sm text-ro-text-muted">
+                <input
+                  type="checkbox"
+                  name="unlimited"
+                  checked={unlimited}
+                  onChange={(e) => setUnlimited(e.target.checked)}
+                />
+                {t("unlimitedLabel")}
+              </label>
+            )}
+          </>
         )}
       </div>
 

@@ -17,7 +17,7 @@ export function ReserveForm({
   unitPrice,
 }: {
   listingId: string;
-  available: number;
+  available: number | null; // null = ilimitado ("los que tengas"): sin tope
   unitPrice: number;
 }) {
   const router = useRouter();
@@ -54,7 +54,7 @@ export function ReserveForm({
           type="number"
           name="quantity"
           min={1}
-          max={available}
+          max={available ?? undefined}
           value={quantity}
           onChange={(e) => setQuantity(Number(e.target.value))}
           className={inputClass}
