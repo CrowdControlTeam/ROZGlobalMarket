@@ -19,6 +19,8 @@ import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { CancelListingButton } from "./[id]/CancelListingButton";
 import { ReserveForm } from "./[id]/ReserveForm";
 import { SaleReservationActions } from "./[id]/SaleReservationActions";
+import { OfferToFulfillForm } from "./[id]/OfferToFulfillForm";
+import { BuyOfferActions } from "./[id]/BuyOfferActions";
 import { TradeOfferForm } from "./[id]/TradeOfferForm";
 import { TradeOfferActions } from "./[id]/TradeOfferActions";
 
@@ -56,11 +58,13 @@ export async function ListingDetailContent({ id }: { id: string }) {
   const isTrade = listing.type === "TRADE";
   const isBuy = listing.type === "BUY";
   const isSale = listing.type === "SALE";
-  // En una venta, las reservas PENDING retienen stock: lo que aún se puede
-  // reservar = vendido restante − reservado. Se deriva de los Deal.
-  const reserved = isSale
-    ? listing.deals.filter((d) => d.status === "PENDING").reduce((s, d) => s + d.quantity, 0)
-    : 0;
+  // Los Deal PENDING retienen cupo: en venta son reservas de comprador; en
+  // compra, ofertas de vendedores por confirmar. En ambos, lo que aún se puede
+  // reservar/ofertar = restante − pendiente. Se deriva de los Deal.
+  const reserved =
+    isSale || isBuy
+      ? listing.deals.filter((d) => d.status === "PENDING").reduce((s, d) => s + d.quantity, 0)
+      : 0;
   const available = remaining - reserved;
   const pendingOffers = listing.deals.filter((d) => d.status === "PENDING");
   const myOffers = listing.deals.filter((d) => d.userId === session.user.discordId);
@@ -178,6 +182,12 @@ export async function ListingDetailContent({ id }: { id: string }) {
             <TradeOfferForm listingId={listing.id} />
           ) : listing.type === "SALE" && listing.price !== null && available > 0 ? (
             <ReserveForm
+              listingId={listing.id}
+              available={available}
+              unitPrice={listing.price}
+            />
+          ) : isBuy && listing.price !== null && available > 0 ? (
+            <OfferToFulfillForm
               listingId={listing.id}
               available={available}
               unitPrice={listing.price}
@@ -301,6 +311,49 @@ export async function ListingDetailContent({ id }: { id: string }) {
                 {deal.status === "PENDING" && (
                   <div className="mt-2">
                     <SaleReservationActions dealId={deal.id} role={isPoster ? "seller" : "buyer"} />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {isBuy && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
+        <div className="mt-3">
+          <p className={labelClass}>
+            {isPoster ? t("detail.fulfillOffersReceived") : t("detail.yourFulfillOffers")}
+          </p>
+          <ul className="mt-2 flex flex-col gap-3">
+            {(isPoster ? pendingOffers : myOffers).map((deal) => (
+              <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">
+                    x{deal.quantity}
+                    <span className="ml-1 font-normal text-ro-text-muted">
+                      · {formatPrice(deal.quantity * (deal.unitPrice ?? 0))}
+                    </span>
+                  </span>
+                  {!isPoster && (
+                    <span className="text-xs text-ro-text-muted">{offerStatusLabel(t, deal.status)}</span>
+                  )}
+                </div>
+                {isPoster && (
+                  <p className="mt-1 text-ro-text-muted">
+                    {t("detail.offeredBy")}{" "}
+                    <UserMention
+                      userId={deal.userId}
+                      username={deal.user.username}
+                      viewerId={session.user.discordId}
+                      item={listing.item}
+                      listingId={listing.id}
+                      dmAvailable={dmAvailable}
+                    />
+                  </p>
+                )}
+                {deal.status === "PENDING" && (
+                  <div className="mt-2">
+                    <BuyOfferActions dealId={deal.id} role={isPoster ? "buyer" : "seller"} />
                   </div>
                 )}
               </li>

@@ -308,9 +308,14 @@ export async function fulfillListing(listingId: string) {
     throw new Error(t("listingNotActive"));
   }
 
-  await prisma.listing.update({
-    where: { id: listingId },
-    data: { status: "SOLD" },
+  // Cumplida fuera de la app (Discord/en persona): se marca COMPLETED y se
+  // rechazan las ofertas de venta que hubiera pendientes.
+  await prisma.$transaction(async (tx) => {
+    await tx.deal.updateMany({
+      where: { listingId, status: "PENDING" },
+      data: { status: "REJECTED" },
+    });
+    await tx.listing.update({ where: { id: listingId }, data: { status: "COMPLETED" } });
   });
 
   revalidatePath("/market");
@@ -508,6 +513,186 @@ export async function cancelSaleReservation(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const deal = await loadOwnedPendingSaleDeal(dealId, "buyer", session.user.discordId, t);
+  await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
+  revalidatePath(`/market/${deal.listingId}`);
+}
+
+// ── Compras (BUY): el vendedor OFRECE suministrar, el comprador CONFIRMA ──
+// Espejo de la reserva de venta con los roles invertidos: en una compra a
+// precio fijo, la contraparte (Deal.userId) es el VENDEDOR que se ofrece a
+// suministrar `quantity` unidades al precio fijo del listing; el comprador (el
+// poster) confirma o rechaza. Varios vendedores pueden cubrir partes.
+
+export async function offerToFulfill(listingId: string, formData: FormData) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+  const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
+
+  const { maintenanceModeEnabled } = await loadMarketConfig();
+  if (maintenanceModeEnabled && !session.user.isAdmin) {
+    throw new Error(t("maintenanceMode"));
+  }
+
+  const schema = z.object({
+    quantity: z.coerce.number().int().positive(t("positiveQuantity")),
+  });
+  const parsed = schema.safeParse({ quantity: formData.get("quantity") });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
+  }
+  const { quantity } = parsed.data;
+
+  const listing = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`;
+    const listing = await tx.listing.findUnique({ where: { id: listingId }, include: { item: true } });
+    if (!listing) throw new Error(t("listingNotFound"));
+    if (listing.posterId === session.user.discordId) throw new Error(t("cannotOfferOwn"));
+    if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+    if (listing.type !== "BUY" || listing.price === null) throw new Error(t("notBuyListing"));
+
+    // Cupo restante = cantidad pedida − ya cumplido − ya ofrecido (pendiente).
+    const agg = await tx.deal.groupBy({
+      by: ["status"],
+      where: { listingId, status: { in: ["ACCEPTED", "PENDING"] } },
+      _sum: { quantity: true },
+    });
+    const fulfilled = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
+    const offered = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
+    const available = listing.quantity - fulfilled - offered;
+    if (quantity > available) throw new Error(t("notEnoughStock", { remaining: available }));
+
+    await tx.deal.create({
+      data: {
+        listingId,
+        userId: session.user.discordId,
+        quantity,
+        status: "PENDING",
+        unitPrice: listing.price,
+      },
+    });
+    return listing;
+  });
+
+  // Aviso al comprador (poster) de que hay una oferta de venta por confirmar.
+  const appUrl = getAppUrl();
+  await sendDirectMessage(listing.posterId, {
+    title: tDiscord("dm.fulfillOffered", {
+      username: session.user.username,
+      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
+    }),
+    url: `${appUrl}/market/${listingId}`,
+    color: DISCORD_EMBED_COLOR.BUY,
+    itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
+    fields: [
+      { name: tField("quantity"), value: String(quantity), inline: true },
+      { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * listing.price!), inline: true },
+    ],
+  });
+
+  revalidatePath("/market");
+  revalidatePath(`/market/${listingId}`);
+}
+
+async function loadOwnedPendingBuyDeal(
+  dealId: string,
+  expectedOwner: "buyer" | "seller",
+  discordId: string,
+  t: Awaited<ReturnType<typeof getTranslations>>,
+) {
+  const deal = await prisma.deal.findUnique({
+    where: { id: dealId },
+    include: { listing: { include: { item: true } }, user: true },
+  });
+  if (!deal) throw new Error(t("offerNotFound"));
+  if (deal.status !== "PENDING") throw new Error(t("offerNotPending"));
+  if (deal.listing.type !== "BUY") throw new Error(t("notBuyListing"));
+  // El comprador es el poster; el vendedor es quien hizo la oferta (Deal.userId).
+  const ownerId = expectedOwner === "buyer" ? deal.listing.posterId : deal.userId;
+  if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
+  return deal;
+}
+
+// El comprador CONFIRMA una oferta de venta: cuenta como cumplida; si se
+// alcanza la cantidad pedida, el listing pasa a COMPLETED.
+export async function acceptFulfillOffer(dealId: string) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+  const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
+
+  const deal = await loadOwnedPendingBuyDeal(dealId, "buyer", session.user.discordId, t);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${deal.listingId} FOR UPDATE`;
+    const cur = await tx.deal.findUnique({ where: { id: dealId }, select: { status: true, quantity: true } });
+    if (!cur || cur.status !== "PENDING") throw new Error(t("offerNotPending"));
+    const listing = await tx.listing.findUnique({
+      where: { id: deal.listingId },
+      select: { quantity: true, quantitySold: true, status: true },
+    });
+    if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+
+    await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
+    const newFulfilled = listing.quantitySold + cur.quantity;
+    await tx.listing.update({
+      where: { id: deal.listingId },
+      data: { quantitySold: newFulfilled, status: newFulfilled >= listing.quantity ? "COMPLETED" : "ACTIVE" },
+    });
+  });
+
+  const appUrl = getAppUrl();
+  await sendDirectMessage(deal.userId, {
+    title: tDiscord("dm.fulfillAccepted", {
+      username: session.user.username,
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+    }),
+    url: `${appUrl}/market/${deal.listingId}`,
+    color: DISCORD_EMBED_COLOR.BUY,
+    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
+    fields: [
+      { name: tField("quantity"), value: String(deal.quantity), inline: true },
+      {
+        name: tDiscord("fields.totalPrice"),
+        value: formatPrice(deal.quantity * (deal.unitPrice ?? 0)),
+        inline: true,
+      },
+    ],
+  });
+
+  revalidatePath("/market");
+  revalidatePath(`/market/${deal.listingId}`);
+}
+
+// El comprador RECHAZA una oferta de venta.
+export async function rejectFulfillOffer(dealId: string) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+  const tDiscord = await getTranslations("discord");
+
+  const deal = await loadOwnedPendingBuyDeal(dealId, "buyer", session.user.discordId, t);
+  await prisma.deal.update({ where: { id: dealId }, data: { status: "REJECTED" } });
+
+  const appUrl = getAppUrl();
+  await sendDirectMessage(deal.userId, {
+    title: tDiscord("dm.fulfillRejected", {
+      username: session.user.username,
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+    }),
+    url: `${appUrl}/market/${deal.listingId}`,
+    color: DISCORD_EMBED_COLOR.BUY,
+    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
+    fields: [],
+  });
+
+  revalidatePath(`/market/${deal.listingId}`);
+}
+
+// El vendedor CANCELA su propia oferta pendiente.
+export async function cancelFulfillOffer(dealId: string) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+  const deal = await loadOwnedPendingBuyDeal(dealId, "seller", session.user.discordId, t);
   await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
   revalidatePath(`/market/${deal.listingId}`);
 }
