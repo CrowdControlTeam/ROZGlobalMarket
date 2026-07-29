@@ -298,9 +298,12 @@ model Deal {
   unitPrice Int?
 
   // Contraoferta, solo en TRADE (el item que se ofrece a cambio). Sin random
-  // options en la oferta, igual que el antiguo TradeOffer.
+  // options en la oferta, igual que el antiguo TradeOffer. offeredQuantity es
+  // la cantidad de ESE item (distinta de `quantity`, que son unidades del
+  // listing — en un trade siempre 1).
   offeredItem      Item?   @relation(fields: [offeredItemId], references: [id])
   offeredItemId    String?
+  offeredQuantity  Int?
   offeredRefine    Int?
   offeredCardSlots Int?
   zenyOffered      Int     @default(0)

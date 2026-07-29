@@ -5,6 +5,7 @@ import {
   WeaponType,
   ListingType,
   TradeOfferStatus,
+  DealStatus,
 } from "@prisma/client";
 import type { MarketSort } from "@/lib/market-sort";
 
@@ -56,7 +57,9 @@ export function listingStatusLabel(t: T, status: string, type: ListingType): str
   return t(`listing.status.${status}`);
 }
 
-export function offerStatusLabel(t: T, status: TradeOfferStatus): string {
+// Acepta TradeOfferStatus (histórico, aún leído por admin-stats) y DealStatus
+// (nuevo flujo) — comparten etiquetas, así que la misma clave i18n vale.
+export function offerStatusLabel(t: T, status: TradeOfferStatus | DealStatus): string {
   return t(`listing.offerStatus.${status}`);
 }
 
