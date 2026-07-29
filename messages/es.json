@@ -78,6 +78,7 @@
     "notDirectSale": "Esta publicación no es una venta directa",
     "notEnoughStock": "Solo quedan {remaining} unidades disponibles",
     "notTradeListing": "Esta publicación no es un intercambio",
+    "notBuyListing": "Esta publicación no es una petición de compra",
     "cannotOfferOwn": "No puedes ofertar en tu propia publicación",
     "offerNotFound": "Oferta no encontrada",
     "offerNotPending": "Esta oferta ya no está pendiente",
@@ -406,6 +407,20 @@
         "confirm": "Confirmar venta",
         "reject": "Rechazar",
         "cancel": "Cancelar reserva"
+      },
+      "fulfillForm": {
+        "quantityLabel": "Cantidad a vender",
+        "total": "Recibirás:",
+        "offering": "Enviando...",
+        "submit": "Ofrecer venta"
+      },
+      "fulfillOffersReceived": "Ofertas de venta",
+      "yourFulfillOffers": "Tus ofertas de venta",
+      "offeredBy": "Ofrecido por",
+      "fulfillActions": {
+        "confirm": "Confirmar compra",
+        "reject": "Rechazar",
+        "cancel": "Cancelar oferta"
       }
     },
     "form": {
@@ -481,6 +496,9 @@
       "reserveRequested": "{username} quiere reservar tu {item}",
       "reserveAccepted": "{username} ha confirmado tu reserva de {item}",
       "reserveRejected": "{username} ha rechazado tu reserva de {item}",
+      "fulfillOffered": "{username} se ofrece a venderte {item}",
+      "fulfillAccepted": "{username} ha aceptado tu oferta de venta de {item}",
+      "fulfillRejected": "{username} ha rechazado tu oferta de venta de {item}",
       "tradeAcceptedForOfferer": "{username} ha aceptado tu oferta de intercambio por su {item}",
       "tradeAcceptedForPoster": "Has aceptado la oferta de {username} por tu {item}",
       "gifted": "{username} te ha regalado {item}",

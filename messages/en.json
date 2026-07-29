@@ -78,6 +78,7 @@
     "notDirectSale": "This listing isn't a direct sale",
     "notEnoughStock": "Only {remaining} units are available",
     "notTradeListing": "This listing isn't a trade",
+    "notBuyListing": "This listing isn't a buy request",
     "cannotOfferOwn": "You can't offer on your own listing",
     "offerNotFound": "Offer not found",
     "offerNotPending": "This offer is no longer pending",
@@ -406,6 +407,20 @@
         "confirm": "Confirm sale",
         "reject": "Reject",
         "cancel": "Cancel reservation"
+      },
+      "fulfillForm": {
+        "quantityLabel": "Quantity to sell",
+        "total": "You'll receive:",
+        "offering": "Sending...",
+        "submit": "Offer to sell"
+      },
+      "fulfillOffersReceived": "Sell offers",
+      "yourFulfillOffers": "Your sell offers",
+      "offeredBy": "Offered by",
+      "fulfillActions": {
+        "confirm": "Confirm purchase",
+        "reject": "Reject",
+        "cancel": "Cancel offer"
       }
     },
     "form": {
@@ -481,6 +496,9 @@
       "reserveRequested": "{username} wants to reserve your {item}",
       "reserveAccepted": "{username} confirmed your reservation of {item}",
       "reserveRejected": "{username} rejected your reservation of {item}",
+      "fulfillOffered": "{username} offers to sell you {item}",
+      "fulfillAccepted": "{username} accepted your sell offer for {item}",
+      "fulfillRejected": "{username} rejected your sell offer for {item}",
       "tradeAcceptedForOfferer": "{username} accepted your trade offer for their {item}",
       "tradeAcceptedForPoster": "You accepted {username}'s offer for your {item}",
       "gifted": "{username} sent you a gift: {item}",
