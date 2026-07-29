@@ -370,7 +370,7 @@
       "wantedBy": "wanted by",
       "soldBy": "sold by",
       "available": "x{count} available",
-      "availableUnlimited": "∞ available",
+      "availableUnlimited": "∞",
       "upTo": "up to ",
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
