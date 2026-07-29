@@ -41,8 +41,8 @@ export async function ListingDetailContent({ id }: { id: string }) {
         item: true,
         poster: true,
         options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
-        tradeOffers: {
-          include: { offerer: true, item: true },
+        deals: {
+          include: { user: true, offeredItem: true },
           orderBy: { createdAt: "desc" },
         },
       },
@@ -54,8 +54,8 @@ export async function ListingDetailContent({ id }: { id: string }) {
   const remaining = listing.quantity - listing.quantitySold;
   const isTrade = listing.type === "TRADE";
   const isBuy = listing.type === "BUY";
-  const pendingOffers = listing.tradeOffers.filter((o) => o.status === "PENDING");
-  const myOffers = listing.tradeOffers.filter((o) => o.offererId === session.user.discordId);
+  const pendingOffers = listing.deals.filter((d) => d.status === "PENDING");
+  const myOffers = listing.deals.filter((d) => d.userId === session.user.discordId);
 
   return (
     <>
@@ -172,26 +172,30 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
-      {isTrade && listing.status === "SOLD" && (
+      {isTrade && (listing.status === "COMPLETED" || listing.status === "SOLD") && (
         <p className="mt-3 text-sm text-ro-text-muted">
           {(() => {
-            const accepted = listing.tradeOffers.find((o) => o.status === "ACCEPTED");
-            if (!accepted) return null;
+            const accepted = listing.deals.find((d) => d.status === "ACCEPTED");
+            if (!accepted || !accepted.offeredItem) return null;
             return (
               <>
                 {t("detail.tradedWith")}{" "}
                 <UserMention
-                  userId={accepted.offererId}
-                  username={accepted.offerer.username}
+                  userId={accepted.userId}
+                  username={accepted.user.username}
                   viewerId={session.user.discordId}
                   item={listing.item}
                   listingId={listing.id}
                   dmAvailable={dmAvailable}
                 />{" "}
                 {t("detail.forItem", {
-                  item: formatItemDisplayName(accepted.item.name, accepted.refineLevel, accepted.cardSlots),
+                  item: formatItemDisplayName(
+                    accepted.offeredItem.name,
+                    accepted.offeredRefine ?? 0,
+                    accepted.offeredCardSlots ?? 0,
+                  ),
                 })}
-                {accepted.quantity > 1 && ` x${accepted.quantity}`}
+                {(accepted.offeredQuantity ?? 1) > 1 && ` x${accepted.offeredQuantity}`}
                 {accepted.zenyOffered > 0 && ` + ${formatPrice(accepted.zenyOffered)}`}
               </>
             );
@@ -207,8 +211,13 @@ export async function ListingDetailContent({ id }: { id: string }) {
               <li key={offer.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
-                    {formatItemDisplayName(offer.item.name, offer.refineLevel, offer.cardSlots)}
-                    {offer.quantity > 1 && ` x${offer.quantity}`}
+                    {offer.offeredItem &&
+                      formatItemDisplayName(
+                        offer.offeredItem.name,
+                        offer.offeredRefine ?? 0,
+                        offer.offeredCardSlots ?? 0,
+                      )}
+                    {(offer.offeredQuantity ?? 1) > 1 && ` x${offer.offeredQuantity}`}
                   </span>
                   {!isPoster && (
                     <span className="text-xs text-ro-text-muted">
@@ -216,14 +225,14 @@ export async function ListingDetailContent({ id }: { id: string }) {
                     </span>
                   )}
                 </div>
-                {isPoster && (
+                {isPoster && offer.offeredItem && (
                   <p className="mt-1 text-ro-text-muted">
                     {t("detail.offerFrom")}{" "}
                     <UserMention
-                      userId={offer.offererId}
-                      username={offer.offerer.username}
+                      userId={offer.userId}
+                      username={offer.user.username}
                       viewerId={session.user.discordId}
-                      item={offer.item}
+                      item={offer.offeredItem}
                       listingId={listing.id}
                       dmAvailable={dmAvailable}
                     />
