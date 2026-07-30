@@ -24,7 +24,9 @@
       "noRoles": "Sin roles registrados",
       "myActivity": "Mi actividad",
       "settings": "Ajustes",
-      "signOut": "Salir"
+      "signOut": "Salir",
+      "theme": "Tema",
+      "language": "Idioma"
     }
   },
   "myActivity": {
@@ -100,7 +102,6 @@
     "invalidOptionForItem": "Option inválida para este item",
     "optionValueRange": "El valor de \"{label}\" debe estar entre {min} y {max}",
     "unsupportedGeminiModel": "Modelo de Gemini no soportado",
-    "unsupportedLocale": "Idioma no soportado",
     "invalidWebhookUrl": "La URL del webhook debe ser un webhook de Discord (https://discord.com/api/webhooks/...)",
     "recognitionNotActive": "El reconocimiento por captura no está activo",
     "noImageReceived": "No se ha recibido ninguna imagen",
@@ -156,10 +157,6 @@
       "rolesFetchError": "No se pudo listar los roles del servidor con nombre ({message}).",
       "roleIdsPlaceholder": "Un ID de rol por línea (o separados por comas)",
       "roleIdsHint": "Sin bot configurado (DISCORD_BOT_TOKEN) no se pueden mostrar los nombres de los roles — copia el ID de cada rol desde Discord (Ajustes del servidor → Roles → clic derecho → Copiar ID, con el modo desarrollador activado)."
-    },
-    "language": {
-      "legend": "Idioma",
-      "label": "Idioma de la aplicación"
     },
     "webhook": {
       "legend": "Notificaciones a Discord",

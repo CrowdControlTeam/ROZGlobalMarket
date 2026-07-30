@@ -9,7 +9,6 @@ import { loadMarketConfig } from "@/lib/market-config";
 import { getOptionsCatalogCount } from "@/lib/item-options";
 import { fetchGuildRoles, getBotStatus } from "@/lib/discord-bot";
 import { GEMINI_MODEL_VALUES, isGeminiModel } from "@/lib/gemini-model-constants";
-import { LOCALE_OPTIONS, isAppLocale } from "@/lib/locale-constants";
 import { isDiscordWebhookUrl } from "@/lib/discord-webhook-constants";
 
 // El valor real de un secreto nunca sale del servidor una vez guardado —
@@ -56,8 +55,6 @@ export async function getMarketConfig() {
     optionsCatalogCount,
     adminRoleIds: config.adminRoleIds,
     guildRolesResult,
-    locale: config.locale,
-    localeOptions: LOCALE_OPTIONS,
   };
 }
 
@@ -90,7 +87,6 @@ export async function updateMarketConfig(formData: FormData) {
     webhookEnabled: z.boolean(),
     imageRecognitionEnabled: z.boolean(),
     geminiModel: z.string().refine(isGeminiModel, t("unsupportedGeminiModel")),
-    locale: z.string().refine(isAppLocale, t("unsupportedLocale")),
     dmNotificationsEnabled: z.boolean(),
     maintenanceModeEnabled: z.boolean(),
     optionsEnabled: z.boolean(),
@@ -113,7 +109,6 @@ export async function updateMarketConfig(formData: FormData) {
     webhookEnabled: formData.get("webhookEnabled") === "on",
     imageRecognitionEnabled: formData.get("imageRecognitionEnabled") === "on",
     geminiModel: formData.get("geminiModel"),
-    locale: formData.get("locale"),
     dmNotificationsEnabled: formData.get("dmNotificationsEnabled") === "on",
     maintenanceModeEnabled: formData.get("maintenanceModeEnabled") === "on",
     optionsEnabled: formData.get("optionsEnabled") === "on",
@@ -138,7 +133,6 @@ export async function updateMarketConfig(formData: FormData) {
       optionsEnabled: parsed.data.optionsEnabled,
       webhookUrl: parsed.data.webhookUrl ?? null,
       adminRoleIds,
-      locale: parsed.data.locale,
       siteName: parsed.data.siteName ?? null,
     },
     update: {
@@ -151,7 +145,6 @@ export async function updateMarketConfig(formData: FormData) {
       optionsEnabled: parsed.data.optionsEnabled,
       ...(parsed.data.webhookUrl ? { webhookUrl: parsed.data.webhookUrl } : {}),
       adminRoleIds,
-      locale: parsed.data.locale,
       siteName: parsed.data.siteName ?? null,
     },
   });

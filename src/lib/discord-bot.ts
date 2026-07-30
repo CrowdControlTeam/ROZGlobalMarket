@@ -89,6 +89,29 @@ export const getBotStatus = cache(async (): Promise<BotStatus> => {
   return value;
 });
 
+// Mapa id→nombre de los roles del servidor, para mostrar el NOMBRE del rol (no
+// el ID) en el menú de usuario cuando el bot está configurado y en el servidor.
+// Se cachea con TTL corto (los roles cambian rara vez) porque el header se
+// renderiza en cada página — mismo criterio que getBotStatus. Si el bot no está
+// disponible se devuelve un mapa vacío y el caller cae al ID.
+const ROLE_NAMES_TTL_MS = 5 * 60 * 1000;
+let roleNamesCache: { value: Map<string, string>; at: number } | null = null;
+
+export const loadGuildRoleNames = cache(async (): Promise<Map<string, string>> => {
+  const now = Date.now();
+  if (roleNamesCache && now - roleNamesCache.at < ROLE_NAMES_TTL_MS) {
+    return roleNamesCache.value;
+  }
+  const result = await fetchGuildRoles();
+  const map = new Map<string, string>();
+  if (result.status === "ok") {
+    for (const r of result.roles) map.set(r.id, r.name);
+    roleNamesCache = { value: map, at: now };
+  }
+  // no_bot/error: no se cachea (para reintentar) y se devuelve vacío => fallback a IDs.
+  return map;
+});
+
 // Para que la UI (nombres clicables, ver UserMention.tsx) sepa si tiene
 // sentido ofrecer la opción en absoluto — mismo criterio que usa
 // sendDirectMessage por debajo, pero sin intentar mandar nada. Ahora exige
