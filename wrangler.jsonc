@@ -15,6 +15,10 @@
   // cada deploy volvería a habilitarla (el toggle del dashboard no persistiría).
   // No es heredable por los named environments, por eso se repite en env.dev.
   "workers_dev": false,
+  // Non-secret var to tell environments apart at runtime. The footer appends a
+  // "-dev" suffix to the version when APP_ENV is "dev". `vars` is not inherited
+  // by named environments, so it is set again under env.dev.
+  "vars": { "APP_ENV": "production" },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -41,7 +45,9 @@
       "name": "roz-global-market-dev",
       // workers_dev no se hereda del nivel raíz: hay que desactivarlo también
       // aquí para que el Worker de dev solo sirva por su subdominio dev.*.
-      "workers_dev": false
+      "workers_dev": false,
+      // Marks this as the dev environment (footer -> "-dev" version suffix).
+      "vars": { "APP_ENV": "dev" }
     }
   }
   // Los secretos (DATABASE_URL, AUTH_SECRET, DISCORD_*, APP_URL, GEMINI_API_KEY)
