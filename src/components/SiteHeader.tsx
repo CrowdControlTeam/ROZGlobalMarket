@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { loadMarketConfig, DEFAULT_SITE_NAME } from "@/lib/market-config";
+import { isAppLocale, DEFAULT_LOCALE } from "@/lib/locale-constants";
 import { HamburgerMenu } from "./HamburgerMenu";
 import { UserMenu } from "./UserMenu";
 import { CreatePublicationButton } from "./CreatePublicationButton";
-import { ThemeToggle } from "./ThemeToggle";
 
 // Fallback de <Suspense> para SiteHeader (ver layout.tsx) — misma forma
 // exacta (alto, borde, posición del logo) para que no haya salto de
@@ -41,11 +42,13 @@ export async function SiteHeader({
   user: SessionUser | null;
   theme: "light" | "dark";
 }) {
-  const [fullUser, { maintenanceModeEnabled, siteName }] = await Promise.all([
+  const [fullUser, { maintenanceModeEnabled, siteName }, rawLocale] = await Promise.all([
     user ? prisma.user.findUnique({ where: { id: user.discordId } }) : null,
     loadMarketConfig(),
+    getLocale(),
   ]);
   const canCreate = !!user && (!maintenanceModeEnabled || user.isAdmin);
+  const locale = isAppLocale(rawLocale) ? rawLocale : DEFAULT_LOCALE;
 
   return (
     <header className="border-b border-ro-gold/25 bg-ro-navy text-ro-on-navy">
@@ -61,7 +64,6 @@ export async function SiteHeader({
         </div>
 
         <div className="flex items-center gap-3">
-          <ThemeToggle initial={theme} />
           {canCreate && <CreatePublicationButton />}
           {fullUser && user && (
             <UserMenu
@@ -73,6 +75,8 @@ export async function SiteHeader({
                 createdAt: fullUser.createdAt,
                 isAdmin: user.isAdmin,
               }}
+              theme={theme}
+              locale={locale}
             />
           )}
         </div>

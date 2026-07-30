@@ -308,13 +308,6 @@ model MarketConfig {
   // (DISCORD_BOT_TOKEN, nunca en base de datos), o como entrada manual si no.
   adminRoleIds String[] @default([])
 
-  // Idioma activo de toda la app (no es una preferencia por usuario, es
-  // global — no hay locale routing, ver src/i18n/request.ts). El catálogo
-  // de idiomas soportados vive en código (src/lib/locale-constants.ts,
-  // mismo patrón que geminiModel): un valor aquí no basta por sí solo, hace
-  // falta que exista de verdad el fichero de mensajes traducido.
-  locale String @default("es")
-
   // Nombre de la app mostrado en la cabecera (enlaza a /market) y como
   // <title> de la pestaña — cada guild pone el suyo. Null hasta
   // configurarse la primera vez: el placeholder/fallback "ROZ Global

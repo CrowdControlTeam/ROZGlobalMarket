@@ -85,20 +85,6 @@ export function AdminConfigForm({ config }: { config: Config }) {
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-semibold text-ro-text">{t("language.legend")}</legend>
-        <div>
-          <label className={labelClass}>{t("language.label")}</label>
-          <select name="locale" defaultValue={config.locale} className={selectClass}>
-            {config.localeOptions.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("webhook.legend")}</legend>
         <ToggleSwitch
           name="webhookEnabled"

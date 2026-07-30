@@ -24,7 +24,9 @@
       "noRoles": "No roles on record",
       "myActivity": "My activity",
       "settings": "Settings",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "theme": "Theme",
+      "language": "Language"
     }
   },
   "myActivity": {
@@ -100,7 +102,6 @@
     "invalidOptionForItem": "Invalid option for this item",
     "optionValueRange": "\"{label}\" must be between {min} and {max}",
     "unsupportedGeminiModel": "Unsupported Gemini model",
-    "unsupportedLocale": "Unsupported language",
     "invalidWebhookUrl": "The webhook URL must be a Discord webhook (https://discord.com/api/webhooks/...)",
     "recognitionNotActive": "Screenshot recognition isn't active",
     "noImageReceived": "No image was received",
@@ -156,10 +157,6 @@
       "rolesFetchError": "Couldn't list the server's roles by name ({message}).",
       "roleIdsPlaceholder": "One role ID per line (or comma-separated)",
       "roleIdsHint": "Without a configured bot (DISCORD_BOT_TOKEN) role names can't be shown — copy each role's ID from Discord (Server Settings → Roles → right-click → Copy ID, with developer mode enabled)."
-    },
-    "language": {
-      "legend": "Language",
-      "label": "App language"
     },
     "webhook": {
       "legend": "Discord notifications",
