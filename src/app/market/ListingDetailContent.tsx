@@ -225,7 +225,10 @@ export async function ListingDetailContent({ id }: { id: string }) {
             <TradeOfferForm listingId={listing.id} />
           ) : isSale && (available === null || available > 0) ? (
             // unitPrice null (sin precio) => ReserveForm muestra el input de puja.
+            // key por available+mejor oferta: al comprar y refrescar, el form se
+            // remonta y la cantidad/puja vuelven al nuevo máximo/sugerido (2A).
             <ReserveForm
+              key={`reserve-${available}-${bestOfferPrice}`}
               listingId={listing.id}
               available={available}
               unitPrice={listing.price}
@@ -233,6 +236,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
             />
           ) : isBuy && (available === null || available > 0) ? (
             <OfferToFulfillForm
+              key={`fulfill-${available}-${bestOfferPrice}`}
               listingId={listing.id}
               available={available}
               unitPrice={listing.price}

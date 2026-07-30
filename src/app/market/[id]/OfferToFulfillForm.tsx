@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { offerToFulfill } from "@/lib/listings";
+import { useListingSync } from "../listingStore";
 import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { getErrorMessage } from "@/lib/errors";
@@ -24,7 +24,7 @@ export function OfferToFulfillForm({
   unitPrice: number | null; // null = "sin precio" (competitivo): el vendedor pide
   suggestedAsk: number | null; // mejor oferta actual (competitivo) para prefijar; null = sin ninguna
 }) {
-  const router = useRouter();
+  const sync = useListingSync();
   // Por defecto se vende todo lo pedido (1 si es ilimitado) y, en competitivo,
   // se pide la mejor oferta actual (1 si aún no hay ninguna).
   const [quantity, setQuantity] = useState(available ?? 1);
@@ -45,8 +45,7 @@ export function OfferToFulfillForm({
         setError(null);
         startTransition(async () => {
           try {
-            await offerToFulfill(listingId, formData);
-            router.refresh();
+            sync(await offerToFulfill(listingId, formData));
           } catch (err) {
             setError(getErrorMessage(err));
           } finally {

@@ -23,6 +23,7 @@ import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constan
 import { loadMarketConfig } from "@/lib/market-config";
 import { searchCatalog } from "@/lib/item-catalog";
 import { listingStatusOnClose, availableFrom, isSoldOut } from "@/lib/deals";
+import { listingCardState } from "@/lib/listing-card";
 
 export async function searchItems(query: string) {
   await requireSession();
@@ -353,6 +354,7 @@ export async function cancelListing(listingId: string) {
 
   revalidatePath("/market");
   revalidatePath(`/market/${listingId}`);
+  return listingCardState(listingId);
 }
 
 export async function reserveListing(listingId: string, formData: FormData) {
@@ -467,6 +469,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
 
   revalidatePath("/market");
   revalidatePath(`/market/${listingId}`);
+  return listingCardState(listingId);
 }
 
 // Ownership + estado compartidos entre aceptar/rechazar (vendedor) y cancelar
@@ -560,6 +563,7 @@ export async function acceptSaleReservation(dealId: string) {
 
   revalidatePath("/market");
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }
 
 // El vendedor RECHAZA una reserva: libera el stock retenido.
@@ -584,6 +588,7 @@ export async function rejectSaleReservation(dealId: string) {
   });
 
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }
 
 // El comprador CANCELA su propia reserva pendiente.
@@ -593,6 +598,7 @@ export async function cancelSaleReservation(dealId: string) {
   const deal = await loadOwnedPendingSaleDeal(dealId, "buyer", session.user.discordId, t);
   await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }
 
 // ── Compras (BUY): el vendedor OFRECE suministrar, el comprador CONFIRMA ──
@@ -694,6 +700,7 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
 
   revalidatePath("/market");
   revalidatePath(`/market/${listingId}`);
+  return listingCardState(listingId);
 }
 
 async function loadOwnedPendingBuyDeal(
@@ -785,6 +792,7 @@ export async function acceptFulfillOffer(dealId: string) {
 
   revalidatePath("/market");
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }
 
 // El comprador RECHAZA una oferta de venta.
@@ -809,6 +817,7 @@ export async function rejectFulfillOffer(dealId: string) {
   });
 
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }
 
 // El vendedor CANCELA su propia oferta pendiente.
@@ -818,4 +827,5 @@ export async function cancelFulfillOffer(dealId: string) {
   const deal = await loadOwnedPendingBuyDeal(dealId, "seller", session.user.discordId, t);
   await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }

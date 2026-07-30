@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { reserveListing } from "@/lib/listings";
+import { useListingSync } from "../listingStore";
 import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { getErrorMessage } from "@/lib/errors";
@@ -24,7 +24,7 @@ export function ReserveForm({
   unitPrice: number | null; // null = "sin precio" (competitivo): el comprador puja
   suggestedBid: number | null; // mejor puja actual (competitivo) para prefijar; null = sin ninguna
 }) {
-  const router = useRouter();
+  const sync = useListingSync();
   // Por defecto se compra todo lo disponible (1 si es ilimitado) y, en
   // competitivo, se puja la mejor oferta actual (1 si aún no hay ninguna).
   const [quantity, setQuantity] = useState(available ?? 1);
@@ -47,8 +47,7 @@ export function ReserveForm({
         setError(null);
         startTransition(async () => {
           try {
-            await reserveListing(listingId, formData);
-            router.refresh();
+            sync(await reserveListing(listingId, formData));
           } catch (err) {
             setError(getErrorMessage(err));
           } finally {

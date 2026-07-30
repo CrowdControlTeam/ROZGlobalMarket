@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { acceptTradeOffer, rejectTradeOffer, cancelTradeOffer } from "@/lib/trade-offers";
 import { buttonClass } from "@/lib/ui";
 import { getErrorMessage } from "@/lib/errors";
+import { useListingSync } from "../listingStore";
+import type { ListingCardPatch } from "@/lib/listing-card";
 
 export function TradeOfferActions({
   offerId,
@@ -14,17 +15,16 @@ export function TradeOfferActions({
   offerId: string;
   role: "seller" | "offerer";
 }) {
-  const router = useRouter();
+  const sync = useListingSync();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations("market.detail.tradeActions");
 
-  function run(action: (id: string) => Promise<void>) {
+  function run(action: (id: string) => Promise<ListingCardPatch>) {
     setError(null);
     startTransition(async () => {
       try {
-        await action(offerId);
-        router.refresh();
+        sync(await action(offerId));
       } catch (err) {
         setError(getErrorMessage(err));
       }

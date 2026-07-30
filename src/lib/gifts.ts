@@ -20,6 +20,7 @@ import {
   validateOptions,
 } from "@/lib/item-options";
 import { availableFrom, isSoldOut } from "@/lib/deals";
+import { listingCardState } from "@/lib/listing-card";
 
 // El destinatario solo se puede elegir entre usuarios que ya han iniciado
 // sesión alguna vez (los únicos de los que hay registro en User) — mismo
@@ -306,6 +307,7 @@ export async function claimGift(listingId: string, formData: FormData) {
 
   revalidatePath("/market");
   revalidatePath(`/market/${listingId}`);
+  return listingCardState(listingId);
 }
 
 async function loadOwnedPendingGiftDeal(
@@ -373,6 +375,7 @@ export async function acceptGiftClaim(dealId: string) {
 
   revalidatePath("/market");
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }
 
 // El que regala RECHAZA una reclamación: libera las unidades retenidas.
@@ -397,6 +400,7 @@ export async function rejectGiftClaim(dealId: string) {
   });
 
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }
 
 // El reclamante CANCELA su propia reclamación pendiente.
@@ -406,4 +410,5 @@ export async function cancelGiftClaim(dealId: string) {
   const deal = await loadOwnedPendingGiftDeal(dealId, "claimer", session.user.discordId, t);
   await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }

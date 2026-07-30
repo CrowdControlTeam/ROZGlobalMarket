@@ -278,15 +278,27 @@ export async function getListings(filters: MarketFilters) {
         })
       : null;
 
-  // Vendido por listing derivado de los Deal ACCEPTED (ya no hay quantitySold).
-  // Un groupBy para toda la página en vez de una consulta por card.
-  const soldByListing = await prisma.deal.groupBy({
-    by: ["listingId"],
-    where: { listingId: { in: page.map((l) => l.id) }, status: "ACCEPTED" },
+  // Vendido y reservado por listing derivados de los Deal (ya no hay
+  // quantitySold). Un groupBy para toda la página en vez de una consulta por
+  // card. `reserved` (PENDING) permite que la card reste lo pendiente igual que
+  // el detalle (en precio fijo); el grid decide si restarlo según el tipo/modo.
+  const dealAgg = await prisma.deal.groupBy({
+    by: ["listingId", "status"],
+    where: { listingId: { in: page.map((l) => l.id) }, status: { in: ["ACCEPTED", "PENDING"] } },
     _sum: { quantity: true },
   });
-  const soldMap = new Map(soldByListing.map((g) => [g.listingId, g._sum.quantity ?? 0]));
-  const pageWithSold = page.map((l) => ({ ...l, sold: soldMap.get(l.id) ?? 0 }));
+  const soldMap = new Map<string, number>();
+  const reservedMap = new Map<string, number>();
+  for (const g of dealAgg) {
+    const q = g._sum.quantity ?? 0;
+    if (g.status === "ACCEPTED") soldMap.set(g.listingId, (soldMap.get(g.listingId) ?? 0) + q);
+    else if (g.status === "PENDING") reservedMap.set(g.listingId, (reservedMap.get(g.listingId) ?? 0) + q);
+  }
+  const pageWithSold = page.map((l) => ({
+    ...l,
+    sold: soldMap.get(l.id) ?? 0,
+    reserved: reservedMap.get(l.id) ?? 0,
+  }));
 
   return { listings: pageWithSold, nextCursor };
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createTradeOffer } from "@/lib/trade-offers";
+import { useListingSync } from "../listingStore";
 import { getMaxRefineLevel } from "@/lib/listings";
 import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
@@ -12,7 +12,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { ItemPicker, type ItemResult } from "../new/ItemPicker";
 
 export function TradeOfferForm({ listingId }: { listingId: string }) {
-  const router = useRouter();
+  const sync = useListingSync();
   const [selectedItem, setSelectedItem] = useState<ItemResult | null>(null);
   const [refineLevel, setRefineLevel] = useState(0);
   const [cardSlots, setCardSlots] = useState(0);
@@ -54,8 +54,7 @@ export function TradeOfferForm({ listingId }: { listingId: string }) {
         setError(null);
         startTransition(async () => {
           try {
-            await createTradeOffer(listingId, formData);
-            router.refresh();
+            sync(await createTradeOffer(listingId, formData));
           } catch (err) {
             setError(getErrorMessage(err));
           } finally {

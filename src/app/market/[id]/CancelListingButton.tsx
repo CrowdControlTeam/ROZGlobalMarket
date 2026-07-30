@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cancelListing } from "@/lib/listings";
+import { useListingSync } from "../listingStore";
 import { buttonClass } from "@/lib/ui";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -20,7 +20,7 @@ export function CancelListingButton({
   listingId: string;
   unlimited?: boolean;
 }) {
-  const router = useRouter();
+  const sync = useListingSync();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations("market.detail");
@@ -29,8 +29,7 @@ export function CancelListingButton({
     setError(null);
     startTransition(async () => {
       try {
-        await cancelListing(listingId);
-        router.refresh();
+        sync(await cancelListing(listingId));
       } catch (err) {
         setError(getErrorMessage(err));
       }
