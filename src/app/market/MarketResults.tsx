@@ -100,12 +100,20 @@ export function MarketResults({
               : listing.type === "BUY"
                 ? t("results.wanted", { count: listing.quantity - listing.sold })
                 : t("results.available", { count: listing.quantity - listing.sold });
+          const roleLabel =
+            listing.type === "BUY"
+              ? t("results.wantedBy")
+              : listing.type === "TRADE"
+                ? t("results.tradedBy")
+                : listing.type === "GIFT"
+                  ? t("results.giftedBy")
+                  : t("results.soldBy");
           const posterLine = (
             <p className="text-sm text-ro-text-muted">
               {/* La cantidad se muestra en todos los tipos, incluidas las compras
                   (unidades que aún se buscan) — mismo formato que las ventas. */}
               {`${countLabel} · `}
-              {listing.type === "BUY" ? t("results.wantedBy") : t("results.soldBy")}{" "}
+              {roleLabel}{" "}
               <UserMention
                 userId={listing.poster.id}
                 username={listing.poster.username}
@@ -116,15 +124,16 @@ export function MarketResults({
               />
             </p>
           );
+          // TRADE y GIFT no llevan precio en la card. En SALE/BUY, precio null =
+          // "sin precio" (competitivo) => "Hacer oferta"; si no, el importe (sin
+          // el "hasta" en compras: el precio de compra ya no es un máximo).
           const priceLine =
-            listing.type === "TRADE" ? null : listing.price === null ? (
-              // "Sin precio" (competitivo): al mejor postor (venta) / mejor precio (compra).
+            listing.type === "TRADE" || listing.type === "GIFT" ? null : listing.price === null ? (
               <p className="font-bold text-ro-text-muted">
                 {listing.type === "BUY" ? t("field.bestPrice") : t("field.bestOffer")}
               </p>
             ) : (
               <p className={`font-bold ${priceColorClass(listing.price)}`}>
-                {listing.type === "BUY" ? t("results.upTo") : ""}
                 {formatPrice(listing.price)}
               </p>
             );

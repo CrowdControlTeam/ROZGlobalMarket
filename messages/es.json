@@ -371,10 +371,11 @@
       "empty": "No hay publicaciones que coincidan con la búsqueda.",
       "wantedBy": "buscado por",
       "soldBy": "vendido por",
+      "tradedBy": "intercambiado por",
+      "giftedBy": "regalado por",
       "available": "x{count} disponibles",
       "wanted": "x{count}",
       "availableUnlimited": "∞",
-      "upTo": "hasta ",
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
     },
@@ -409,19 +410,19 @@
         "cancelOffer": "Cancelar"
       },
       "reserve": {
-        "quantityLabel": "Cantidad a reservar",
+        "quantityLabel": "Cantidad a comprar",
         "bidLabel": "Tu oferta/ud",
         "total": "Total (si se confirma):",
         "reserving": "Comprando...",
         "submit": "Comprar"
       },
       "perUnit": "/ud",
-      "reservationsReceived": "Reservas por confirmar",
+      "reservationsReceived": "Ventas por confirmar",
       "yourReservations": "Tus reservas",
       "reservedBy": "Reservado por",
       "reserved": "Reservados",
       "reservationActions": {
-        "confirm": "Confirmar venta",
+        "confirm": "Vender",
         "reject": "Rechazar",
         "cancel": "Cancelar reserva"
       },
@@ -436,7 +437,7 @@
       "yourFulfillOffers": "Tus ofertas de venta",
       "offeredBy": "Ofrecido por",
       "fulfillActions": {
-        "confirm": "Confirmar compra",
+        "confirm": "Comprar",
         "reject": "Rechazar",
         "cancel": "Cancelar oferta"
       },
@@ -445,7 +446,7 @@
         "claiming": "Reclamando...",
         "submit": "Reclamar"
       },
-      "claimsReceived": "Reclamaciones por confirmar",
+      "claimsReceived": "Regalos por confirmar",
       "yourClaims": "Tus reclamaciones",
       "claimedBy": "Reclamado por",
       "claimActions": {

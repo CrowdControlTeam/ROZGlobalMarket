@@ -371,10 +371,11 @@
       "empty": "No listings match your search.",
       "wantedBy": "wanted by",
       "soldBy": "sold by",
+      "tradedBy": "traded by",
+      "giftedBy": "gifted by",
       "available": "x{count} available",
       "wanted": "x{count}",
       "availableUnlimited": "∞",
-      "upTo": "up to ",
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
     },
@@ -409,19 +410,19 @@
         "cancelOffer": "Cancel"
       },
       "reserve": {
-        "quantityLabel": "Quantity to reserve",
+        "quantityLabel": "Quantity to buy",
         "bidLabel": "Your bid/ea",
         "total": "Total (if confirmed):",
         "reserving": "Buying...",
         "submit": "Buy"
       },
       "perUnit": "/ea",
-      "reservationsReceived": "Reservations to confirm",
+      "reservationsReceived": "Sales to confirm",
       "yourReservations": "Your reservations",
       "reservedBy": "Reserved by",
       "reserved": "Reserved",
       "reservationActions": {
-        "confirm": "Confirm sale",
+        "confirm": "Sell",
         "reject": "Reject",
         "cancel": "Cancel reservation"
       },
@@ -436,7 +437,7 @@
       "yourFulfillOffers": "Your sell offers",
       "offeredBy": "Offered by",
       "fulfillActions": {
-        "confirm": "Confirm purchase",
+        "confirm": "Buy",
         "reject": "Reject",
         "cancel": "Cancel offer"
       },
@@ -445,7 +446,7 @@
         "claiming": "Claiming...",
         "submit": "Claim"
       },
-      "claimsReceived": "Claims to confirm",
+      "claimsReceived": "Gifts to confirm",
       "yourClaims": "Your claims",
       "claimedBy": "Claimed by",
       "claimActions": {
