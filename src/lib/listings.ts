@@ -306,6 +306,7 @@ export async function createListing(formData: FormData) {
     quantity: listing.quantity,
     posterUsername: session.user.username,
     posterAvatarUrl: session.user.avatarUrl,
+    posterId: session.user.discordId,
     listingUrl: `${appUrl}/market/${listing.id}`,
     options: rawOptions.map((o) => ({
       label: defsById.get(o.defId)!.label,
@@ -464,6 +465,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
+      { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
 
@@ -558,6 +560,7 @@ export async function acceptSaleReservation(dealId: string) {
         value: formatPrice(deal.quantity * (deal.unitPrice ?? 0)),
         inline: true,
       },
+      { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
 
@@ -584,7 +587,7 @@ export async function rejectSaleReservation(dealId: string) {
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
     itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
-    fields: [],
+    fields: [{ name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false }],
   });
 
   revalidatePath(`/market/${deal.listingId}`);
@@ -695,6 +698,7 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
+      { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
 
@@ -787,6 +791,7 @@ export async function acceptFulfillOffer(dealId: string) {
         value: formatPrice(deal.quantity * (deal.unitPrice ?? 0)),
         inline: true,
       },
+      { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
 
@@ -813,7 +818,7 @@ export async function rejectFulfillOffer(dealId: string) {
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
     itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
-    fields: [],
+    fields: [{ name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false }],
   });
 
   revalidatePath(`/market/${deal.listingId}`);

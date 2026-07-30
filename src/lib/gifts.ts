@@ -187,6 +187,7 @@ export async function sendGift(formData: FormData) {
               },
             ]
           : []),
+        { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
       ],
     });
   }
@@ -302,7 +303,10 @@ export async function claimGift(listingId: string, formData: FormData) {
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
     itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
-    fields: [{ name: tField("quantity"), value: String(quantity), inline: true }],
+    fields: [
+      { name: tField("quantity"), value: String(quantity), inline: true },
+      { name: tDiscord("fields.to"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
   revalidatePath("/market");
@@ -370,7 +374,10 @@ export async function acceptGiftClaim(dealId: string) {
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
     itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
-    fields: [{ name: tField("quantity"), value: String(deal.quantity), inline: true }],
+    fields: [
+      { name: tField("quantity"), value: String(deal.quantity), inline: true },
+      { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
   revalidatePath("/market");
@@ -396,7 +403,7 @@ export async function rejectGiftClaim(dealId: string) {
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
     itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
-    fields: [],
+    fields: [{ name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false }],
   });
 
   revalidatePath(`/market/${deal.listingId}`);

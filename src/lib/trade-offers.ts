@@ -179,7 +179,11 @@ export async function acceptTradeOffer(dealId: string) {
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.TRADE,
     itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.yourOffer"), value: offeredItemName, inline: true }, ...zenyField],
+    fields: [
+      { name: tDiscord("fields.yourOffer"), value: offeredItemName, inline: true },
+      ...zenyField,
+      { name: tDiscord("fields.tradedWith"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
   await sendDirectMessage(session.user.discordId, {
     title: tDiscord("dm.tradeAcceptedForPoster", {
@@ -189,7 +193,11 @@ export async function acceptTradeOffer(dealId: string) {
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.TRADE,
     itemIconUrl: `${appUrl}${deal.offeredItem!.iconUrl}`,
-    fields: [{ name: tDiscord("fields.youReceived"), value: offeredItemName, inline: true }, ...zenyField],
+    fields: [
+      { name: tDiscord("fields.youReceived"), value: offeredItemName, inline: true },
+      ...zenyField,
+      { name: tDiscord("fields.tradedWith"), value: `<@${deal.userId}>`, inline: false },
+    ],
   });
 
   revalidatePath(`/market/${deal.listingId}`);
