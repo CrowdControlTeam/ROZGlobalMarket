@@ -57,15 +57,24 @@ export function OfferToFulfillForm({
     >
       <div>
         <label className={labelClass}>{t("quantityLabel")}</label>
-        <input
-          type="number"
-          name="quantity"
-          min={1}
-          max={available ?? undefined}
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          className={inputClass}
-        />
+        {/* Con 1 sola unidad el input no aporta: "1" en texto plano (armonía) +
+            hidden. */}
+        {available === 1 ? (
+          <>
+            <p className="text-sm text-ro-text-muted">1</p>
+            <input type="hidden" name="quantity" value={1} />
+          </>
+        ) : (
+          <input
+            type="number"
+            name="quantity"
+            min={1}
+            max={available ?? undefined}
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+            className={inputClass}
+          />
+        )}
       </div>
 
       {competitive && (
