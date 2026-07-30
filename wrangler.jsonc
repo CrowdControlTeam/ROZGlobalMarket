@@ -8,6 +8,13 @@
   // Workers; requiere compatibility_date >= 2024-09-23.
   "compatibility_date": "2025-03-25",
   "compatibility_flags": ["nodejs_compat"],
+  // Desactiva la URL por defecto *.workers.dev: en producción solo se entra por
+  // el dominio propio, que es donde viven las protecciones de zona (WAF, rate
+  // limit, Access, etc.) — la workers.dev se las saltaría. Es un ajuste
+  // declarativo A PROPÓSITO: el default de wrangler es true, así que sin esto
+  // cada deploy volvería a habilitarla (el toggle del dashboard no persistiría).
+  // No es heredable por los named environments, por eso se repite en env.dev.
+  "workers_dev": false,
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -31,7 +38,10 @@
   // es producción (rama main).
   "env": {
     "dev": {
-      "name": "roz-global-market-dev"
+      "name": "roz-global-market-dev",
+      // workers_dev no se hereda del nivel raíz: hay que desactivarlo también
+      // aquí para que el Worker de dev solo sirva por su subdominio dev.*.
+      "workers_dev": false
     }
   }
   // Los secretos (DATABASE_URL, AUTH_SECRET, DISCORD_*, APP_URL, GEMINI_API_KEY)
