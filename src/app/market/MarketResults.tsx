@@ -94,14 +94,17 @@ export function MarketResults({
               {listingTypeLabel(t, listing.type)}
             </span>
           );
+          const countLabel =
+            listing.quantity === null
+              ? t("results.availableUnlimited")
+              : listing.type === "BUY"
+                ? t("results.wanted", { count: listing.quantity - listing.sold })
+                : t("results.available", { count: listing.quantity - listing.sold });
           const posterLine = (
             <p className="text-sm text-ro-text-muted">
-              {listing.type !== "BUY" &&
-                `${
-                  listing.quantity === null
-                    ? t("results.availableUnlimited")
-                    : t("results.available", { count: listing.quantity - listing.sold })
-                } · `}
+              {/* La cantidad se muestra en todos los tipos, incluidas las compras
+                  (unidades que aún se buscan) — mismo formato que las ventas. */}
+              {`${countLabel} · `}
               {listing.type === "BUY" ? t("results.wantedBy") : t("results.soldBy")}{" "}
               <UserMention
                 userId={listing.poster.id}

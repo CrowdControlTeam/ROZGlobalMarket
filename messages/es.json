@@ -372,6 +372,7 @@
       "wantedBy": "buscado por",
       "soldBy": "vendido por",
       "available": "x{count} disponibles",
+      "wanted": "x{count}",
       "availableUnlimited": "∞",
       "upTo": "hasta ",
       "loadMore": "Cargar más",
