@@ -4,20 +4,14 @@ import { prisma } from "@/lib/prisma";
 // Labels vía sortLabel(t, sort) en market-labels.ts (messages/es.json,
 // namespace market.sort.*) — este array solo fija el orden y los valores
 // válidos, no el texto mostrado.
-export const SORT_VALUES = [
-  "newest",
-  "oldest",
-  "price_asc",
-  "price_desc",
-  "name_asc",
-  "name_desc",
-] as const;
-
-export type MarketSort = (typeof SORT_VALUES)[number];
-
-export function isMarketSort(value: string): value is MarketSort {
-  return (SORT_VALUES as readonly string[]).includes(value);
-}
+// Re-exportado desde market-sort.ts (módulo sin Prisma) para que los
+// componentes cliente lo importen desde ahí sin arrastrar este módulo —y el
+// cliente de Prisma— al bundle del navegador. El código de servidor puede
+// seguir importándolo desde "@/lib/market". MarketSort se importa además para
+// uso interno (el re-export no lo trae al scope local).
+export { SORT_VALUES, isMarketSort } from "@/lib/market-sort";
+import type { MarketSort } from "@/lib/market-sort";
+export type { MarketSort };
 
 export type MarketFilters = {
   q?: string;
@@ -284,5 +278,27 @@ export async function getListings(filters: MarketFilters) {
         })
       : null;
 
-  return { listings: page, nextCursor };
+  // Vendido y reservado por listing derivados de los Deal (ya no hay
+  // quantitySold). Un groupBy para toda la página en vez de una consulta por
+  // card. `reserved` (PENDING) permite que la card reste lo pendiente igual que
+  // el detalle (en precio fijo); el grid decide si restarlo según el tipo/modo.
+  const dealAgg = await prisma.deal.groupBy({
+    by: ["listingId", "status"],
+    where: { listingId: { in: page.map((l) => l.id) }, status: { in: ["ACCEPTED", "PENDING"] } },
+    _sum: { quantity: true },
+  });
+  const soldMap = new Map<string, number>();
+  const reservedMap = new Map<string, number>();
+  for (const g of dealAgg) {
+    const q = g._sum.quantity ?? 0;
+    if (g.status === "ACCEPTED") soldMap.set(g.listingId, (soldMap.get(g.listingId) ?? 0) + q);
+    else if (g.status === "PENDING") reservedMap.set(g.listingId, (reservedMap.get(g.listingId) ?? 0) + q);
+  }
+  const pageWithSold = page.map((l) => ({
+    ...l,
+    sold: soldMap.get(l.id) ?? 0,
+    reserved: reservedMap.get(l.id) ?? 0,
+  }));
+
+  return { listings: pageWithSold, nextCursor };
 }

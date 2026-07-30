@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
 import { sendDirectMessage, isDmFeatureAvailable } from "@/lib/discord-bot";
+import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 
 // Mensaje libre desde un nombre clicable (ver UserMention.tsx) — a
@@ -53,7 +54,7 @@ export async function sendContactMessage(formData: FormData) {
   if (!recipient) throw new Error(t("userNotFound"));
   if (!item) throw new Error(t("itemNotFound"));
 
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   await sendDirectMessage(parsed.data.recipientId, {
     title: tDiscord("dm.contactMessage", { username: session.user.username, item: item.name }),
     url: parsed.data.listingId ? `${appUrl}/market/${parsed.data.listingId}` : undefined,

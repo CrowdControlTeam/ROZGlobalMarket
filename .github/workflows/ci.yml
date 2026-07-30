@@ -1,0 +1,45 @@
+name: CI
+
+# Se ejecuta en cada PR hacia develop/main y en los push directos a esas
+# ramas (p.ej. tras un merge). Git Flow: el trabajo llega a develop por PR.
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+# Cancela ejecuciones antiguas de la misma rama/PR si llega un push nuevo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      # `npm ci` dispara el postinstall (prisma generate), que solo necesita
+      # el schema, no una base de datos.
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Tests
+        run: npm test
+
+      # Solo dependencias de producción: la única alerta pendiente de `npm
+      # audit` es dev-only (cadena de ESLint) y además un falso positivo de
+      # brace-expansion, así que no debe hacer fallar el CI.
+      - name: Auditoría de seguridad (producción)
+        run: npm audit --omit=dev --audit-level=high

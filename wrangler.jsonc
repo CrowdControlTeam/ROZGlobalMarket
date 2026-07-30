@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "roz-global-market",
+  // Worker generado por OpenNext (`npm run cf:build`). Ver .gitignore:
+  // .open-next/ no se sube, se regenera en cada build/deploy.
+  "main": ".open-next/worker.js",
+  // nodejs_compat es imprescindible para que Next/Prisma/next-auth corran en
+  // Workers; requiere compatibility_date >= 2024-09-23.
+  "compatibility_date": "2025-03-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Workers Logs (logs persistidos y consultables en el dashboard). Es un
+  // campo heredable, así que este bloque de nivel raíz aplica a producción y
+  // al entorno "dev". logs.enabled=true activa los logs; invocation_logs=true
+  // incluye la línea de resumen por invocación (petición/respuesta — útil para
+  // depurar); head_sampling_rate 1 = 100% de las peticiones (se puede bajar si
+  // el volumen crece).
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "head_sampling_rate": 1
+    }
+  },
+  // Entorno "dev" (rama develop): Worker aparte con su propia URL, secretos y
+  // BD, para no tocar producción. Lo despliega la conexión de Cloudflare
+  // Workers Builds de develop con `deploy --env dev`. La config de nivel raíz
+  // es producción (rama main).
+  "env": {
+    "dev": {
+      "name": "roz-global-market-dev"
+    }
+  }
+  // Los secretos (DATABASE_URL, AUTH_SECRET, DISCORD_*, APP_URL, GEMINI_API_KEY)
+  // NO van aquí: se cargan con `wrangler secret put <NOMBRE>` (por entorno) o
+  // desde el dashboard de Cloudflare. El Worker NO necesita DIRECT_URL (las
+  // migraciones se lanzan aparte). Ver README (sección Despliegue).
+}

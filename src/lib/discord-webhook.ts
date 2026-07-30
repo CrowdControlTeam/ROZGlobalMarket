@@ -9,9 +9,10 @@ type ListingWebhookPayload = {
   itemIconUrl: string; // absoluta
   type: "SALE" | "TRADE" | "BUY";
   price: number | null; // null cuando type = TRADE; en BUY es el precio máximo a pagar
-  quantity: number;
+  quantity: number | null; // null = ilimitado ("los que tengas"), solo SALE/BUY
   posterUsername: string;
   posterAvatarUrl: string | null;
+  posterId: string; // discordId, para la mención clicable "Publicado por"
   listingUrl: string; // absoluta
   options?: { label: string; value: number }[];
 };
@@ -44,11 +45,20 @@ export async function sendListingCreatedWebhook(payload: ListingWebhookPayload) 
             : [
                 {
                   name: payload.type === "BUY" ? tField("payUpTo") : t("fields.price"),
-                  value: formatPrice(payload.price!),
+                  // price null en SALE/BUY = "sin precio" (competitivo): se muestra
+                  // "al mejor postor/precio" en vez de un importe.
+                  value:
+                    payload.price === null
+                      ? tField(payload.type === "BUY" ? "bestPrice" : "bestOffer")
+                      : formatPrice(payload.price),
                   inline: true,
                 },
               ]),
-          { name: tField("quantity"), value: String(payload.quantity), inline: true },
+          {
+            name: tField("quantity"),
+            value: payload.quantity === null ? "∞" : String(payload.quantity),
+            inline: true,
+          },
           ...(payload.options && payload.options.length > 0
             ? [
                 {
@@ -60,6 +70,7 @@ export async function sendListingCreatedWebhook(payload: ListingWebhookPayload) 
                 },
               ]
             : []),
+          { name: t("fields.postedBy"), value: `<@${payload.posterId}>`, inline: false },
         ],
         timestamp: new Date().toISOString(),
       },

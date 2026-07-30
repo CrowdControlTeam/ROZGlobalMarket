@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { SORT_VALUES } from "@/lib/market";
+import { SORT_VALUES } from "@/lib/market-sort";
 import { sortLabel } from "@/lib/market-labels";
 import { selectClass } from "@/lib/ui";
 

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { ListingType, TradeOfferStatus } from "@prisma/client";
+import { ListingType, DealStatus } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getMarketStats } from "@/lib/admin-stats";
 import { isStatsPeriod, type StatsPeriod } from "@/lib/admin-stats-constants";
@@ -9,9 +9,9 @@ import { formatPrice, priceColorClass } from "@/lib/price";
 import { listingTypeLabel, offerStatusLabel } from "@/lib/market-labels";
 import { AdminStatsPeriodSelect } from "./AdminStatsPeriodSelect";
 
-const LISTING_STATUSES = ["ACTIVE", "SOLD", "CANCELLED", "EXPIRED"] as const;
+const LISTING_STATUSES = ["ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"] as const;
 const TYPES = Object.values(ListingType);
-const OFFER_STATUSES = Object.values(TradeOfferStatus);
+const OFFER_STATUSES = Object.values(DealStatus);
 
 function RankingTable({
   rows,
@@ -72,7 +72,7 @@ export default async function AdminStatsPage({
     <main className="mx-auto max-w-3xl px-6 py-8">
       <BackLink href="/admin" label={t("backToConfig")} />
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="font-heading text-lg text-ro-gold">{t("title")}</h1>
+        <h1 className="font-heading text-lg text-ro-text">{t("title")}</h1>
         <AdminStatsPeriodSelect />
       </div>
 
@@ -106,7 +106,7 @@ export default async function AdminStatsPage({
               <th className="pb-1 font-normal" />
               {LISTING_STATUSES.map((status) => (
                 <th key={status} className="pb-1 text-right font-normal">
-                  {status === "SOLD" ? t("listingsByType.closed") : tMarket(`listing.status.${status}`)}
+                  {status === "COMPLETED" ? t("listingsByType.closed") : tMarket(`listing.status.${status}`)}
                 </th>
               ))}
             </tr>

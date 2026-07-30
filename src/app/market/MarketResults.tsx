@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -13,15 +13,18 @@ import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { listingTypeLabel, LISTING_TYPE_BADGE_CLASS, formatOptionAmount } from "@/lib/market-labels";
 import { getErrorMessage } from "@/lib/errors";
 import { UserMention } from "@/components/UserMention";
+import { useListingPatches, clearListingPatches } from "./listingStore";
+import type { ListingCardPatch } from "@/lib/listing-card";
 
 type Item = { id: string; name: string; iconUrl: string };
 type Poster = { id: string; username: string };
 type ListingOption = { slotIndex: number; value: number; def: { label: string } };
 type Listing = {
   id: string;
-  type: "SALE" | "TRADE" | "BUY";
-  quantity: number;
-  quantitySold: number;
+  type: "SALE" | "TRADE" | "BUY" | "GIFT";
+  quantity: number | null; // null = ilimitado ("los que tengas")
+  sold: number;
+  reserved: number; // Σ PENDING; el grid lo resta solo en precio fijo (ver countLabel)
   price: number | null;
   refineLevel: number;
   cardSlots: number;
@@ -29,6 +32,26 @@ type Listing = {
   poster: Poster;
   options: ListingOption[];
 };
+
+// Aplica los patches del store (mutaciones hechas en el detalle) sobre las cards:
+// actualiza vendido/reservado, y si el listing dejó de estar ACTIVE lo quita.
+function applyPatches(
+  listings: Listing[],
+  patches: ReadonlyMap<string, ListingCardPatch>,
+): Listing[] {
+  if (patches.size === 0) return listings;
+  const out: Listing[] = [];
+  for (const l of listings) {
+    const p = patches.get(l.id);
+    if (!p) {
+      out.push(l);
+    } else if (p.status === "ACTIVE") {
+      out.push({ ...l, sold: p.sold, reserved: p.reserved });
+    }
+    // status !== ACTIVE => se omite (comprado/vendido del todo o cancelado).
+  }
+  return out;
+}
 
 export function MarketResults({
   initialListings,
@@ -49,6 +72,14 @@ export function MarketResults({
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market");
   const tCommon = useTranslations("common");
+  // Patches de mutaciones hechas en el detalle (ver listingStore.ts): se fusionan
+  // sobre las cards para reflejar la compra/venta sin recargar, en cualquier
+  // página cargada. Al montar el grid (nueva vista del servidor) se limpian.
+  const patches = useListingPatches();
+  const displayed = useMemo(() => applyPatches(listings, patches), [listings, patches]);
+  useEffect(() => {
+    clearListingPatches();
+  }, []);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -75,7 +106,7 @@ export function MarketResults({
     });
   }
 
-  if (listings.length === 0) {
+  if (displayed.length === 0) {
     return (
       <p className="text-ro-text-light/70">
         {t("results.empty")}
@@ -86,7 +117,7 @@ export function MarketResults({
   return (
     <div>
       <ul className="flex flex-col gap-3">
-        {listings.map((listing) => {
+        {displayed.map((listing) => {
           const badge = !filters.type && (
             <span
               className={`self-start rounded border px-1.5 py-0.5 text-xs font-normal ${LISTING_TYPE_BADGE_CLASS[listing.type]}`}
@@ -94,11 +125,38 @@ export function MarketResults({
               {listingTypeLabel(t, listing.type)}
             </span>
           );
+          // Disponible = cantidad − vendido − reservado, salvo en competitivo
+          // ("sin precio", SALE/BUY con price null) y TRADE, donde lo pendiente no
+          // retiene stock (misma regla que el detalle, ver deals.ts).
+          const isCompetitive =
+            (listing.type === "SALE" || listing.type === "BUY") && listing.price === null;
+          const holdsReserved =
+            (listing.type === "SALE" || listing.type === "BUY" || listing.type === "GIFT") &&
+            !isCompetitive;
+          const available =
+            listing.quantity === null
+              ? null
+              : Math.max(0, listing.quantity - listing.sold - (holdsReserved ? listing.reserved : 0));
+          const countLabel =
+            available === null
+              ? t("results.availableUnlimited")
+              : listing.type === "BUY"
+                ? t("results.wanted", { count: available })
+                : t("results.available", { count: available });
+          const roleLabel =
+            listing.type === "BUY"
+              ? t("results.wantedBy")
+              : listing.type === "TRADE"
+                ? t("results.tradedBy")
+                : listing.type === "GIFT"
+                  ? t("results.giftedBy")
+                  : t("results.soldBy");
           const posterLine = (
             <p className="text-sm text-ro-text-muted">
-              {listing.type !== "BUY" &&
-                `${t("results.available", { count: listing.quantity - listing.quantitySold })} · `}
-              {listing.type === "BUY" ? t("results.wantedBy") : t("results.soldBy")}{" "}
+              {/* La cantidad se muestra en todos los tipos, incluidas las compras
+                  (unidades que aún se buscan) — mismo formato que las ventas. */}
+              {`${countLabel} · `}
+              {roleLabel}{" "}
               <UserMention
                 userId={listing.poster.id}
                 username={listing.poster.username}
@@ -109,12 +167,19 @@ export function MarketResults({
               />
             </p>
           );
-          const priceLine = listing.type !== "TRADE" && listing.price !== null && (
-            <p className={`font-bold ${priceColorClass(listing.price)}`}>
-              {listing.type === "BUY" ? t("results.upTo") : ""}
-              {formatPrice(listing.price)}
-            </p>
-          );
+          // TRADE y GIFT no llevan precio en la card. En SALE/BUY, precio null =
+          // "sin precio" (competitivo) => "Hacer oferta"; si no, el importe (sin
+          // el "hasta" en compras: el precio de compra ya no es un máximo).
+          const priceLine =
+            listing.type === "TRADE" || listing.type === "GIFT" ? null : listing.price === null ? (
+              <p className="font-bold text-ro-text-muted">
+                {listing.type === "BUY" ? t("field.bestPrice") : t("field.bestOffer")}
+              </p>
+            ) : (
+              <p className={`font-bold ${priceColorClass(listing.price)}`}>
+                {formatPrice(listing.price)}
+              </p>
+            );
 
           return (
             <li key={listing.id}>

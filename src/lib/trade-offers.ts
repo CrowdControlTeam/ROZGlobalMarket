@@ -5,11 +5,19 @@ import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
+import { listingCardState } from "@/lib/listing-card";
 import { loadMarketConfig } from "@/lib/market-config";
 import { sendDirectMessage } from "@/lib/discord-bot";
+import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
+
+// Flujo de intercambio (TRADE) sobre la tabla Deal (antes TradeOffer — ver el
+// rediseño de listings). Una oferta de trade es un Deal PENDING con item de
+// contraoferta; aceptarla cierra el listing (resolución única). Se conservan
+// los nombres de función y el contrato de formData para no tocar la UI del
+// formulario/acciones (TradeOfferForm/TradeOfferActions).
 
 export async function createTradeOffer(listingId: string, formData: FormData) {
   const session = await requireSession();
@@ -20,7 +28,10 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
     throw new Error(t("maintenanceMode"));
   }
 
-  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: { item: true },
+  });
   if (!listing) throw new Error(t("listingNotFound"));
   if (listing.type !== "TRADE") throw new Error(t("notTradeListing"));
   if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
@@ -73,119 +84,169 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
     }
   }
 
-  await prisma.tradeOffer.create({
+  // quantity del Deal = unidades del listing (en un trade siempre 1); la
+  // cantidad del item ofrecido va en offeredQuantity.
+  await prisma.deal.create({
     data: {
       listingId,
-      offererId: session.user.discordId,
-      itemId: parsed.data.itemId,
-      quantity: parsed.data.quantity,
-      refineLevel,
-      cardSlots,
+      userId: session.user.discordId,
+      quantity: 1,
+      offeredItemId: parsed.data.itemId,
+      offeredQuantity: parsed.data.quantity,
+      offeredRefine: refineLevel,
+      offeredCardSlots: cardSlots,
       zenyOffered: parsed.data.zenyOffered,
     },
   });
 
+  // Aviso al poster de que le han ofrecido un intercambio (coherente con
+  // venta/compra/regalo, que también avisan al recibir la oferta). Best-effort.
+  const appUrl = getAppUrl();
+  const tDiscord = await getTranslations("discord");
+  const zenyField =
+    parsed.data.zenyOffered > 0
+      ? [{ name: tDiscord("fields.zenyIncluded"), value: String(parsed.data.zenyOffered), inline: true }]
+      : [];
+  await sendDirectMessage(listing.posterId, {
+    title: tDiscord("dm.tradeOffered", {
+      username: session.user.username,
+      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
+    }),
+    url: `${appUrl}/market/${listingId}`,
+    color: DISCORD_EMBED_COLOR.TRADE,
+    itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
+    fields: [
+      { name: tDiscord("fields.offeredItem"), value: formatItemDisplayName(item.name, refineLevel, cardSlots), inline: true },
+      ...zenyField,
+      { name: tDiscord("fields.offerer"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
+  });
+
   revalidatePath(`/market/${listingId}`);
+  return listingCardState(listingId);
 }
 
-// Ownership + estado se comparten entre aceptar/rechazar/cancelar — solo
-// cambia quién puede hacerlo y a qué estado se mueve.
-async function loadOwnedPendingOffer(
-  offerId: string,
-  expectedOwnerField: "posterId" | "offererId",
+// Ownership + estado se comparten entre aceptar/rechazar/cancelar — solo cambia
+// quién puede hacerlo y a qué estado se mueve.
+async function loadOwnedPendingDeal(
+  dealId: string,
+  expectedOwner: "poster" | "offerer",
   discordId: string,
   t: Awaited<ReturnType<typeof getTranslations>>,
 ) {
-  const offer = await prisma.tradeOffer.findUnique({
-    where: { id: offerId },
-    include: { listing: { include: { item: true } }, item: true, offerer: true },
+  const deal = await prisma.deal.findUnique({
+    where: { id: dealId },
+    include: { listing: { include: { item: true } }, offeredItem: true, user: true },
   });
-  if (!offer) throw new Error(t("offerNotFound"));
-  if (offer.status !== "PENDING") throw new Error(t("offerNotPending"));
+  if (!deal) throw new Error(t("offerNotFound"));
+  if (deal.status !== "PENDING") throw new Error(t("offerNotPending"));
 
-  const ownerId = expectedOwnerField === "posterId" ? offer.listing.posterId : offer.offererId;
+  const ownerId = expectedOwner === "poster" ? deal.listing.posterId : deal.userId;
   if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
 
-  return offer;
+  return deal;
 }
 
-export async function acceptTradeOffer(offerId: string) {
+export async function acceptTradeOffer(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
 
-  const offer = await loadOwnedPendingOffer(offerId, "posterId", session.user.discordId, t);
+  const deal = await loadOwnedPendingDeal(dealId, "poster", session.user.discordId, t);
 
   await prisma.$transaction(async (tx) => {
-    await tx.tradeOffer.update({ where: { id: offerId }, data: { status: "ACCEPTED" } });
-    // El resto de ofertas pendientes del mismo listing quedan rechazadas
-    // automáticamente: el listing solo puede cerrarse con una.
-    await tx.tradeOffer.updateMany({
-      where: { listingId: offer.listingId, status: "PENDING", id: { not: offerId } },
+    // Bloqueo de la fila del listing para serializar aceptaciones concurrentes:
+    // sin esto, dos aceptaciones del mismo listing podrían cerrarlo dos veces.
+    // Ver el núcleo del rediseño en deals.ts.
+    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${deal.listingId} FOR UPDATE`;
+
+    const listing = await tx.listing.findUnique({
+      where: { id: deal.listingId },
+      select: { status: true },
+    });
+    if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+    const current = await tx.deal.findUnique({ where: { id: dealId }, select: { status: true } });
+    if (!current || current.status !== "PENDING") throw new Error(t("offerNotPending"));
+
+    await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
+    // El resto de ofertas pendientes del mismo listing quedan rechazadas: el
+    // listing solo puede cerrarse con una (un trade es resolución única).
+    await tx.deal.updateMany({
+      where: { listingId: deal.listingId, status: "PENDING", id: { not: dealId } },
       data: { status: "REJECTED" },
     });
-    // Se reutiliza ListingStatus.SOLD para "cerrado" también en trades (no
-    // hay Purchase asociada: Purchase.unitPrice es obligatorio y no encaja
-    // con un intercambio) — la UI muestra "Intercambiada" en vez de
-    // "Vendida" cuando type = TRADE, ver STATUS_LABEL en market/[id]/page.tsx.
-    await tx.listing.update({ where: { id: offer.listingId }, data: { status: "SOLD" } });
+    await tx.listing.update({ where: { id: deal.listingId }, data: { status: "COMPLETED" } });
   });
 
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   const listingItemName = formatItemDisplayName(
-    offer.listing.item.name,
-    offer.listing.refineLevel,
-    offer.listing.cardSlots,
+    deal.listing.item.name,
+    deal.listing.refineLevel,
+    deal.listing.cardSlots,
   );
-  const offeredItemName = formatItemDisplayName(offer.item.name, offer.refineLevel, offer.cardSlots);
+  const offeredItemName = formatItemDisplayName(
+    deal.offeredItem!.name,
+    deal.offeredRefine ?? 0,
+    deal.offeredCardSlots ?? 0,
+  );
   const zenyField =
-    offer.zenyOffered > 0
-      ? [{ name: tDiscord("fields.zenyIncluded"), value: String(offer.zenyOffered), inline: true }]
+    deal.zenyOffered > 0
+      ? [{ name: tDiscord("fields.zenyIncluded"), value: String(deal.zenyOffered), inline: true }]
       : [];
 
-  // Norma 2.10 del plan original: en un trade ambas partes reciben algo, así que a
-  // diferencia de una compra normal (donde solo se notifica al vendedor,
-  // que es pasivo) aquí se manda un DM a cada lado — el que acepta ya sabe
-  // que ha aceptado, pero no tiene constancia por Discord de lo recibido.
-  await sendDirectMessage(offer.offererId, {
+  // En un trade ambas partes reciben algo, así que a diferencia de una compra
+  // (donde solo se notifica al vendedor) se manda un DM a cada lado. Best-effort
+  // (sendDirectMessage no tumba la transacción, ya cerrada arriba).
+  await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.tradeAcceptedForOfferer", {
       username: session.user.username,
       item: listingItemName,
     }),
-    url: `${appUrl}/market/${offer.listingId}`,
+    url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.TRADE,
-    itemIconUrl: `${appUrl}${offer.listing.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.yourOffer"), value: offeredItemName, inline: true }, ...zenyField],
+    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
+    fields: [
+      { name: tDiscord("fields.yourOffer"), value: offeredItemName, inline: true },
+      ...zenyField,
+      { name: tDiscord("fields.tradedWith"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
   await sendDirectMessage(session.user.discordId, {
     title: tDiscord("dm.tradeAcceptedForPoster", {
-      username: offer.offerer.username,
+      username: deal.user.username,
       item: listingItemName,
     }),
-    url: `${appUrl}/market/${offer.listingId}`,
+    url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.TRADE,
-    itemIconUrl: `${appUrl}${offer.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.youReceived"), value: offeredItemName, inline: true }, ...zenyField],
+    itemIconUrl: `${appUrl}${deal.offeredItem!.iconUrl}`,
+    fields: [
+      { name: tDiscord("fields.youReceived"), value: offeredItemName, inline: true },
+      ...zenyField,
+      { name: tDiscord("fields.tradedWith"), value: `<@${deal.userId}>`, inline: false },
+    ],
   });
 
-  revalidatePath(`/market/${offer.listingId}`);
+  revalidatePath(`/market/${deal.listingId}`);
   revalidatePath("/market");
+  return listingCardState(deal.listingId);
 }
 
-export async function rejectTradeOffer(offerId: string) {
+export async function rejectTradeOffer(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
-  const offer = await loadOwnedPendingOffer(offerId, "posterId", session.user.discordId, t);
+  const deal = await loadOwnedPendingDeal(dealId, "poster", session.user.discordId, t);
 
-  await prisma.tradeOffer.update({ where: { id: offerId }, data: { status: "REJECTED" } });
-  revalidatePath(`/market/${offer.listingId}`);
+  await prisma.deal.update({ where: { id: dealId }, data: { status: "REJECTED" } });
+  revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }
 
-export async function cancelTradeOffer(offerId: string) {
+export async function cancelTradeOffer(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
-  const offer = await loadOwnedPendingOffer(offerId, "offererId", session.user.discordId, t);
+  const deal = await loadOwnedPendingDeal(dealId, "offerer", session.user.discordId, t);
 
-  await prisma.tradeOffer.update({ where: { id: offerId }, data: { status: "CANCELLED" } });
-  revalidatePath(`/market/${offer.listingId}`);
+  await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
+  revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }

@@ -7,14 +7,14 @@ const BUTTON_BASE =
   "inline-flex items-center justify-center gap-2 rounded-md border-2 px-5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40";
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary:
-    "border-ro-gold-dark bg-ro-gold text-ro-text hover:bg-ro-gold-dark hover:text-ro-text-light",
-  // Para usar sobre el fondo oscuro de la página (fuera de un Panel).
+  // Acción principal: rojo ROZ (comprar, publicar, enviar).
+  primary: "border-ro-red bg-ro-red text-white hover:opacity-90",
+  // Acción secundaria: neutro sutil (raised), sin dorado.
   secondary:
-    "border-ro-panel-border/60 bg-transparent text-ro-text-light hover:border-ro-gold hover:text-ro-gold",
-  // Para usar dentro de un Panel (fondo claro tipo pergamino).
+    "border-ro-panel-border bg-ro-panel-alt text-ro-text hover:bg-ro-panel-border/30",
+  // Sobre superficie de panel: contorno neutro.
   outline:
-    "border-ro-panel-border bg-transparent text-ro-text hover:bg-ro-panel-border/10",
+    "border-ro-panel-border bg-transparent text-ro-text hover:bg-ro-panel-border/40",
   discord:
     "border-[#4752C4] bg-[#5865F2] text-white hover:bg-[#4752C4]",
   danger: "border-red-900 bg-red-800 text-white hover:bg-red-900",

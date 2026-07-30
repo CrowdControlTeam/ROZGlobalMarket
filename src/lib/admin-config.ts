@@ -7,9 +7,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { getOptionsCatalogCount } from "@/lib/item-options";
-import { fetchGuildRoles } from "@/lib/discord-bot";
+import { fetchGuildRoles, getBotStatus } from "@/lib/discord-bot";
 import { GEMINI_MODEL_VALUES, isGeminiModel } from "@/lib/gemini-model-constants";
-import { LOCALE_OPTIONS, isAppLocale } from "@/lib/locale-constants";
+import { isDiscordWebhookUrl } from "@/lib/discord-webhook-constants";
 
 // El valor real de un secreto nunca sale del servidor una vez guardado —
 // esto es lo único que llega al cliente para representarlo en el formulario.
@@ -20,10 +20,11 @@ function maskSecret(value: string): string {
 export async function getMarketConfig() {
   await requireAdmin();
 
-  const [config, optionsCatalogCount, guildRolesResult, rawConfig, t] = await Promise.all([
+  const [config, optionsCatalogCount, guildRolesResult, botStatus, rawConfig, t] = await Promise.all([
     loadMarketConfig(),
     getOptionsCatalogCount(),
     fetchGuildRoles(),
+    getBotStatus(),
     prisma.marketConfig.findUnique({ where: { id: 1 }, select: { siteName: true } }),
     getTranslations("admin.recognition.models"),
   ]);
@@ -48,14 +49,12 @@ export async function getMarketConfig() {
     geminiModel: config.geminiModel,
     geminiModelOptions,
     dmNotificationsEnabled: config.dmNotificationsEnabled,
-    hasDiscordBotToken: !!process.env.DISCORD_BOT_TOKEN,
+    botStatus,
     maintenanceModeEnabled: config.maintenanceModeEnabled,
     optionsEnabled: config.optionsEnabled,
     optionsCatalogCount,
     adminRoleIds: config.adminRoleIds,
     guildRolesResult,
-    locale: config.locale,
-    localeOptions: LOCALE_OPTIONS,
   };
 }
 
@@ -63,6 +62,7 @@ export async function getMarketConfig() {
 // rechazar todo el formulario por una línea mal pegada — es una lista de
 // texto libre en el caso sin bot, conviene ser tolerante.
 const SNOWFLAKE = /^\d{15,25}$/;
+
 
 function parseAdminRoleIds(formData: FormData): string[] {
   // Modo con bot: <select multiple name="adminRoleIds"> manda varias
@@ -87,13 +87,18 @@ export async function updateMarketConfig(formData: FormData) {
     webhookEnabled: z.boolean(),
     imageRecognitionEnabled: z.boolean(),
     geminiModel: z.string().refine(isGeminiModel, t("unsupportedGeminiModel")),
-    locale: z.string().refine(isAppLocale, t("unsupportedLocale")),
     dmNotificationsEnabled: z.boolean(),
     maintenanceModeEnabled: z.boolean(),
     optionsEnabled: z.boolean(),
     // Vacío = no tocar el valor ya guardado (patrón "enmascarado + reemplazar":
     // el formulario nunca recibe el valor real, así que no puede reenviarlo).
-    webhookUrl: z.string().trim().optional(),
+    // Cuando sí viene un valor, debe ser un webhook de Discord (ver
+    // isDiscordWebhookUrl) para no permitir SSRF a hosts arbitrarios.
+    webhookUrl: z
+      .string()
+      .trim()
+      .refine(isDiscordWebhookUrl, t("invalidWebhookUrl"))
+      .optional(),
     // A diferencia de webhookUrl, este campo no está enmascarado — vacío
     // aquí sí significa "volver a sin configurar" (cae al placeholder).
     siteName: z.string().trim().optional(),
@@ -104,7 +109,6 @@ export async function updateMarketConfig(formData: FormData) {
     webhookEnabled: formData.get("webhookEnabled") === "on",
     imageRecognitionEnabled: formData.get("imageRecognitionEnabled") === "on",
     geminiModel: formData.get("geminiModel"),
-    locale: formData.get("locale"),
     dmNotificationsEnabled: formData.get("dmNotificationsEnabled") === "on",
     maintenanceModeEnabled: formData.get("maintenanceModeEnabled") === "on",
     optionsEnabled: formData.get("optionsEnabled") === "on",
@@ -129,7 +133,6 @@ export async function updateMarketConfig(formData: FormData) {
       optionsEnabled: parsed.data.optionsEnabled,
       webhookUrl: parsed.data.webhookUrl ?? null,
       adminRoleIds,
-      locale: parsed.data.locale,
       siteName: parsed.data.siteName ?? null,
     },
     update: {
@@ -142,7 +145,6 @@ export async function updateMarketConfig(formData: FormData) {
       optionsEnabled: parsed.data.optionsEnabled,
       ...(parsed.data.webhookUrl ? { webhookUrl: parsed.data.webhookUrl } : {}),
       adminRoleIds,
-      locale: parsed.data.locale,
       siteName: parsed.data.siteName ?? null,
     },
   });

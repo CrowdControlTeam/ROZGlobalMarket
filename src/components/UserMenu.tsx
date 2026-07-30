@@ -6,8 +6,11 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Settings, LogOut, Package } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { ThemeToggle } from "./ThemeToggle";
+import { LocaleSwitcher } from "./LocaleSwitcher";
 import { buttonClass } from "@/lib/ui";
 import { signOutAction } from "@/lib/auth-actions";
+import type { AppLocale } from "@/lib/locale-constants";
 
 type FullUser = {
   discordId: string;
@@ -18,7 +21,15 @@ type FullUser = {
   isAdmin: boolean;
 };
 
-export function UserMenu({ user }: { user: FullUser }) {
+export function UserMenu({
+  user,
+  theme,
+  locale,
+}: {
+  user: FullUser;
+  theme: "light" | "dark";
+  locale: AppLocale;
+}) {
   const [open, setOpen] = useState(false);
   const t = useTranslations("nav.account");
 
@@ -84,6 +95,19 @@ export function UserMenu({ user }: { user: FullUser }) {
             </dd>
           </div>
         </dl>
+
+        {/* Preferencias por usuario (cookie): tema e idioma, movidos aquí desde
+            la cabecera y /admin respectivamente. */}
+        <div className="mt-6 flex flex-col gap-3 border-t border-ro-panel-border/30 pt-4 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-ro-text-muted">{t("theme")}</span>
+            <ThemeToggle initial={theme} />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-ro-text-muted">{t("language")}</span>
+            <LocaleSwitcher initial={locale} />
+          </div>
+        </div>
 
         <div className="mt-6 flex flex-col gap-2">
           <Link

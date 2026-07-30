@@ -1,6 +1,6 @@
 "use server";
 
-import { ListingType, ListingStatus, TradeOfferStatus } from "@prisma/client";
+import { ListingType, ListingStatus, DealStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-guard";
 import type { StatsPeriod } from "@/lib/admin-stats-constants";
@@ -34,16 +34,21 @@ function topN<T extends { total: number }>(map: Map<string, T>, n: number): T[] 
     .slice(0, n);
 }
 
-// Todo el cálculo se hace en JS a partir de filas planas en vez de
-// groupBy/aggregate encadenados de Prisma: cruzar Purchase/TradeOffer con
-// el poster o el item del Listing asociado no es directo con groupBy, y el
-// volumen de un mercado de guild (cientos de filas, no millones) hace que
-// reducir en memoria sea sencillo y perfectamente barato.
+// Todo el cálculo se hace en JS a partir de filas planas (Listing + Deal) en vez
+// de groupBy/aggregate encadenados: cruzar los tratos con el poster/item del
+// Listing no es directo con groupBy, y el volumen de un mercado de guild
+// (cientos de filas) hace que reducir en memoria sea sencillo y barato.
+//
+// Deal sustituye a las tablas Purchase/TradeOffer/Gift (ver el rediseño): un
+// trato ACCEPTED es una compra/venta/intercambio/regalo ya cerrado. El sentido
+// del dinero depende del tipo de listing: en SALE el vendedor es el poster y el
+// comprador la contraparte; en BUY, al revés; en TRADE el "dinero" es el zeny
+// de compensación; GIFT no mueve zeny.
 export async function getMarketStats(period: StatsPeriod = "30d") {
   await requireAdmin();
   const since = windowStartFor(period);
 
-  const [listings, purchases, tradeOffers, gifts, totalUsers] = await Promise.all([
+  const [listings, deals, totalUsers] = await Promise.all([
     prisma.listing.findMany({
       where: { createdAt: { gte: since } },
       select: {
@@ -55,15 +60,20 @@ export async function getMarketStats(period: StatsPeriod = "30d") {
         item: { select: { name: true } },
       },
     }),
-    prisma.purchase.findMany({
-      where: { createdAt: { gte: since } },
+    // updatedAt (no createdAt): lo que interesa de un trato es cuándo se resolvió
+    // (aceptado/rechazado/cancelado), no solo cuándo se creó.
+    prisma.deal.findMany({
+      where: { updatedAt: { gte: since } },
       select: {
+        status: true,
         quantity: true,
         unitPrice: true,
-        buyerId: true,
-        buyer: { select: { username: true } },
+        zenyOffered: true,
+        userId: true,
+        user: { select: { username: true } },
         listing: {
           select: {
+            type: true,
             posterId: true,
             itemId: true,
             poster: { select: { username: true } },
@@ -72,29 +82,15 @@ export async function getMarketStats(period: StatsPeriod = "30d") {
         },
       },
     }),
-    // updatedAt (no createdAt): lo que interesa de una oferta es cuándo
-    // cambió de estado (aceptada/rechazada/cancelada), no solo cuándo se
-    // creó — una oferta creada hace 40 días pero aceptada hace 3 sí cuenta
-    // como actividad reciente.
-    prisma.tradeOffer.findMany({
-      where: { updatedAt: { gte: since } },
-      select: {
-        status: true,
-        zenyOffered: true,
-        offererId: true,
-        offerer: { select: { username: true } },
-        listing: { select: { posterId: true, poster: { select: { username: true } } } },
-      },
-    }),
-    prisma.gift.count({ where: { createdAt: { gte: since } } }),
     prisma.user.count(),
   ]);
 
   // --- Totales ---
   const listingsByTypeStatus: Record<ListingType, Record<ListingStatus, number>> = {
-    SALE: { ACTIVE: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
-    BUY: { ACTIVE: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
-    TRADE: { ACTIVE: 0, SOLD: 0, CANCELLED: 0, EXPIRED: 0 },
+    SALE: { ACTIVE: 0, COMPLETED: 0, CANCELLED: 0, EXPIRED: 0 },
+    BUY: { ACTIVE: 0, COMPLETED: 0, CANCELLED: 0, EXPIRED: 0 },
+    TRADE: { ACTIVE: 0, COMPLETED: 0, CANCELLED: 0, EXPIRED: 0 },
+    GIFT: { ACTIVE: 0, COMPLETED: 0, CANCELLED: 0, EXPIRED: 0 },
   };
   const posterIds = new Set<string>();
   for (const l of listings) {
@@ -102,18 +98,16 @@ export async function getMarketStats(period: StatsPeriod = "30d") {
     posterIds.add(l.posterId);
   }
 
-  const tradeOffersByStatus: Record<TradeOfferStatus, number> = {
+  // Estados de las ofertas de intercambio (ahora Deal sobre listings TRADE).
+  const tradeOffersByStatus: Record<DealStatus, number> = {
     PENDING: 0,
     ACCEPTED: 0,
     REJECTED: 0,
     CANCELLED: 0,
   };
-  for (const o of tradeOffers) tradeOffersByStatus[o.status]++;
-
-  const purchaseZeny = purchases.reduce((sum, p) => sum + p.quantity * p.unitPrice, 0);
-  const acceptedTradeZeny = tradeOffers
-    .filter((o) => o.status === "ACCEPTED")
-    .reduce((sum, o) => sum + o.zenyOffered, 0);
+  for (const d of deals) {
+    if (d.listing.type === "TRADE") tradeOffersByStatus[d.status]++;
+  }
 
   // --- Rankings ---
   const topPostersMap = new Map<string, UserTotal>();
@@ -123,19 +117,44 @@ export async function getMarketStats(period: StatsPeriod = "30d") {
     addItemTotal(topListedItemsMap, l.itemId, l.item.name, 1);
   }
 
+  // Dinero movido + ganadores/gastadores + items más comerciados, a partir de
+  // los tratos ACEPTADOS.
   const earnersMap = new Map<string, UserTotal>();
   const spendersMap = new Map<string, UserTotal>();
   const topPurchasedItemsMap = new Map<string, ItemTotal>();
-  for (const p of purchases) {
-    const amount = p.quantity * p.unitPrice;
-    addTotal(earnersMap, p.listing.posterId, p.listing.poster.username, amount);
-    addTotal(spendersMap, p.buyerId, p.buyer.username, amount);
-    addItemTotal(topPurchasedItemsMap, p.listing.itemId, p.listing.item.name, p.quantity);
-  }
-  for (const o of tradeOffers) {
-    if (o.status !== "ACCEPTED" || o.zenyOffered <= 0) continue;
-    addTotal(earnersMap, o.listing.posterId, o.listing.poster.username, o.zenyOffered);
-    addTotal(spendersMap, o.offererId, o.offerer.username, o.zenyOffered);
+  let zenyMoved = 0;
+  let giftsSent = 0;
+
+  for (const d of deals) {
+    if (d.status !== "ACCEPTED") continue;
+    const l = d.listing;
+
+    if (l.type === "GIFT") {
+      giftsSent += 1;
+      continue;
+    }
+
+    if (l.type === "TRADE") {
+      if (d.zenyOffered > 0) {
+        zenyMoved += d.zenyOffered;
+        addTotal(earnersMap, l.posterId, l.poster.username, d.zenyOffered);
+        addTotal(spendersMap, d.userId, d.user.username, d.zenyOffered);
+      }
+      continue;
+    }
+
+    // SALE / BUY: hay precio unitario. En SALE vende el poster; en BUY, la
+    // contraparte (el poster es quien compra).
+    const amount = d.quantity * (d.unitPrice ?? 0);
+    if (amount <= 0) continue;
+    zenyMoved += amount;
+    const sellerId = l.type === "SALE" ? l.posterId : d.userId;
+    const sellerName = l.type === "SALE" ? l.poster.username : d.user.username;
+    const buyerId = l.type === "SALE" ? d.userId : l.posterId;
+    const buyerName = l.type === "SALE" ? d.user.username : l.poster.username;
+    addTotal(earnersMap, sellerId, sellerName, amount);
+    addTotal(spendersMap, buyerId, buyerName, amount);
+    addItemTotal(topPurchasedItemsMap, l.itemId, l.item.name, d.quantity);
   }
 
   return {
@@ -143,9 +162,9 @@ export async function getMarketStats(period: StatsPeriod = "30d") {
     windowDays: 30,
     totals: {
       listingsByTypeStatus,
-      zenyMoved: purchaseZeny + acceptedTradeZeny,
+      zenyMoved,
       tradeOffersByStatus,
-      giftsSent: gifts,
+      giftsSent,
       postersCount: posterIds.size,
       totalUsers,
     },

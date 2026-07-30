@@ -2,7 +2,7 @@
 
 Mercado para la comunidad de Ragnarok Zero, con login por Discord.
 
-> Este proyecto parte de [ROGuildMarket](https://github.com/CrowdControlTeam/ROGuildMarket) a partir de la **v0.2.0**, del que se separa para evolucionar de forma independiente. La especificación funcional de aquel proyecto (el «plan original» al que hacen referencia algunos comentarios del código) pertenece a ROGuildMarket, no a este repositorio.
+> Este proyecto parte del código de [ROGuildMarket](https://github.com/CrowdControlTeam/ROGuildMarket) tal como estaba en su **v0.2.0**, del que se separa para evolucionar de forma independiente y con **su propio versionado desde 0.0.1**. La especificación funcional de aquel proyecto (el «plan original» al que hacen referencia algunos comentarios del código) pertenece a ROGuildMarket, no a este repositorio.
 
 ## Requisitos
 
@@ -13,7 +13,7 @@ Mercado para la comunidad de Ragnarok Zero, con login por Discord.
 
 1. Crea los dos archivos de entorno a partir de `.env.example` (ninguno se sube al repo):
    - `.env` → solo `DATABASE_URL` y `DIRECT_URL` (lo lee el CLI de Prisma, que no ve `.env.local`).
-   - `.env.local` → el resto: credenciales de Discord (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`), `AUTH_SECRET`, `APP_URL` y, opcionalmente, `GEMINI_API_KEY`.
+   - `.env.local` → el resto: credenciales de Discord (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`), `AUTH_SECRET`, `APP_URL` y, opcionalmente, `DISCORD_ADMIN_IDS` y `GEMINI_API_KEY`.
 2. Levanta la base de datos local:
    ```bash
    docker compose up -d db
@@ -30,9 +30,51 @@ Mercado para la comunidad de Ragnarok Zero, con login por Discord.
 
 En local, `DATABASE_URL`/`DIRECT_URL` apuntan al Postgres de `docker-compose.yml` (puerto 5434). El webhook de Discord ya no es una variable de entorno: se configura desde `/admin`.
 
-## Despliegue
+## Despliegue (Cloudflare Workers + Neon)
 
-Objetivo de despliegue: **Cloudflare** (Workers, vía OpenNext) con **Neon** como base de datos Postgres serverless. En producción, `DATABASE_URL` usa el endpoint *pooled* de Neon y `DIRECT_URL` el directo (este último para `prisma migrate`). La configuración del adaptador de Cloudflare está pendiente y se añadirá más adelante.
+La app se despliega en **Cloudflare Workers** vía [OpenNext](https://opennext.js.org/cloudflare), con **Neon** como Postgres serverless. Config: `wrangler.jsonc` y `open-next.config.ts`.
+
+### Base de datos (Neon)
+
+1. Crea un proyecto en Neon y copia las dos cadenas de conexión:
+   - `DATABASE_URL` → endpoint **pooled** (host con `-pooler`).
+   - `DIRECT_URL` → endpoint **directo** (sin `-pooler`), para `prisma migrate`.
+2. Aplica las migraciones contra Neon:
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+En Workers, [prisma.ts](src/lib/prisma.ts) detecta el host de Neon (`neon.tech`) y usa el driver serverless (`@prisma/adapter-neon`, WebSocket) en vez de una conexión TCP; en local se sigue usando el cliente estándar contra el Postgres de docker.
+
+### Secretos en Cloudflare
+
+Configúralos con `wrangler secret put <NOMBRE>` (o desde el dashboard): `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`, `APP_URL` (dominio del Worker) y, opcionalmente, `DISCORD_ADMIN_IDS` (IDs de usuario con acceso a `/admin`, separados por comas), `DISCORD_BOT_TOKEN` y `GEMINI_API_KEY`.
+
+### Build y deploy
+
+```bash
+npm run cf:build     # genera el Worker en .open-next/
+npm run cf:preview   # prueba local del Worker (workerd)
+npm run cf:deploy    # despliega a Cloudflare (requiere `wrangler login`)
+```
+
+> **Nota (Windows):** `cf:build` crea symlinks que en Windows requieren el **Modo Desarrollador** activado (o ejecutar como administrador); si no, falla con `EPERM: symlink`. En Linux, macOS y CI compila sin más — el deploy real suele hacerse desde CI/Linux.
+
+### Automatizado (Cloudflare Workers Builds)
+
+El deploy lo hace la integración Git nativa de Cloudflare (**Workers Builds**), no GitHub Actions. Se usan **dos conexiones**, una por entorno, cada una vigilando su rama y con secretos/BD aislados:
+
+| Worker | Production branch | Deploy command |
+|--------|-------------------|----------------|
+| `roz-global-market` (producción) | `main` | `npx opennextjs-cloudflare deploy` |
+| `roz-global-market-dev` | `develop` | `npx opennextjs-cloudflare deploy --env dev` |
+
+En ambas: build command `npx opennextjs-cloudflare build`, *"Builds for non-production branches"* **desactivado** (cada conexión solo despliega su rama de producción), y los secretos de runtime se ponen a nivel de cada Worker. El `env.dev` de `wrangler.jsonc` es lo que resuelve el `--env dev`. Al construirse en Linux, no aplica el problema de symlinks de Windows.
+
+### Versionado (SemVer)
+
+- **`release.yml`**: en cada push a `main`, tagea la versión y publica un GitHub Release con notas automáticas. El *bump* se controla con un token `#major` / `#minor` / `#patch` en el mensaje del commit de merge (patch por defecto).
+- **`prerelease.yml`**: on-demand desde `develop` (Actions → *Run workflow*), saca un tag de prerelease `vX.Y.Z-rc.N`.
 
 ## Prisma
 

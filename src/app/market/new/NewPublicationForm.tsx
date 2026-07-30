@@ -43,6 +43,12 @@ export function NewPublicationForm({
   );
   const [refineLevel, setRefineLevel] = useState(0);
   const [cardSlots, setCardSlots] = useState(0);
+  // "Sin tope" ("los que tengas"): solo SALE/BUY de materiales. Envía
+  // unlimited=on y oculta el campo de cantidad (el server pone quantity null).
+  const [unlimited, setUnlimited] = useState(false);
+  // "Sin precio" (competitivo): solo SALE/BUY. Envía noPrice=on, oculta el precio
+  // (el server pone price null) y la contraparte puja/oferta su precio.
+  const [noPrice, setNoPrice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [priceMissing, setPriceMissing] = useState(false);
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
@@ -66,6 +72,9 @@ export function NewPublicationForm({
   // idénticas. BUY se queda fuera: ahí las options son un mínimo deseado,
   // no el roll de un ejemplar concreto, así que no ata la cantidad.
   const quantityLocked = type === "TRADE" || ((type === "SALE" || type === "GIFT") && optionGroup !== null);
+  // "Sin tope" solo tiene sentido en materiales de venta/compra: un TRADE cierra
+  // el listing entero y un GIFT siempre reparte una cantidad concreta.
+  const canBeUnlimited = !quantityLocked && (type === "SALE" || type === "BUY");
 
   // El reset de optionSelections se dispara desde el evento de selección de
   // item (handleItemSelect más abajo), no aquí: sincronizar dos piezas de
@@ -163,7 +172,9 @@ export function NewPublicationForm({
     });
   }
 
-  const canSubmit = selectedItem !== null && (type !== "GIFT" || selectedRecipient !== null);
+  // El destinatario de un regalo es OPCIONAL: sin él, el regalo es reclamable
+  // por cualquiera (ver sendGift en gifts.ts).
+  const canSubmit = selectedItem !== null;
   // useTransition por sí solo no basta: disabled={isPending} solo se
   // refleja en el DOM tras el siguiente render, y varios clics muy
   // seguidos (mash-click) pueden dispararse antes de ese commit — se
@@ -174,16 +185,20 @@ export function NewPublicationForm({
 
   return (
     <form
+      // Aviso visual instantáneo del precio (borde rojo) en onSubmit, NO dentro
+      // de `action`: si falta el precio hacemos preventDefault y así el `action`
+      // no llega a ejecutarse, evitando el reset automático del formulario que
+      // React 19 dispara al terminar una función `action` — ese reset vaciaba
+      // las options ya rellenadas. La validación real sigue en el servidor
+      // (createListing en listings.ts); esto es solo UX.
+      onSubmit={(e) => {
+        const priceRequired = (type === "SALE" || type === "BUY") && !noPrice;
+        const priceEmpty = priceRequired && !new FormData(e.currentTarget).get("price");
+        setPriceMissing(priceEmpty);
+        if (priceEmpty) e.preventDefault();
+      }}
       action={(formData) => {
         if (submittingRef.current) return;
-
-        // Aviso visual instantáneo (borde rojo), sin esperar al viaje al
-        // servidor — que sigue siendo la validación real (ver
-        // createListing en listings.ts), esto es solo UX.
-        const priceRequired = type === "SALE" || type === "BUY";
-        const priceEmpty = priceRequired && !formData.get("price");
-        setPriceMissing(priceEmpty);
-        if (priceEmpty) return;
 
         submittingRef.current = true;
         setError(null);
@@ -242,14 +257,28 @@ export function NewPublicationForm({
             <input type="hidden" name="quantity" value={1} />
           </>
         ) : (
-          <input
-            type="number"
-            name="quantity"
-            min={1}
-            defaultValue={1}
-            required
-            className={inputClass}
-          />
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              name="quantity"
+              min={1}
+              defaultValue={1}
+              required={!unlimited}
+              disabled={canBeUnlimited && unlimited}
+              className={`${inputClass} min-w-0 flex-1`}
+            />
+            {canBeUnlimited && (
+              <label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-ro-text-muted">
+                <input
+                  type="checkbox"
+                  name="unlimited"
+                  checked={unlimited}
+                  onChange={(e) => setUnlimited(e.target.checked)}
+                />
+                {t("unlimitedLabel")}
+              </label>
+            )}
+          </div>
         )}
       </div>
 
@@ -286,7 +315,26 @@ export function NewPublicationForm({
       {(type === "SALE" || type === "BUY") && (
         <div>
           <label className={labelClass}>{type === "BUY" ? t("payUpToLabel") : t("priceLabel")}</label>
-          <PriceInput name="price" placeholder="0" invalid={priceMissing} />
+          <div className="flex items-center gap-3">
+            {noPrice ? (
+              <p className="min-w-0 flex-1 text-sm text-ro-text-muted">
+                {type === "BUY" ? tField("bestPrice") : tField("bestOffer")}
+              </p>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <PriceInput name="price" placeholder="0" invalid={priceMissing} />
+              </div>
+            )}
+            <label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-ro-text-muted">
+              <input
+                type="checkbox"
+                name="noPrice"
+                checked={noPrice}
+                onChange={(e) => setNoPrice(e.target.checked)}
+              />
+              {t("noPriceLabel")}
+            </label>
+          </div>
         </div>
       )}
 

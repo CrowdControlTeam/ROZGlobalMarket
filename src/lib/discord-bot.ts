@@ -4,6 +4,7 @@
 // configurado, el panel cae a introducir IDs a mano — ver
 // AdminConfigForm.tsx) y para las DMs de transacción (ver sendDirectMessage
 // más abajo).
+import { cache } from "react";
 import { loadMarketConfig } from "@/lib/market-config";
 
 export type GuildRolesResult =
@@ -45,15 +46,81 @@ export async function fetchGuildRoles(): Promise<GuildRolesResult> {
   };
 }
 
+export type BotStatus = "no_token" | "not_in_guild" | "error" | "ok";
+
+// Comprobar si el bot sigue en el servidor es una llamada a Discord, e
+// isDmFeatureAvailable se invoca en varias páginas. El bot entra/sale del
+// servidor rara vez, así que se memoiza: cache() dedupe dentro de una misma
+// request, y una caché de módulo con TTL corto evita repetir la llamada entre
+// requests sin quedarse pegado a un estado viejo mucho rato. (En Workers la
+// caché vive por isolate — best-effort, suficiente aquí.)
+const BOT_STATUS_TTL_MS = 5 * 60 * 1000;
+let botStatusCache: { value: BotStatus; at: number } | null = null;
+
+async function fetchBotStatus(): Promise<BotStatus> {
+  const token = process.env.DISCORD_BOT_TOKEN;
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!token) return "no_token";
+  if (!guildId) return "error";
+
+  let res: Response;
+  try {
+    res = await fetch(`https://discord.com/api/guilds/${guildId}`, {
+      headers: { Authorization: `Bot ${token}` },
+    });
+  } catch {
+    return "error";
+  }
+  if (res.ok) return "ok";
+  // 403/404 = el bot no está en ese servidor (no invitado). Otros códigos
+  // (401 token inválido, 5xx…) son un error de configuración/red distinto.
+  if (res.status === 403 || res.status === 404) return "not_in_guild";
+  return "error";
+}
+
+export const getBotStatus = cache(async (): Promise<BotStatus> => {
+  const now = Date.now();
+  if (botStatusCache && now - botStatusCache.at < BOT_STATUS_TTL_MS) {
+    return botStatusCache.value;
+  }
+  const value = await fetchBotStatus();
+  // Los "error" (transitorios/red) no se cachean, para reintentar antes.
+  if (value !== "error") botStatusCache = { value, at: now };
+  return value;
+});
+
+// Mapa id→nombre de los roles del servidor, para mostrar el NOMBRE del rol (no
+// el ID) en el menú de usuario cuando el bot está configurado y en el servidor.
+// Se cachea con TTL corto (los roles cambian rara vez) porque el header se
+// renderiza en cada página — mismo criterio que getBotStatus. Si el bot no está
+// disponible se devuelve un mapa vacío y el caller cae al ID.
+const ROLE_NAMES_TTL_MS = 5 * 60 * 1000;
+let roleNamesCache: { value: Map<string, string>; at: number } | null = null;
+
+export const loadGuildRoleNames = cache(async (): Promise<Map<string, string>> => {
+  const now = Date.now();
+  if (roleNamesCache && now - roleNamesCache.at < ROLE_NAMES_TTL_MS) {
+    return roleNamesCache.value;
+  }
+  const result = await fetchGuildRoles();
+  const map = new Map<string, string>();
+  if (result.status === "ok") {
+    for (const r of result.roles) map.set(r.id, r.name);
+    roleNamesCache = { value: map, at: now };
+  }
+  // no_bot/error: no se cachea (para reintentar) y se devuelve vacío => fallback a IDs.
+  return map;
+});
+
 // Para que la UI (nombres clicables, ver UserMention.tsx) sepa si tiene
 // sentido ofrecer la opción en absoluto — mismo criterio que usa
-// sendDirectMessage por debajo (toggle Y token), pero sin intentar mandar
-// nada. Se resuelve una vez por página (server component) y se pasa hacia
-// abajo, no una llamada por cada mención.
+// sendDirectMessage por debajo, pero sin intentar mandar nada. Ahora exige
+// además que el bot esté DE VERDAD en el servidor (no solo que haya token): si
+// lo expulsan, los DMs dejan de entregarse, así que la UI no debe ofrecerlos.
 export async function isDmFeatureAvailable(): Promise<boolean> {
-  if (!process.env.DISCORD_BOT_TOKEN) return false;
   const { dmNotificationsEnabled } = await loadMarketConfig();
-  return dmNotificationsEnabled;
+  if (!dmNotificationsEnabled) return false;
+  return (await getBotStatus()) === "ok";
 }
 
 export type DirectMessagePayload = {

@@ -59,7 +59,7 @@ export function AdminConfigForm({ config }: { config: Config }) {
                   name="adminRoleIds"
                   value={role.id}
                   defaultChecked={config.adminRoleIds.includes(role.id)}
-                  className="accent-ro-gold"
+                  className="accent-emerald-600"
                 />
                 {role.name}
               </label>
@@ -82,20 +82,6 @@ export function AdminConfigForm({ config }: { config: Config }) {
             <p className="mt-1 text-xs text-ro-text-muted">{t("access.roleIdsHint")}</p>
           </div>
         )}
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-semibold text-ro-text">{t("language.legend")}</legend>
-        <div>
-          <label className={labelClass}>{t("language.label")}</label>
-          <select name="locale" defaultValue={config.locale} className={selectClass}>
-            {config.localeOptions.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </div>
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
@@ -128,10 +114,14 @@ export function AdminConfigForm({ config }: { config: Config }) {
         />
         <p className="text-xs text-ro-text-muted">
           {t("dm.botLabel")}{" "}
-          {config.hasDiscordBotToken ? (
-            <span className="text-green-700">{t("dm.botConfigured")}</span>
-          ) : (
+          {config.botStatus === "ok" ? (
+            <span className="text-green-700">{t("dm.botInServer")}</span>
+          ) : config.botStatus === "not_in_guild" ? (
+            <span className="text-red-700">{t("dm.botNotInServer")}</span>
+          ) : config.botStatus === "no_token" ? (
             <span className="text-red-700">{t("dm.botNotConfigured")}</span>
+          ) : (
+            <span className="text-red-700">{t("dm.botCheckError")}</span>
           )}
           . {t("dm.requirement")}
         </p>

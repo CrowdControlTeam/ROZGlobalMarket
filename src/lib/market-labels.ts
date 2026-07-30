@@ -4,9 +4,9 @@ import {
   ItemOptionGroup,
   WeaponType,
   ListingType,
-  TradeOfferStatus,
+  DealStatus,
 } from "@prisma/client";
-import type { MarketSort } from "@/lib/market";
+import type { MarketSort } from "@/lib/market-sort";
 
 // Traductor ya escopado al namespace "market" (useTranslations("market") en
 // cliente, getTranslations("market") en servidor) — cada helper de aquí
@@ -48,15 +48,14 @@ export function posterLabel(t: T, type: ListingType): string {
   return t(`listing.poster.${type}`);
 }
 
-// SOLD se reutiliza para "cerrado con éxito" en los tres tipos (ver
-// comentarios en trade-offers.ts y listings.ts) — el texto mostrado
-// cambia según qué significa cerrarse en cada uno.
+// COMPLETED = "cerrado con éxito" en todos los tipos — el texto mostrado cambia
+// según qué significa cerrarse en cada uno (ver soldStatus.{type} en i18n).
 export function listingStatusLabel(t: T, status: string, type: ListingType): string {
-  if (status === "SOLD") return t(`listing.soldStatus.${type}`);
+  if (status === "COMPLETED") return t(`listing.soldStatus.${type}`);
   return t(`listing.status.${status}`);
 }
 
-export function offerStatusLabel(t: T, status: TradeOfferStatus): string {
+export function offerStatusLabel(t: T, status: DealStatus): string {
   return t(`listing.offerStatus.${status}`);
 }
 
@@ -74,6 +73,7 @@ export const LISTING_TYPE_BADGE_CLASS: Record<ListingType, string> = {
   SALE: "border-ro-gold-dark/50 bg-ro-gold/10 text-ro-gold-dark",
   TRADE: "border-blue-500/50 bg-blue-500/10 text-blue-600",
   BUY: "border-green-600/50 bg-green-600/10 text-green-700",
+  GIFT: "border-rose-500/50 bg-rose-500/10 text-rose-600",
 };
 
 // SALE/TRADE/GIFT muestran el roll exacto de una instancia real ("+20");

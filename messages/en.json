@@ -22,16 +22,22 @@
       "memberSince": "Member since",
       "roles": "Discord roles",
       "noRoles": "No roles on record",
-      "myActivity": "Activity",
+      "myActivity": "My activity",
       "settings": "Settings",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "theme": "Theme",
+      "language": "Language"
     }
   },
   "myActivity": {
     "title": "My activity",
     "listingsEmpty": "You haven't posted anything yet.",
+    "pendingEmpty": "Nothing pending.",
+    "pendingIncoming": "To confirm",
+    "pendingOutgoing": "My requests",
     "tabs": {
       "listings": "My listings",
+      "pending": "Pending",
       "gifts": "Gifts"
     }
   },
@@ -40,7 +46,7 @@
     "greeting": "Hi, <strong>{username}</strong>. What's cooking in the guild market today?",
     "goToMarket": "Go to the market",
     "intro": "Private market for guild members. Sign in with Discord to enter.",
-    "signIn": "Sign in with Discord"
+    "signIn": "Log in with Discord"
   },
   "authError": {
     "title": "Access denied",
@@ -72,17 +78,18 @@
     "listingNotFound": "Listing not found",
     "onlyPosterCancel": "Only the poster can cancel this",
     "listingNotActive": "This listing is no longer active",
-    "onlyBuyFulfill": "Only a buy request can be marked as fulfilled by hand",
-    "onlyPosterFulfill": "Only the poster can mark this as fulfilled",
     "cannotBuyOwn": "You can't buy your own listing",
     "notDirectSale": "This listing isn't a direct sale",
     "notEnoughStock": "Only {remaining} units are available",
     "notTradeListing": "This listing isn't a trade",
+    "notBuyListing": "This listing isn't a buy request",
     "cannotOfferOwn": "You can't offer on your own listing",
     "offerNotFound": "Offer not found",
     "offerNotPending": "This offer is no longer pending",
     "noPermissionOffer": "You don't have permission over this offer",
     "cannotGiftSelf": "You can't gift an item to yourself",
+    "cannotClaimOwn": "You can't claim your own gift",
+    "notClaimableGift": "This gift can't be claimed",
     "recipientNotFound": "The selected recipient doesn't exist",
     "userNotFound": "The recipient doesn't exist",
     "cannotMessageSelf": "You can't message yourself",
@@ -95,9 +102,11 @@
     "invalidOptionForItem": "Invalid option for this item",
     "optionValueRange": "\"{label}\" must be between {min} and {max}",
     "unsupportedGeminiModel": "Unsupported Gemini model",
-    "unsupportedLocale": "Unsupported language",
+    "invalidWebhookUrl": "The webhook URL must be a Discord webhook (https://discord.com/api/webhooks/...)",
     "recognitionNotActive": "Screenshot recognition isn't active",
     "noImageReceived": "No image was received",
+    "imageTooLarge": "The image can't be larger than {max} MB",
+    "rateLimited": "Too many requests. Wait {seconds}s and try again.",
     "recognitionFailed": "Automatic detection failed. Try again or fill in the item by hand."
   },
   "admin": {
@@ -149,10 +158,6 @@
       "roleIdsPlaceholder": "One role ID per line (or comma-separated)",
       "roleIdsHint": "Without a configured bot (DISCORD_BOT_TOKEN) role names can't be shown — copy each role's ID from Discord (Server Settings → Roles → right-click → Copy ID, with developer mode enabled)."
     },
-    "language": {
-      "legend": "Language",
-      "label": "App language"
-    },
     "webhook": {
       "legend": "Discord notifications",
       "toggleLabel": "Send a new-sale notification to the webhook",
@@ -165,8 +170,10 @@
       "legend": "Private notifications (DM)",
       "toggleLabel": "Notify the recipient of a transaction by DM (purchase, trade, gift...)",
       "botLabel": "Discord bot:",
-      "botConfigured": "configured",
+      "botInServer": "in the server",
+      "botNotInServer": "configured, but not in the server (did you invite it?)",
       "botNotConfigured": "not configured (DISCORD_BOT_TOKEN environment variable)",
+      "botCheckError": "couldn't verify (error querying Discord)",
       "requirement": "This AND the toggle both need to be on for DMs to be sent."
     },
     "recognition": {
@@ -228,7 +235,9 @@
       "refine": "Refine",
       "cardSlots": "Card slots",
       "minStats": "Minimum stats",
-      "payUpTo": "Pay up to"
+      "payUpTo": "Pay/ea",
+      "bestOffer": "Make an offer",
+      "bestPrice": "Make an offer"
     },
     "filters": {
       "toggle": "Filters",
@@ -320,17 +329,20 @@
       "type": {
         "SALE": "Sale",
         "TRADE": "Trade",
-        "BUY": "Buy"
+        "BUY": "Buy",
+        "GIFT": "Gift"
       },
       "viewTitle": {
         "SALE": "Sales",
         "BUY": "Purchases",
-        "TRADE": "Trades"
+        "TRADE": "Trades",
+        "GIFT": "Gifts"
       },
       "poster": {
         "SALE": "Seller",
         "TRADE": "Seller",
-        "BUY": "Buyer"
+        "BUY": "Buyer",
+        "GIFT": "Sender"
       },
       "status": {
         "ACTIVE": "Active",
@@ -340,7 +352,8 @@
       "soldStatus": {
         "SALE": "Sold",
         "TRADE": "Traded",
-        "BUY": "Fulfilled"
+        "BUY": "Fulfilled",
+        "GIFT": "Gifted"
       },
       "offerStatus": {
         "PENDING": "Pending",
@@ -353,19 +366,23 @@
       "empty": "No listings match your search.",
       "wantedBy": "wanted by",
       "soldBy": "sold by",
+      "tradedBy": "traded by",
+      "giftedBy": "gifted by",
       "available": "x{count} available",
-      "upTo": "up to ",
+      "wanted": "x{count}",
+      "availableUnlimited": "∞",
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
     },
     "detail": {
       "available": "Available",
-      "unitPrice": "Price",
+      "unitPrice": "Price/ea",
       "posted": "Posted",
       "sold": "Sold",
+      "given": "Given",
       "of": "of",
-      "markFulfilled": "Completed",
       "cancelListing": "Cancel",
+      "closeListing": "Close",
       "tradedWith": "Traded with",
       "forItem": "for {item}",
       "offersReceived": "Offers received",
@@ -386,6 +403,51 @@
         "accept": "Accept",
         "reject": "Reject",
         "cancelOffer": "Cancel"
+      },
+      "reserve": {
+        "quantityLabel": "Quantity to buy",
+        "bidLabel": "Your bid/ea",
+        "total": "Total (if confirmed):",
+        "reserving": "Buying...",
+        "submit": "Buy"
+      },
+      "perUnit": "/ea",
+      "reservationsReceived": "Sales to confirm",
+      "yourReservations": "Your purchases",
+      "reservedBy": "Bought by",
+      "reserved": "Pending",
+      "reservationActions": {
+        "confirm": "Sell",
+        "reject": "Reject",
+        "cancel": "Cancel purchase"
+      },
+      "fulfillForm": {
+        "quantityLabel": "Quantity to sell",
+        "askLabel": "Your price/ea",
+        "total": "You'll receive:",
+        "offering": "Selling...",
+        "submit": "Sell"
+      },
+      "fulfillOffersReceived": "Sell offers",
+      "yourFulfillOffers": "Your sell offers",
+      "offeredBy": "Offered by",
+      "fulfillActions": {
+        "confirm": "Buy",
+        "reject": "Reject",
+        "cancel": "Cancel offer"
+      },
+      "claimForm": {
+        "quantityLabel": "Quantity to claim",
+        "claiming": "Claiming...",
+        "submit": "Claim"
+      },
+      "claimsReceived": "Gifts to confirm",
+      "yourClaims": "Your claims",
+      "claimedBy": "Claimed by",
+      "claimActions": {
+        "confirm": "Hand over",
+        "reject": "Reject",
+        "cancel": "Cancel claim"
       }
     },
     "form": {
@@ -405,9 +467,11 @@
       "publishing": "Posting...",
       "recognitionLabel": "Recognize from screenshot (optional)",
       "itemLabel": "Item",
-      "priceLabel": "Price (z)",
-      "payUpToLabel": "Pay up to (z)",
-      "recipientLabel": "Recipient",
+      "priceLabel": "Price/ea",
+      "payUpToLabel": "Pay/ea",
+      "unlimitedLabel": "Unlimited",
+      "noPriceLabel": "No price",
+      "recipientLabel": "Recipient (optional — without one, anyone can claim it)",
       "recognitionNoMatchNamed": "No item in the catalog looks like \"{name}\". Select it manually.",
       "recognitionNoMatch": "Couldn't read the item in the screenshot. Select it manually.",
       "recognitionDetected": "Detected: {item}. Review the data before posting.",
@@ -417,7 +481,8 @@
         "hint": "Drag and drop, click to browse, or paste from the clipboard",
         "clear": "Clear",
         "scan": "Scan",
-        "scanning": "Scanning..."
+        "scanning": "Scanning...",
+        "tooLarge": "The image can't be larger than {max} MB"
       }
     },
     "itemPicker": {
@@ -448,18 +513,35 @@
       "BUY": "New buy request"
     },
     "fields": {
-      "price": "Price",
+      "price": "Price/ea",
       "totalPrice": "Total price",
       "zenyIncluded": "Zeny included",
       "yourOffer": "Your offer",
       "youReceived": "You received",
-      "replyTo": "Reply to"
+      "replyTo": "Reply to",
+      "buyer": "Buyer",
+      "seller": "Seller",
+      "tradedWith": "Traded with",
+      "from": "From",
+      "to": "To",
+      "postedBy": "Posted by",
+      "offeredItem": "Offers",
+      "offerer": "Offerer"
     },
     "dm": {
-      "purchased": "{username} bought your {item}",
+      "tradeOffered": "{username} offered a trade for your {item}",
+      "reserveRequested": "{username} wants to buy your {item}",
+      "reserveAccepted": "{username} confirmed your purchase of {item}",
+      "reserveRejected": "{username} rejected your purchase of {item}",
+      "fulfillOffered": "{username} offers to sell you {item}",
+      "fulfillAccepted": "{username} accepted your sell offer for {item}",
+      "fulfillRejected": "{username} rejected your sell offer for {item}",
       "tradeAcceptedForOfferer": "{username} accepted your trade offer for their {item}",
       "tradeAcceptedForPoster": "You accepted {username}'s offer for your {item}",
       "gifted": "{username} sent you a gift: {item}",
+      "giftClaimRequested": "{username} wants to claim your gift of {item}",
+      "giftClaimAccepted": "{username} handed you the gift of {item}",
+      "giftClaimRejected": "{username} rejected your claim of {item}",
       "contactMessage": "{username} wrote to you about {item}"
     }
   }

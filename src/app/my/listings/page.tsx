@@ -23,7 +23,6 @@ export default async function MyListingsPage() {
   return (
     <ul className="flex flex-col gap-3">
       {listings.map((listing) => {
-        const remaining = listing.quantity - listing.quantitySold;
         const isBuy = listing.type === "BUY";
         return (
           <li key={listing.id}>
@@ -43,8 +42,17 @@ export default async function MyListingsPage() {
                 </p>
                 <p className="text-sm text-ro-text-muted">
                   {listingStatusLabel(t, listing.status, listing.type)}
-                  {!isBuy && listing.status === "ACTIVE" && listing.quantity > 1 &&
-                    ` · ${t("results.available", { count: remaining })}`}
+                  {/* Cantidad también en las compras (unidades que aún se buscan),
+                      igual que el grid del mercado: "x{n}" en compra, "x{n}
+                      disponibles" en el resto, "∞" si es ilimitada. */}
+                  {listing.status === "ACTIVE" && listing.quantity === null &&
+                    ` · ${t("results.availableUnlimited")}`}
+                  {listing.status === "ACTIVE" && listing.quantity !== null && listing.quantity > 1 &&
+                    ` · ${
+                      isBuy
+                        ? t("results.wanted", { count: listing.quantity - listing.sold })
+                        : t("results.available", { count: listing.quantity - listing.sold })
+                    }`}
                 </p>
                 {listing.options.length > 0 && (
                   <p className="mt-1 flex flex-wrap gap-1">
@@ -61,7 +69,6 @@ export default async function MyListingsPage() {
               </div>
               {listing.type !== "TRADE" && listing.price !== null && (
                 <p className={`font-bold ${priceColorClass(listing.price)}`}>
-                  {isBuy ? t("results.upTo") : ""}
                   {formatPrice(listing.price)}
                 </p>
               )}

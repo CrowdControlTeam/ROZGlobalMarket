@@ -8,7 +8,6 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { DEFAULT_GEMINI_MODEL, isGeminiModel, type GeminiModel } from "@/lib/gemini-model-constants";
-import { DEFAULT_LOCALE, isAppLocale, type AppLocale } from "@/lib/locale-constants";
 
 // Placeholder/fallback hasta que se configure — vive en código a
 // propósito, no en el default de la columna (ver comentario en
@@ -26,7 +25,6 @@ export type MarketConfigValues = {
   maintenanceModeEnabled: boolean;
   optionsEnabled: boolean;
   adminRoleIds: string[];
-  locale: AppLocale;
   siteName: string;
 };
 
@@ -51,10 +49,6 @@ export const loadMarketConfig = cache(async (): Promise<MarketConfigValues> => {
     maintenanceModeEnabled: config?.maintenanceModeEnabled ?? false,
     optionsEnabled: config?.optionsEnabled ?? true,
     adminRoleIds: config?.adminRoleIds ?? [],
-    // Mismo criterio que geminiModel: si el valor guardado dejara de estar
-    // soportado, se cae al default en vez de pedirle a next-intl un locale
-    // sin fichero de mensajes.
-    locale: config?.locale && isAppLocale(config.locale) ? config.locale : DEFAULT_LOCALE,
     siteName: config?.siteName?.trim() || DEFAULT_SITE_NAME,
   };
 });

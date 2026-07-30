@@ -11,7 +11,7 @@ export default async function MyActivityLayout({ children }: { children: React.R
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <BackLink href="/market" label={tNav("backToMarket")} />
-      <h1 className="mb-6 font-heading text-lg text-ro-gold">{t("title")}</h1>
+      <h1 className="mb-6 font-heading text-lg text-ro-text">{t("title")}</h1>
       <MyActivityTabs />
       {children}
     </main>

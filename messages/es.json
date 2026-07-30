@@ -22,16 +22,22 @@
       "memberSince": "Miembro desde",
       "roles": "Roles en Discord",
       "noRoles": "Sin roles registrados",
-      "myActivity": "Actividad",
+      "myActivity": "Mi actividad",
       "settings": "Ajustes",
-      "signOut": "Salir"
+      "signOut": "Salir",
+      "theme": "Tema",
+      "language": "Idioma"
     }
   },
   "myActivity": {
     "title": "Mi actividad",
     "listingsEmpty": "Todavía no has publicado nada.",
+    "pendingEmpty": "No tienes nada pendiente.",
+    "pendingIncoming": "Por confirmar",
+    "pendingOutgoing": "Mis solicitudes",
     "tabs": {
       "listings": "Mis publicaciones",
+      "pending": "Pendientes",
       "gifts": "Regalos"
     }
   },
@@ -40,7 +46,7 @@
     "greeting": "Hola, <strong>{username}</strong>. ¿Qué se cuece hoy en el mercado de la guild?",
     "goToMarket": "Ir al mercado",
     "intro": "Mercado privado para miembros de la guild. Inicia sesión con Discord para entrar.",
-    "signIn": "Iniciar sesión con Discord"
+    "signIn": "Entrar con Discord"
   },
   "authError": {
     "title": "Acceso denegado",
@@ -72,17 +78,18 @@
     "listingNotFound": "Publicación no encontrada",
     "onlyPosterCancel": "Solo quien la publicó puede cancelarla",
     "listingNotActive": "Esta publicación ya no está activa",
-    "onlyBuyFulfill": "Solo una petición de compra se puede marcar como cumplida a mano",
-    "onlyPosterFulfill": "Solo quien la publicó puede marcarla como cumplida",
     "cannotBuyOwn": "No puedes comprar tu propia publicación",
     "notDirectSale": "Esta publicación no es una venta directa",
     "notEnoughStock": "Solo quedan {remaining} unidades disponibles",
     "notTradeListing": "Esta publicación no es un intercambio",
+    "notBuyListing": "Esta publicación no es una petición de compra",
     "cannotOfferOwn": "No puedes ofertar en tu propia publicación",
     "offerNotFound": "Oferta no encontrada",
     "offerNotPending": "Esta oferta ya no está pendiente",
     "noPermissionOffer": "No tienes permiso sobre esta oferta",
     "cannotGiftSelf": "No puedes regalarte un item a ti mismo",
+    "cannotClaimOwn": "No puedes reclamar tu propio regalo",
+    "notClaimableGift": "Este regalo no se puede reclamar",
     "recipientNotFound": "El destinatario seleccionado no existe",
     "userNotFound": "El destinatario no existe",
     "cannotMessageSelf": "No puedes enviarte un mensaje a ti mismo",
@@ -95,9 +102,11 @@
     "invalidOptionForItem": "Option inválida para este item",
     "optionValueRange": "El valor de \"{label}\" debe estar entre {min} y {max}",
     "unsupportedGeminiModel": "Modelo de Gemini no soportado",
-    "unsupportedLocale": "Idioma no soportado",
+    "invalidWebhookUrl": "La URL del webhook debe ser un webhook de Discord (https://discord.com/api/webhooks/...)",
     "recognitionNotActive": "El reconocimiento por captura no está activo",
     "noImageReceived": "No se ha recibido ninguna imagen",
+    "imageTooLarge": "La imagen no puede superar los {max} MB",
+    "rateLimited": "Demasiadas peticiones. Espera {seconds} s e inténtalo de nuevo.",
     "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano."
   },
   "admin": {
@@ -149,10 +158,6 @@
       "roleIdsPlaceholder": "Un ID de rol por línea (o separados por comas)",
       "roleIdsHint": "Sin bot configurado (DISCORD_BOT_TOKEN) no se pueden mostrar los nombres de los roles — copia el ID de cada rol desde Discord (Ajustes del servidor → Roles → clic derecho → Copiar ID, con el modo desarrollador activado)."
     },
-    "language": {
-      "legend": "Idioma",
-      "label": "Idioma de la aplicación"
-    },
     "webhook": {
       "legend": "Notificaciones a Discord",
       "toggleLabel": "Enviar notificación de nueva venta al webhook",
@@ -165,8 +170,10 @@
       "legend": "Notificaciones privadas (DM)",
       "toggleLabel": "Avisar por DM al destinatario de una transacción (compra, trade, regalo...)",
       "botLabel": "Bot de Discord:",
-      "botConfigured": "configurado",
+      "botInServer": "en el servidor",
+      "botNotInServer": "configurado, pero no está en el servidor (¿lo has invitado?)",
       "botNotConfigured": "no configurado (variable de entorno DISCORD_BOT_TOKEN)",
+      "botCheckError": "no se pudo verificar (error al consultar Discord)",
       "requirement": "Hace falta esto Y el toggle activo para que se manden los DMs."
     },
     "recognition": {
@@ -228,7 +235,9 @@
       "refine": "Refine",
       "cardSlots": "Slots de carta",
       "minStats": "Stats mínimos",
-      "payUpTo": "Pago hasta"
+      "payUpTo": "Pago/ud",
+      "bestOffer": "Hacer oferta",
+      "bestPrice": "Hacer oferta"
     },
     "filters": {
       "toggle": "Filtros",
@@ -320,17 +329,20 @@
       "type": {
         "SALE": "Venta",
         "TRADE": "Intercambio",
-        "BUY": "Compra"
+        "BUY": "Compra",
+        "GIFT": "Regalo"
       },
       "viewTitle": {
         "SALE": "Ventas",
         "BUY": "Compras",
-        "TRADE": "Intercambios"
+        "TRADE": "Intercambios",
+        "GIFT": "Regalos"
       },
       "poster": {
         "SALE": "Vendedor",
         "TRADE": "Vendedor",
-        "BUY": "Comprador"
+        "BUY": "Comprador",
+        "GIFT": "Remitente"
       },
       "status": {
         "ACTIVE": "Activa",
@@ -340,7 +352,8 @@
       "soldStatus": {
         "SALE": "Vendida",
         "TRADE": "Intercambiada",
-        "BUY": "Cumplida"
+        "BUY": "Cumplida",
+        "GIFT": "Regalado"
       },
       "offerStatus": {
         "PENDING": "Pendiente",
@@ -353,19 +366,23 @@
       "empty": "No hay publicaciones que coincidan con la búsqueda.",
       "wantedBy": "buscado por",
       "soldBy": "vendido por",
+      "tradedBy": "intercambiado por",
+      "giftedBy": "regalado por",
       "available": "x{count} disponibles",
-      "upTo": "hasta ",
+      "wanted": "x{count}",
+      "availableUnlimited": "∞",
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
     },
     "detail": {
       "available": "Disponibles",
-      "unitPrice": "Precio",
+      "unitPrice": "Precio/ud",
       "posted": "Publicado",
       "sold": "Vendidos",
+      "given": "Entregados",
       "of": "de",
-      "markFulfilled": "Completado",
       "cancelListing": "Cancelar",
+      "closeListing": "Cerrar",
       "tradedWith": "Intercambiado con",
       "forItem": "por {item}",
       "offersReceived": "Ofertas recibidas",
@@ -386,6 +403,51 @@
         "accept": "Aceptar",
         "reject": "Rechazar",
         "cancelOffer": "Cancelar"
+      },
+      "reserve": {
+        "quantityLabel": "Cantidad a comprar",
+        "bidLabel": "Tu oferta/ud",
+        "total": "Total (si se confirma):",
+        "reserving": "Comprando...",
+        "submit": "Comprar"
+      },
+      "perUnit": "/ud",
+      "reservationsReceived": "Ventas por confirmar",
+      "yourReservations": "Tus compras",
+      "reservedBy": "Comprado por",
+      "reserved": "Pendientes",
+      "reservationActions": {
+        "confirm": "Vender",
+        "reject": "Rechazar",
+        "cancel": "Cancelar compra"
+      },
+      "fulfillForm": {
+        "quantityLabel": "Cantidad a vender",
+        "askLabel": "Tu precio/ud",
+        "total": "Recibirás:",
+        "offering": "Vendiendo...",
+        "submit": "Vender"
+      },
+      "fulfillOffersReceived": "Ofertas de venta",
+      "yourFulfillOffers": "Tus ofertas de venta",
+      "offeredBy": "Ofrecido por",
+      "fulfillActions": {
+        "confirm": "Comprar",
+        "reject": "Rechazar",
+        "cancel": "Cancelar oferta"
+      },
+      "claimForm": {
+        "quantityLabel": "Cantidad a reclamar",
+        "claiming": "Reclamando...",
+        "submit": "Reclamar"
+      },
+      "claimsReceived": "Regalos por confirmar",
+      "yourClaims": "Tus reclamaciones",
+      "claimedBy": "Reclamado por",
+      "claimActions": {
+        "confirm": "Entregar",
+        "reject": "Rechazar",
+        "cancel": "Cancelar reclamación"
       }
     },
     "form": {
@@ -405,9 +467,11 @@
       "publishing": "Publicando...",
       "recognitionLabel": "Reconocer desde captura (opcional)",
       "itemLabel": "Item",
-      "priceLabel": "Precio (z)",
-      "payUpToLabel": "Pago hasta (z)",
-      "recipientLabel": "Destinatario",
+      "priceLabel": "Precio/ud",
+      "payUpToLabel": "Pago/ud",
+      "unlimitedLabel": "Ilimitados",
+      "noPriceLabel": "Sin precio",
+      "recipientLabel": "Destinatario (opcional — sin él, cualquiera puede reclamarlo)",
       "recognitionNoMatchNamed": "No se ha encontrado en el catálogo ningún item parecido a \"{name}\". Selecciónalo manualmente.",
       "recognitionNoMatch": "No se ha podido leer el item en la captura. Selecciónalo manualmente.",
       "recognitionDetected": "Detectado: {item}. Revisa los datos antes de publicar.",
@@ -417,7 +481,8 @@
         "hint": "Arrastra y suelta, haz clic para buscar o pega desde el portapapeles",
         "clear": "Borrar",
         "scan": "Escanear",
-        "scanning": "Escaneando..."
+        "scanning": "Escaneando...",
+        "tooLarge": "La imagen no puede superar los {max} MB"
       }
     },
     "itemPicker": {
@@ -448,18 +513,35 @@
       "BUY": "Nueva compra"
     },
     "fields": {
-      "price": "Precio",
+      "price": "Precio/ud",
       "totalPrice": "Precio total",
       "zenyIncluded": "Zeny incluido",
       "yourOffer": "Tu oferta",
       "youReceived": "Has recibido",
-      "replyTo": "Responder a"
+      "replyTo": "Responder a",
+      "buyer": "Comprador",
+      "seller": "Vendedor",
+      "tradedWith": "Intercambiado con",
+      "from": "De",
+      "to": "Para",
+      "postedBy": "Publicado por",
+      "offeredItem": "Ofrece",
+      "offerer": "Ofertante"
     },
     "dm": {
-      "purchased": "{username} ha comprado tu {item}",
+      "tradeOffered": "{username} te ha ofrecido un intercambio por tu {item}",
+      "reserveRequested": "{username} quiere comprar tu {item}",
+      "reserveAccepted": "{username} ha confirmado tu compra de {item}",
+      "reserveRejected": "{username} ha rechazado tu compra de {item}",
+      "fulfillOffered": "{username} se ofrece a venderte {item}",
+      "fulfillAccepted": "{username} ha aceptado tu oferta de venta de {item}",
+      "fulfillRejected": "{username} ha rechazado tu oferta de venta de {item}",
       "tradeAcceptedForOfferer": "{username} ha aceptado tu oferta de intercambio por su {item}",
       "tradeAcceptedForPoster": "Has aceptado la oferta de {username} por tu {item}",
       "gifted": "{username} te ha regalado {item}",
+      "giftClaimRequested": "{username} quiere reclamar tu regalo de {item}",
+      "giftClaimAccepted": "{username} te ha entregado el regalo de {item}",
+      "giftClaimRejected": "{username} ha rechazado tu reclamación de {item}",
       "contactMessage": "{username} te ha escrito sobre {item}"
     }
   }
