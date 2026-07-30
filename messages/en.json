@@ -518,10 +518,18 @@
       "zenyIncluded": "Zeny included",
       "yourOffer": "Your offer",
       "youReceived": "You received",
-      "replyTo": "Reply to"
+      "replyTo": "Reply to",
+      "buyer": "Buyer",
+      "seller": "Seller",
+      "tradedWith": "Traded with",
+      "from": "From",
+      "to": "To",
+      "postedBy": "Posted by",
+      "offeredItem": "Offers",
+      "offerer": "Offerer"
     },
     "dm": {
-      "purchased": "{username} bought your {item}",
+      "tradeOffered": "{username} offered a trade for your {item}",
       "reserveRequested": "{username} wants to buy your {item}",
       "reserveAccepted": "{username} confirmed your purchase of {item}",
       "reserveRejected": "{username} rejected your purchase of {item}",

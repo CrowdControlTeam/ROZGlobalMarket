@@ -12,6 +12,7 @@ type ListingWebhookPayload = {
   quantity: number | null; // null = ilimitado ("los que tengas"), solo SALE/BUY
   posterUsername: string;
   posterAvatarUrl: string | null;
+  posterId: string; // discordId, para la mención clicable "Publicado por"
   listingUrl: string; // absoluta
   options?: { label: string; value: number }[];
 };
@@ -69,6 +70,7 @@ export async function sendListingCreatedWebhook(payload: ListingWebhookPayload) 
                 },
               ]
             : []),
+          { name: t("fields.postedBy"), value: `<@${payload.posterId}>`, inline: false },
         ],
         timestamp: new Date().toISOString(),
       },

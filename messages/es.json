@@ -518,10 +518,18 @@
       "zenyIncluded": "Zeny incluido",
       "yourOffer": "Tu oferta",
       "youReceived": "Has recibido",
-      "replyTo": "Responder a"
+      "replyTo": "Responder a",
+      "buyer": "Comprador",
+      "seller": "Vendedor",
+      "tradedWith": "Intercambiado con",
+      "from": "De",
+      "to": "Para",
+      "postedBy": "Publicado por",
+      "offeredItem": "Ofrece",
+      "offerer": "Ofertante"
     },
     "dm": {
-      "purchased": "{username} ha comprado tu {item}",
+      "tradeOffered": "{username} te ha ofrecido un intercambio por tu {item}",
       "reserveRequested": "{username} quiere comprar tu {item}",
       "reserveAccepted": "{username} ha confirmado tu compra de {item}",
       "reserveRejected": "{username} ha rechazado tu compra de {item}",
