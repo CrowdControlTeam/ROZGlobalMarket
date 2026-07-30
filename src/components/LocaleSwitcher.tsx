@@ -43,14 +43,15 @@ export function LocaleSwitcher({ initial }: { initial: AppLocale }) {
             type="button"
             disabled={isPending}
             aria-pressed={active}
+            title={o.label}
             onClick={() => select(o.value)}
-            className={`px-3 py-1 text-sm transition-colors disabled:opacity-60 ${
+            className={`px-3 py-1 text-sm uppercase transition-colors disabled:opacity-60 ${
               active
                 ? "bg-ro-gold font-semibold text-ro-navy"
                 : "text-ro-text-muted hover:bg-white/5"
             }`}
           >
-            {o.label}
+            {o.value}
           </button>
         );
       })}
