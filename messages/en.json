@@ -527,9 +527,12 @@
       "tradedWith": "Traded with",
       "from": "From",
       "to": "To",
-      "postedBy": "Posted by"
+      "postedBy": "Posted by",
+      "offeredItem": "Offers",
+      "offerer": "Offerer"
     },
     "dm": {
+      "tradeOffered": "{username} offered a trade for your {item}",
       "reserveRequested": "{username} wants to buy your {item}",
       "reserveAccepted": "{username} confirmed your purchase of {item}",
       "reserveRejected": "{username} rejected your purchase of {item}",

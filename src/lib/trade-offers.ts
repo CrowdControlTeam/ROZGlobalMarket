@@ -28,7 +28,10 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
     throw new Error(t("maintenanceMode"));
   }
 
-  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: { item: true },
+  });
   if (!listing) throw new Error(t("listingNotFound"));
   if (listing.type !== "TRADE") throw new Error(t("notTradeListing"));
   if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
@@ -94,6 +97,29 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
       offeredCardSlots: cardSlots,
       zenyOffered: parsed.data.zenyOffered,
     },
+  });
+
+  // Aviso al poster de que le han ofrecido un intercambio (coherente con
+  // venta/compra/regalo, que también avisan al recibir la oferta). Best-effort.
+  const appUrl = getAppUrl();
+  const tDiscord = await getTranslations("discord");
+  const zenyField =
+    parsed.data.zenyOffered > 0
+      ? [{ name: tDiscord("fields.zenyIncluded"), value: String(parsed.data.zenyOffered), inline: true }]
+      : [];
+  await sendDirectMessage(listing.posterId, {
+    title: tDiscord("dm.tradeOffered", {
+      username: session.user.username,
+      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
+    }),
+    url: `${appUrl}/market/${listingId}`,
+    color: DISCORD_EMBED_COLOR.TRADE,
+    itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
+    fields: [
+      { name: tDiscord("fields.offeredItem"), value: formatItemDisplayName(item.name, refineLevel, cardSlots), inline: true },
+      ...zenyField,
+      { name: tDiscord("fields.offerer"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
   revalidatePath(`/market/${listingId}`);

@@ -527,9 +527,12 @@
       "tradedWith": "Intercambiado con",
       "from": "De",
       "to": "Para",
-      "postedBy": "Publicado por"
+      "postedBy": "Publicado por",
+      "offeredItem": "Ofrece",
+      "offerer": "Ofertante"
     },
     "dm": {
+      "tradeOffered": "{username} te ha ofrecido un intercambio por tu {item}",
       "reserveRequested": "{username} quiere comprar tu {item}",
       "reserveAccepted": "{username} ha confirmado tu compra de {item}",
       "reserveRejected": "{username} ha rechazado tu compra de {item}",
