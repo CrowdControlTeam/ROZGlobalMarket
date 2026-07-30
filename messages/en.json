@@ -416,13 +416,13 @@
       },
       "perUnit": "/ea",
       "reservationsReceived": "Sales to confirm",
-      "yourReservations": "Your reservations",
-      "reservedBy": "Reserved by",
-      "reserved": "Reserved",
+      "yourReservations": "Your purchases",
+      "reservedBy": "Bought by",
+      "reserved": "Pending",
       "reservationActions": {
         "confirm": "Sell",
         "reject": "Reject",
-        "cancel": "Cancel reservation"
+        "cancel": "Cancel purchase"
       },
       "fulfillForm": {
         "quantityLabel": "Quantity to sell",
@@ -525,9 +525,9 @@
     },
     "dm": {
       "purchased": "{username} bought your {item}",
-      "reserveRequested": "{username} wants to reserve your {item}",
-      "reserveAccepted": "{username} confirmed your reservation of {item}",
-      "reserveRejected": "{username} rejected your reservation of {item}",
+      "reserveRequested": "{username} wants to buy your {item}",
+      "reserveAccepted": "{username} confirmed your purchase of {item}",
+      "reserveRejected": "{username} rejected your purchase of {item}",
       "fulfillOffered": "{username} offers to sell you {item}",
       "fulfillAccepted": "{username} accepted your sell offer for {item}",
       "fulfillRejected": "{username} rejected your sell offer for {item}",

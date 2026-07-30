@@ -416,13 +416,13 @@
       },
       "perUnit": "/ud",
       "reservationsReceived": "Ventas por confirmar",
-      "yourReservations": "Tus reservas",
-      "reservedBy": "Reservado por",
-      "reserved": "Reservados",
+      "yourReservations": "Tus compras",
+      "reservedBy": "Comprado por",
+      "reserved": "Pendientes",
       "reservationActions": {
         "confirm": "Vender",
         "reject": "Rechazar",
-        "cancel": "Cancelar reserva"
+        "cancel": "Cancelar compra"
       },
       "fulfillForm": {
         "quantityLabel": "Cantidad a vender",
@@ -525,9 +525,9 @@
     },
     "dm": {
       "purchased": "{username} ha comprado tu {item}",
-      "reserveRequested": "{username} quiere reservar tu {item}",
-      "reserveAccepted": "{username} ha confirmado tu reserva de {item}",
-      "reserveRejected": "{username} ha rechazado tu reserva de {item}",
+      "reserveRequested": "{username} quiere comprar tu {item}",
+      "reserveAccepted": "{username} ha confirmado tu compra de {item}",
+      "reserveRejected": "{username} ha rechazado tu compra de {item}",
       "fulfillOffered": "{username} se ofrece a venderte {item}",
       "fulfillAccepted": "{username} ha aceptado tu oferta de venta de {item}",
       "fulfillRejected": "{username} ha rechazado tu oferta de venta de {item}",
