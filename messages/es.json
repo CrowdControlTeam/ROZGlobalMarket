@@ -240,7 +240,9 @@
       "refine": "Refine",
       "cardSlots": "Slots de carta",
       "minStats": "Stats mínimos",
-      "payUpTo": "Pago/ud"
+      "payUpTo": "Pago/ud",
+      "bestOffer": "Al mejor postor",
+      "bestPrice": "Al mejor precio"
     },
     "filters": {
       "toggle": "Filtros",
@@ -407,10 +409,13 @@
       },
       "reserve": {
         "quantityLabel": "Cantidad a reservar",
+        "bidLabel": "Tu oferta/ud",
         "total": "Total (si se confirma):",
         "reserving": "Reservando...",
-        "submit": "Reservar"
+        "submit": "Reservar",
+        "bidSubmit": "Enviar oferta"
       },
+      "perUnit": "/ud",
       "reservationsReceived": "Reservas por confirmar",
       "yourReservations": "Tus reservas",
       "reservedBy": "Reservado por",
@@ -422,6 +427,7 @@
       },
       "fulfillForm": {
         "quantityLabel": "Cantidad a vender",
+        "askLabel": "Tu precio/ud",
         "total": "Recibirás:",
         "offering": "Enviando...",
         "submit": "Ofrecer venta"
@@ -468,6 +474,7 @@
       "priceLabel": "Precio/ud",
       "payUpToLabel": "Pago/ud",
       "unlimitedLabel": "Ilimitados",
+      "noPriceLabel": "Sin precio",
       "recipientLabel": "Destinatario (opcional — sin él, cualquiera puede reclamarlo)",
       "recognitionNoMatchNamed": "No se ha encontrado en el catálogo ningún item parecido a \"{name}\". Selecciónalo manualmente.",
       "recognitionNoMatch": "No se ha podido leer el item en la captura. Selecciónalo manualmente.",

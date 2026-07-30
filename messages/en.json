@@ -240,7 +240,9 @@
       "refine": "Refine",
       "cardSlots": "Card slots",
       "minStats": "Minimum stats",
-      "payUpTo": "Pay/ea"
+      "payUpTo": "Pay/ea",
+      "bestOffer": "Highest bidder",
+      "bestPrice": "Best price"
     },
     "filters": {
       "toggle": "Filters",
@@ -407,10 +409,13 @@
       },
       "reserve": {
         "quantityLabel": "Quantity to reserve",
+        "bidLabel": "Your bid/ea",
         "total": "Total (if confirmed):",
         "reserving": "Reserving...",
-        "submit": "Reserve"
+        "submit": "Reserve",
+        "bidSubmit": "Send offer"
       },
+      "perUnit": "/ea",
       "reservationsReceived": "Reservations to confirm",
       "yourReservations": "Your reservations",
       "reservedBy": "Reserved by",
@@ -422,6 +427,7 @@
       },
       "fulfillForm": {
         "quantityLabel": "Quantity to sell",
+        "askLabel": "Your price/ea",
         "total": "You'll receive:",
         "offering": "Sending...",
         "submit": "Offer to sell"
@@ -468,6 +474,7 @@
       "priceLabel": "Price/ea",
       "payUpToLabel": "Pay/ea",
       "unlimitedLabel": "Unlimited",
+      "noPriceLabel": "No price",
       "recipientLabel": "Recipient (optional — without one, anyone can claim it)",
       "recognitionNoMatchNamed": "No item in the catalog looks like \"{name}\". Select it manually.",
       "recognitionNoMatch": "Couldn't read the item in the screenshot. Select it manually.",

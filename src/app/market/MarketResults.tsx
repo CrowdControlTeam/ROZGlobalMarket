@@ -113,12 +113,18 @@ export function MarketResults({
               />
             </p>
           );
-          const priceLine = listing.type !== "TRADE" && listing.price !== null && (
-            <p className={`font-bold ${priceColorClass(listing.price)}`}>
-              {listing.type === "BUY" ? t("results.upTo") : ""}
-              {formatPrice(listing.price)}
-            </p>
-          );
+          const priceLine =
+            listing.type === "TRADE" ? null : listing.price === null ? (
+              // "Sin precio" (competitivo): al mejor postor (venta) / mejor precio (compra).
+              <p className="font-bold text-ro-text-muted">
+                {listing.type === "BUY" ? t("field.bestPrice") : t("field.bestOffer")}
+              </p>
+            ) : (
+              <p className={`font-bold ${priceColorClass(listing.price)}`}>
+                {listing.type === "BUY" ? t("results.upTo") : ""}
+                {formatPrice(listing.price)}
+              </p>
+            );
 
           return (
             <li key={listing.id}>

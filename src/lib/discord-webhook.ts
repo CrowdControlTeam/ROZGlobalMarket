@@ -44,7 +44,12 @@ export async function sendListingCreatedWebhook(payload: ListingWebhookPayload) 
             : [
                 {
                   name: payload.type === "BUY" ? tField("payUpTo") : t("fields.price"),
-                  value: formatPrice(payload.price!),
+                  // price null en SALE/BUY = "sin precio" (competitivo): se muestra
+                  // "al mejor postor/precio" en vez de un importe.
+                  value:
+                    payload.price === null
+                      ? tField(payload.type === "BUY" ? "bestPrice" : "bestOffer")
+                      : formatPrice(payload.price),
                   inline: true,
                 },
               ]),

@@ -8,9 +8,11 @@ import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { getErrorMessage } from "@/lib/errors";
 
-// Reserva de una venta a precio fijo: crea un Deal PENDING que retiene stock
-// hasta que el vendedor lo confirma o rechaza (ver reserveListing en
-// listings.ts). Sustituye a la compra instantánea (BuyForm).
+// Comprador sobre una venta:
+//  - precio fijo (unitPrice number): reserva a ese precio; crea un Deal PENDING
+//    que retiene stock hasta que el vendedor confirma/rechaza.
+//  - "sin precio" (unitPrice null, competitivo): el comprador PUJA su precio/ud;
+//    la puja no retiene stock y el vendedor elige la mejor (ver reserveListing).
 export function ReserveForm({
   listingId,
   available,
@@ -18,16 +20,20 @@ export function ReserveForm({
 }: {
   listingId: string;
   available: number | null; // null = ilimitado ("los que tengas"): sin tope
-  unitPrice: number;
+  unitPrice: number | null; // null = "sin precio" (competitivo): el comprador puja
 }) {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
+  const [bid, setBid] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market.detail.reserve");
   // Mismo guard que el resto de formularios contra el mash-click (ver
   // NewPublicationForm.tsx).
   const submittingRef = useRef(false);
+
+  const competitive = unitPrice === null;
+  const effectiveUnit = competitive ? bid : unitPrice;
 
   return (
     <form
@@ -61,17 +67,31 @@ export function ReserveForm({
         />
       </div>
 
+      {competitive && (
+        <div>
+          <label className={labelClass}>{t("bidLabel")}</label>
+          <input
+            type="number"
+            name="price"
+            min={1}
+            value={bid}
+            onChange={(e) => setBid(Number(e.target.value))}
+            className={inputClass}
+          />
+        </div>
+      )}
+
       <p className="text-sm text-ro-text-muted">
         {t("total")}{" "}
-        <span className={`font-semibold ${priceColorClass(quantity * unitPrice)}`}>
-          {formatPrice(quantity * unitPrice)}
+        <span className={`font-semibold ${priceColorClass(quantity * effectiveUnit)}`}>
+          {formatPrice(quantity * effectiveUnit)}
         </span>
       </p>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <button type="submit" disabled={isPending} className={buttonClass("primary")}>
-        {isPending ? t("reserving") : t("submit")}
+        {isPending ? t("reserving") : competitive ? t("bidSubmit") : t("submit")}
       </button>
     </form>
   );

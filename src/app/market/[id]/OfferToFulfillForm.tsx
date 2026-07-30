@@ -8,10 +8,11 @@ import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { getErrorMessage } from "@/lib/errors";
 
-// Oferta de un vendedor para cumplir una petición de compra (BUY) a precio
-// fijo: crea un Deal PENDING que el comprador (poster) confirma o rechaza (ver
-// offerToFulfill en listings.ts). Espejo de ReserveForm con los roles
-// invertidos: aquí el que actúa es el vendedor y "recibirá" el importe.
+// Vendedor que se ofrece a cumplir una petición de compra (BUY):
+//  - precio fijo (unitPrice number): oferta al precio del comprador; Deal PENDING
+//    que retiene cupo hasta que el comprador confirma/rechaza.
+//  - "sin precio" (unitPrice null, competitivo): el vendedor PIDE su precio/ud; la
+//    oferta no retiene cupo y el comprador elige la más barata (ver offerToFulfill).
 export function OfferToFulfillForm({
   listingId,
   available,
@@ -19,14 +20,18 @@ export function OfferToFulfillForm({
 }: {
   listingId: string;
   available: number | null; // null = compra ilimitada ("los que tengas")
-  unitPrice: number;
+  unitPrice: number | null; // null = "sin precio" (competitivo): el vendedor pide
 }) {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
+  const [ask, setAsk] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market.detail.fulfillForm");
   const submittingRef = useRef(false);
+
+  const competitive = unitPrice === null;
+  const effectiveUnit = competitive ? ask : unitPrice;
 
   return (
     <form
@@ -60,10 +65,24 @@ export function OfferToFulfillForm({
         />
       </div>
 
+      {competitive && (
+        <div>
+          <label className={labelClass}>{t("askLabel")}</label>
+          <input
+            type="number"
+            name="price"
+            min={1}
+            value={ask}
+            onChange={(e) => setAsk(Number(e.target.value))}
+            className={inputClass}
+          />
+        </div>
+      )}
+
       <p className="text-sm text-ro-text-muted">
         {t("total")}{" "}
-        <span className={`font-semibold ${priceColorClass(quantity * unitPrice)}`}>
-          {formatPrice(quantity * unitPrice)}
+        <span className={`font-semibold ${priceColorClass(quantity * effectiveUnit)}`}>
+          {formatPrice(quantity * effectiveUnit)}
         </span>
       </p>
 

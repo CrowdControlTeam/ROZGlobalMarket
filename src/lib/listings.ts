@@ -172,17 +172,23 @@ export async function createListing(formData: FormData) {
   // opcional en la oferta). En SALE es el precio de venta; en BUY el mismo
   // campo significa "precio máximo que pagaría" — mismo campo, doble
   // sentido según `type` (ver comentario en schema.prisma).
+  // price null en SALE/BUY = "sin precio" (competitivo): no se fija precio y la
+  // contraparte puja/oferta el suyo; el poster elige la mejor (ver reserveListing
+  // / offerToFulfill y su rama competitiva). La señal es el checkbox `noPrice`.
   let price: number | null = null;
   if (parsed.data.type === "SALE" || parsed.data.type === "BUY") {
-    const pricedParsed = z.coerce
-      .number()
-      .int()
-      .positive(t("positivePrice"))
-      .safeParse(formData.get("price"));
-    if (!pricedParsed.success) {
-      throw new Error(pricedParsed.error.issues[0]?.message ?? t("invalidPrice"));
+    const noPrice = formData.get("noPrice") === "on";
+    if (!noPrice) {
+      const pricedParsed = z.coerce
+        .number()
+        .int()
+        .positive(t("positivePrice"))
+        .safeParse(formData.get("price"));
+      if (!pricedParsed.success) {
+        throw new Error(pricedParsed.error.issues[0]?.message ?? t("invalidPrice"));
+      }
+      price = pricedParsed.data;
     }
-    price = pricedParsed.data;
   }
 
   const item = await prisma.item.findUnique({
@@ -402,7 +408,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
   }
   const { quantity } = parsed.data;
 
-  const listing = await prisma.$transaction(async (tx) => {
+  const { listing, unitPrice } = await prisma.$transaction(async (tx) => {
     // Bloqueo de la fila: serializa reservas concurrentes para no reservar más
     // stock del disponible. Ver el núcleo del rediseño en deals.ts.
     await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`;
@@ -415,12 +421,33 @@ export async function reserveListing(listingId: string, formData: FormData) {
     if (listing.status !== "ACTIVE") {
       throw new Error(t("listingNotActive"));
     }
-    if (listing.type !== "SALE" || listing.price === null) {
+    if (listing.type !== "SALE") {
       throw new Error(t("notDirectSale"));
     }
 
-    // Disponible = cantidad − vendido − reservado. Las reservas PENDING retienen
-    // stock; vendido/reservado se derivan de los Deal (ver deals.ts).
+    // Dos mecánicas según el listing:
+    //  - precio fijo (price no null): unitPrice = el del listing; la reserva
+    //    PENDING RETIENE stock (disponible resta lo reservado).
+    //  - "sin precio" (price null, competitivo): el comprador puja su unitPrice
+    //    y las pujas PENDING NO retienen stock —varias personas compiten por las
+    //    mismas unidades y el vendedor elige— (ver deals.ts). El tope anti-
+    //    sobreventa se aplica al ACEPTAR (acceptSaleReservation).
+    const competitive = listing.price === null;
+    let unitPrice: number;
+    if (listing.price === null) {
+      const bidParsed = z.coerce
+        .number()
+        .int()
+        .positive(t("positivePrice"))
+        .safeParse(formData.get("price"));
+      if (!bidParsed.success) {
+        throw new Error(bidParsed.error.issues[0]?.message ?? t("invalidPrice"));
+      }
+      unitPrice = bidParsed.data;
+    } else {
+      unitPrice = listing.price;
+    }
+
     const agg = await tx.deal.groupBy({
       by: ["status"],
       where: { listingId, status: { in: ["ACCEPTED", "PENDING"] } },
@@ -429,24 +456,25 @@ export async function reserveListing(listingId: string, formData: FormData) {
     const sold = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
     const reserved = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
     // available null = ilimitado ("los que tengas"): no hay tope que comprobar.
-    const available = availableFrom(listing.quantity, sold, reserved);
+    // En competitivo no se resta lo reservado (las pujas no bloquean stock).
+    const available = availableFrom(listing.quantity, sold, competitive ? 0 : reserved);
     if (available !== null && quantity > available) {
       throw new Error(t("notEnoughStock", { remaining: available }));
     }
 
-    // Reserva: un Deal PENDING que retiene stock hasta que el vendedor lo
-    // confirma (acceptSaleReservation) o lo rechaza — aún no cuenta como vendido.
+    // Deal PENDING: en precio fijo es una reserva que retiene stock hasta que el
+    // vendedor confirma/rechaza; en competitivo es una puja a `unitPrice`.
     await tx.deal.create({
       data: {
         listingId,
         userId: session.user.discordId,
         quantity,
         status: "PENDING",
-        unitPrice: listing.price,
+        unitPrice,
       },
     });
 
-    return listing;
+    return { listing, unitPrice };
   });
 
   // Aviso al vendedor de que hay una reserva por confirmar (best-effort; el
@@ -463,7 +491,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
     itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
-      { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * listing.price!), inline: true },
+      { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
     ],
   });
 
@@ -510,6 +538,21 @@ export async function acceptSaleReservation(dealId: string) {
       select: { quantity: true, status: true },
     });
     if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+
+    // Guard anti-sobreventa: en "sin precio" (competitivo) las pujas PENDING no
+    // retienen stock, así que la suma de las aceptadas podría pasarse del tope.
+    // Se comprueba aquí, al aceptar. En precio fijo siempre pasa (la reserva ya
+    // reservó el stock), así que es inocuo.
+    if (listing.quantity !== null) {
+      const acceptedAgg = await tx.deal.aggregate({
+        where: { listingId: deal.listingId, status: "ACCEPTED" },
+        _sum: { quantity: true },
+      });
+      const alreadySold = acceptedAgg._sum.quantity ?? 0;
+      if (alreadySold + cur.quantity > listing.quantity) {
+        throw new Error(t("notEnoughStock", { remaining: listing.quantity - alreadySold }));
+      }
+    }
 
     await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
     // Vendido = Σ cantidad de los Deal ACCEPTED (incluido el recién aceptado).
@@ -608,13 +651,33 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
   }
   const { quantity } = parsed.data;
 
-  const listing = await prisma.$transaction(async (tx) => {
+  const { listing, unitPrice } = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`;
     const listing = await tx.listing.findUnique({ where: { id: listingId }, include: { item: true } });
     if (!listing) throw new Error(t("listingNotFound"));
     if (listing.posterId === session.user.discordId) throw new Error(t("cannotOfferOwn"));
     if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
-    if (listing.type !== "BUY" || listing.price === null) throw new Error(t("notBuyListing"));
+    if (listing.type !== "BUY") throw new Error(t("notBuyListing"));
+
+    // Igual que en la venta: precio fijo (el vendedor se ofrece al precio del
+    // comprador, la oferta PENDING retiene cupo) vs "sin precio" (competitivo: el
+    // vendedor pide su unitPrice y las ofertas no bloquean cupo; el comprador
+    // elige la más barata). El tope se aplica al ACEPTAR (acceptFulfillOffer).
+    const competitive = listing.price === null;
+    let unitPrice: number;
+    if (listing.price === null) {
+      const askParsed = z.coerce
+        .number()
+        .int()
+        .positive(t("positivePrice"))
+        .safeParse(formData.get("price"));
+      if (!askParsed.success) {
+        throw new Error(askParsed.error.issues[0]?.message ?? t("invalidPrice"));
+      }
+      unitPrice = askParsed.data;
+    } else {
+      unitPrice = listing.price;
+    }
 
     // Cupo restante = cantidad pedida − ya cumplido − ya ofrecido (pendiente).
     const agg = await tx.deal.groupBy({
@@ -625,7 +688,8 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
     const fulfilled = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
     const offered = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
     // available null = compra ilimitada ("los que tengas"): sin cupo que topar.
-    const available = availableFrom(listing.quantity, fulfilled, offered);
+    // En competitivo no se resta lo ofrecido (las ofertas no bloquean cupo).
+    const available = availableFrom(listing.quantity, fulfilled, competitive ? 0 : offered);
     if (available !== null && quantity > available) {
       throw new Error(t("notEnoughStock", { remaining: available }));
     }
@@ -636,10 +700,10 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
         userId: session.user.discordId,
         quantity,
         status: "PENDING",
-        unitPrice: listing.price,
+        unitPrice,
       },
     });
-    return listing;
+    return { listing, unitPrice };
   });
 
   // Aviso al comprador (poster) de que hay una oferta de venta por confirmar.
@@ -654,7 +718,7 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
     itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
-      { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * listing.price!), inline: true },
+      { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
     ],
   });
 
@@ -700,6 +764,20 @@ export async function acceptFulfillOffer(dealId: string) {
       select: { quantity: true, status: true },
     });
     if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+
+    // Guard anti-sobrecompra: en "sin precio" las ofertas PENDING no retienen
+    // cupo, así que las aceptadas podrían pasarse de la cantidad pedida. Se
+    // comprueba al aceptar (inocuo en precio fijo, donde la oferta ya reservó).
+    if (listing.quantity !== null) {
+      const acceptedAgg = await tx.deal.aggregate({
+        where: { listingId: deal.listingId, status: "ACCEPTED" },
+        _sum: { quantity: true },
+      });
+      const alreadyFulfilled = acceptedAgg._sum.quantity ?? 0;
+      if (alreadyFulfilled + cur.quantity > listing.quantity) {
+        throw new Error(t("notEnoughStock", { remaining: listing.quantity - alreadyFulfilled }));
+      }
+    }
 
     await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
     // Cumplido = Σ cantidad de los Deal ACCEPTED (incluido el recién aceptado).

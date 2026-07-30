@@ -46,6 +46,9 @@ export function NewPublicationForm({
   // "Sin tope" ("los que tengas"): solo SALE/BUY de materiales. Envía
   // unlimited=on y oculta el campo de cantidad (el server pone quantity null).
   const [unlimited, setUnlimited] = useState(false);
+  // "Sin precio" (competitivo): solo SALE/BUY. Envía noPrice=on, oculta el precio
+  // (el server pone price null) y la contraparte puja/oferta su precio.
+  const [noPrice, setNoPrice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [priceMissing, setPriceMissing] = useState(false);
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
@@ -189,7 +192,7 @@ export function NewPublicationForm({
       // las options ya rellenadas. La validación real sigue en el servidor
       // (createListing en listings.ts); esto es solo UX.
       onSubmit={(e) => {
-        const priceRequired = type === "SALE" || type === "BUY";
+        const priceRequired = (type === "SALE" || type === "BUY") && !noPrice;
         const priceEmpty = priceRequired && !new FormData(e.currentTarget).get("price");
         setPriceMissing(priceEmpty);
         if (priceEmpty) e.preventDefault();
@@ -312,7 +315,26 @@ export function NewPublicationForm({
       {(type === "SALE" || type === "BUY") && (
         <div>
           <label className={labelClass}>{type === "BUY" ? t("payUpToLabel") : t("priceLabel")}</label>
-          <PriceInput name="price" placeholder="0" invalid={priceMissing} />
+          <div className="flex items-center gap-3">
+            {noPrice ? (
+              <p className="min-w-0 flex-1 text-sm text-ro-text-muted">
+                {type === "BUY" ? tField("bestPrice") : tField("bestOffer")}
+              </p>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <PriceInput name="price" placeholder="0" invalid={priceMissing} />
+              </div>
+            )}
+            <label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-ro-text-muted">
+              <input
+                type="checkbox"
+                name="noPrice"
+                checked={noPrice}
+                onChange={(e) => setNoPrice(e.target.checked)}
+              />
+              {t("noPriceLabel")}
+            </label>
+          </div>
         </div>
       )}
 
