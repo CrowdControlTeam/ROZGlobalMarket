@@ -220,7 +220,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
       {listing.status === "ACTIVE" && (
         <div className="mt-3">
           {isPoster ? (
-            <CancelListingButton listingId={listing.id} showFulfill={isBuy} />
+            <CancelListingButton listingId={listing.id} unlimited={listing.quantity === null} />
           ) : isTrade ? (
             <TradeOfferForm listingId={listing.id} />
           ) : isSale && (available === null || available > 0) ? (

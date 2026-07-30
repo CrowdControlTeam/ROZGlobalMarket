@@ -336,49 +336,19 @@ export async function cancelListing(listingId: string) {
     throw new Error(t("listingNotActive"));
   }
 
-  const status = listingStatusOnClose(listing.deals);
+  // Cierre a mano. Con tope: si el listing sigue ACTIVE es que NO se alcanzó la
+  // cantidad (al alcanzarla pasa a COMPLETED solo), así que cerrarlo = CANCELLED.
+  // Ilimitado: nunca se cierra solo, así que COMPLETED si se comerció algo
+  // (≥1 Deal ACCEPTED) y CANCELLED si no (ver deals.ts). Las ventas parciales
+  // siguen contando en estadísticas porque se derivan de los Deal.
+  const status =
+    listing.quantity === null ? listingStatusOnClose(listing.deals) : "CANCELLED";
   await prisma.$transaction(async (tx) => {
     await tx.deal.updateMany({
       where: { listingId, status: "PENDING" },
       data: { status: "REJECTED" },
     });
     await tx.listing.update({ where: { id: listingId }, data: { status } });
-  });
-
-  revalidatePath("/market");
-  revalidatePath(`/market/${listingId}`);
-}
-
-// Cierre manual de una petición de compra (type=BUY) cuando ya se ha
-// resuelto fuera de la app (Discord, en persona) — sin oferta/aceptación
-// dentro de la app (norma 2.4 del plan original, deliberadamente simple v1). Se
-// se marca COMPLETED, la UI lo muestra como "Cumplida".
-export async function fulfillListing(listingId: string) {
-  const session = await requireSession();
-  const t = await getTranslations("errors");
-
-  const listing = await prisma.listing.findUnique({
-    where: { id: listingId },
-  });
-  if (!listing) throw new Error(t("listingNotFound"));
-  if (listing.type !== "BUY") {
-    throw new Error(t("onlyBuyFulfill"));
-  }
-  if (listing.posterId !== session.user.discordId) {
-    throw new Error(t("onlyPosterFulfill"));
-  }
-  if (listing.status !== "ACTIVE") {
-    throw new Error(t("listingNotActive"));
-  }
-
-  // Cumplida fuera de la app (Discord/en persona): se marca COMPLETED y se
-  // rechazan las ofertas de venta que hubiera pendientes.
-  await prisma.$transaction(async (tx) => {
-    await tx.deal.updateMany({
-      where: { listingId, status: "PENDING" },
-      data: { status: "REJECTED" },
-    });
-    await tx.listing.update({ where: { id: listingId }, data: { status: "COMPLETED" } });
   });
 
   revalidatePath("/market");
