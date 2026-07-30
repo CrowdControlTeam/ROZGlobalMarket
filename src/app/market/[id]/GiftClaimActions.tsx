@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { acceptGiftClaim, rejectGiftClaim, cancelGiftClaim } from "@/lib/gifts";
 import { buttonClass } from "@/lib/ui";
 import { getErrorMessage } from "@/lib/errors";
+import { useListingSync } from "../listingStore";
+import type { ListingCardPatch } from "@/lib/listing-card";
 
 // Acciones sobre una reclamación de regalo: el que regala entrega/rechaza; el
 // reclamante cancela la suya. Mismo patrón que SaleReservationActions.
@@ -16,17 +17,16 @@ export function GiftClaimActions({
   dealId: string;
   role: "giver" | "claimer";
 }) {
-  const router = useRouter();
+  const sync = useListingSync();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations("market.detail.claimActions");
 
-  function run(action: (id: string) => Promise<void>) {
+  function run(action: (id: string) => Promise<ListingCardPatch>) {
     setError(null);
     startTransition(async () => {
       try {
-        await action(dealId);
-        router.refresh();
+        sync(await action(dealId));
       } catch (err) {
         setError(getErrorMessage(err));
       }

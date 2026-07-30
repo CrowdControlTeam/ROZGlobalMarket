@@ -62,7 +62,6 @@ export default async function MyListingsPage() {
               </div>
               {listing.type !== "TRADE" && listing.price !== null && (
                 <p className={`font-bold ${priceColorClass(listing.price)}`}>
-                  {isBuy ? t("results.upTo") : ""}
                   {formatPrice(listing.price)}
                 </p>
               )}

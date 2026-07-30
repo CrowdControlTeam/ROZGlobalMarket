@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { claimGift } from "@/lib/gifts";
+import { useListingSync } from "../listingStore";
 import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -19,7 +19,7 @@ export function ClaimGiftForm({
   // el resto de forms (SALE/BUY sí pueden ser ilimitados).
   available: number | null;
 }) {
-  const router = useRouter();
+  const sync = useListingSync();
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -34,8 +34,7 @@ export function ClaimGiftForm({
         setError(null);
         startTransition(async () => {
           try {
-            await claimGift(listingId, formData);
-            router.refresh();
+            sync(await claimGift(listingId, formData));
           } catch (err) {
             setError(getErrorMessage(err));
           } finally {

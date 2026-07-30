@@ -76,8 +76,6 @@
     "listingNotFound": "Publicación no encontrada",
     "onlyPosterCancel": "Solo quien la publicó puede cancelarla",
     "listingNotActive": "Esta publicación ya no está activa",
-    "onlyBuyFulfill": "Solo una petición de compra se puede marcar como cumplida a mano",
-    "onlyPosterFulfill": "Solo quien la publicó puede marcarla como cumplida",
     "cannotBuyOwn": "No puedes comprar tu propia publicación",
     "notDirectSale": "Esta publicación no es una venta directa",
     "notEnoughStock": "Solo quedan {remaining} unidades disponibles",
@@ -240,7 +238,9 @@
       "refine": "Refine",
       "cardSlots": "Slots de carta",
       "minStats": "Stats mínimos",
-      "payUpTo": "Pago/ud"
+      "payUpTo": "Pago/ud",
+      "bestOffer": "Hacer oferta",
+      "bestPrice": "Hacer oferta"
     },
     "filters": {
       "toggle": "Filtros",
@@ -369,9 +369,11 @@
       "empty": "No hay publicaciones que coincidan con la búsqueda.",
       "wantedBy": "buscado por",
       "soldBy": "vendido por",
+      "tradedBy": "intercambiado por",
+      "giftedBy": "regalado por",
       "available": "x{count} disponibles",
+      "wanted": "x{count}",
       "availableUnlimited": "∞",
-      "upTo": "hasta ",
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
     },
@@ -382,8 +384,8 @@
       "sold": "Vendidos",
       "given": "Entregados",
       "of": "de",
-      "markFulfilled": "Completado",
       "cancelListing": "Cancelar",
+      "closeListing": "Cerrar",
       "tradedWith": "Intercambiado con",
       "forItem": "por {item}",
       "offersReceived": "Ofertas recibidas",
@@ -406,31 +408,34 @@
         "cancelOffer": "Cancelar"
       },
       "reserve": {
-        "quantityLabel": "Cantidad a reservar",
+        "quantityLabel": "Cantidad a comprar",
+        "bidLabel": "Tu oferta/ud",
         "total": "Total (si se confirma):",
-        "reserving": "Reservando...",
-        "submit": "Reservar"
+        "reserving": "Comprando...",
+        "submit": "Comprar"
       },
-      "reservationsReceived": "Reservas por confirmar",
-      "yourReservations": "Tus reservas",
-      "reservedBy": "Reservado por",
-      "reserved": "Reservados",
+      "perUnit": "/ud",
+      "reservationsReceived": "Ventas por confirmar",
+      "yourReservations": "Tus compras",
+      "reservedBy": "Comprado por",
+      "reserved": "Pendientes",
       "reservationActions": {
-        "confirm": "Confirmar venta",
+        "confirm": "Vender",
         "reject": "Rechazar",
-        "cancel": "Cancelar reserva"
+        "cancel": "Cancelar compra"
       },
       "fulfillForm": {
         "quantityLabel": "Cantidad a vender",
+        "askLabel": "Tu precio/ud",
         "total": "Recibirás:",
-        "offering": "Enviando...",
-        "submit": "Ofrecer venta"
+        "offering": "Vendiendo...",
+        "submit": "Vender"
       },
       "fulfillOffersReceived": "Ofertas de venta",
       "yourFulfillOffers": "Tus ofertas de venta",
       "offeredBy": "Ofrecido por",
       "fulfillActions": {
-        "confirm": "Confirmar compra",
+        "confirm": "Comprar",
         "reject": "Rechazar",
         "cancel": "Cancelar oferta"
       },
@@ -439,7 +444,7 @@
         "claiming": "Reclamando...",
         "submit": "Reclamar"
       },
-      "claimsReceived": "Reclamaciones por confirmar",
+      "claimsReceived": "Regalos por confirmar",
       "yourClaims": "Tus reclamaciones",
       "claimedBy": "Reclamado por",
       "claimActions": {
@@ -468,6 +473,7 @@
       "priceLabel": "Precio/ud",
       "payUpToLabel": "Pago/ud",
       "unlimitedLabel": "Ilimitados",
+      "noPriceLabel": "Sin precio",
       "recipientLabel": "Destinatario (opcional — sin él, cualquiera puede reclamarlo)",
       "recognitionNoMatchNamed": "No se ha encontrado en el catálogo ningún item parecido a \"{name}\". Selecciónalo manualmente.",
       "recognitionNoMatch": "No se ha podido leer el item en la captura. Selecciónalo manualmente.",
@@ -519,9 +525,9 @@
     },
     "dm": {
       "purchased": "{username} ha comprado tu {item}",
-      "reserveRequested": "{username} quiere reservar tu {item}",
-      "reserveAccepted": "{username} ha confirmado tu reserva de {item}",
-      "reserveRejected": "{username} ha rechazado tu reserva de {item}",
+      "reserveRequested": "{username} quiere comprar tu {item}",
+      "reserveAccepted": "{username} ha confirmado tu compra de {item}",
+      "reserveRejected": "{username} ha rechazado tu compra de {item}",
       "fulfillOffered": "{username} se ofrece a venderte {item}",
       "fulfillAccepted": "{username} ha aceptado tu oferta de venta de {item}",
       "fulfillRejected": "{username} ha rechazado tu oferta de venta de {item}",

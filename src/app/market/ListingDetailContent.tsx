@@ -73,17 +73,30 @@ export async function ListingDetailContent({ id }: { id: string }) {
   const isBuy = listing.type === "BUY";
   const isSale = listing.type === "SALE";
   const isGift = listing.type === "GIFT";
-  // Los Deal PENDING retienen cupo: en venta son reservas de comprador; en
-  // compra, ofertas de vendedores; en regalo, reclamaciones. En todos, lo que
-  // aún se puede reservar/ofertar/reclamar = restante − pendiente. Se deriva de
-  // los Deal.
+  // "Sin precio" (competitivo): un SALE/BUY sin precio fijo. La contraparte puja
+  // su unitPrice y el poster elige la mejor; a diferencia de la reserva/oferta a
+  // precio fijo, las PENDING NO retienen stock (ver reserveListing/offerToFulfill).
+  const isCompetitive = (isSale || isBuy) && listing.price === null;
+  // Los Deal PENDING retienen cupo SOLO en los modos de reserva (precio fijo y
+  // regalo); en competitivo compiten por las mismas unidades y no bloquean, así
+  // que ahí no se restan de lo disponible.
   const reserved =
-    isSale || isBuy || isGift
+    (isSale || isBuy || isGift) && !isCompetitive
       ? listing.deals.filter((d) => d.status === "PENDING").reduce((s, d) => s + d.quantity, 0)
       : 0;
   const available = availableFrom(listing.quantity, sold, reserved);
   const pendingOffers = listing.deals.filter((d) => d.status === "PENDING");
   const myOffers = listing.deals.filter((d) => d.userId === session.user.discordId);
+  // En competitivo, el poster compara pujas: se ordenan por mejor precio/ud
+  // (venta = más alto primero; compra = más bajo primero). Copia para no mutar.
+  const pendingByBestPrice = [...pendingOffers].sort((a, b) => {
+    const pa = a.unitPrice ?? 0;
+    const pb = b.unitPrice ?? 0;
+    return isBuy ? pa - pb : pb - pa;
+  });
+  // Precio sugerido al pujar/ofertar en competitivo = la mejor oferta actual (la
+  // primera ya ordenada); null si aún no hay ninguna (el form arranca en 1).
+  const bestOfferPrice = isCompetitive ? (pendingByBestPrice[0]?.unitPrice ?? null) : null;
 
   return (
     <>
@@ -124,6 +137,14 @@ export async function ListingDetailContent({ id }: { id: string }) {
             <dt className="text-xs text-ro-text-muted">{isBuy ? t("field.payUpTo") : t("detail.unitPrice")}</dt>
             <dd className={`font-bold ${priceColorClass(listing.price)}`}>
               {formatPrice(listing.price)}
+            </dd>
+          </div>
+        )}
+        {isCompetitive && (
+          <div>
+            <dt className="text-xs text-ro-text-muted">{isBuy ? t("field.payUpTo") : t("detail.unitPrice")}</dt>
+            <dd className="font-bold text-ro-text-muted">
+              {isBuy ? t("field.bestPrice") : t("field.bestOffer")}
             </dd>
           </div>
         )}
@@ -199,20 +220,27 @@ export async function ListingDetailContent({ id }: { id: string }) {
       {listing.status === "ACTIVE" && (
         <div className="mt-3">
           {isPoster ? (
-            <CancelListingButton listingId={listing.id} showFulfill={isBuy} />
+            <CancelListingButton listingId={listing.id} unlimited={listing.quantity === null} />
           ) : isTrade ? (
             <TradeOfferForm listingId={listing.id} />
-          ) : listing.type === "SALE" && listing.price !== null && (available === null || available > 0) ? (
+          ) : isSale && (available === null || available > 0) ? (
+            // unitPrice null (sin precio) => ReserveForm muestra el input de puja.
+            // key por available+mejor oferta: al comprar y refrescar, el form se
+            // remonta y la cantidad/puja vuelven al nuevo máximo/sugerido (2A).
             <ReserveForm
+              key={`reserve-${available}-${bestOfferPrice}`}
               listingId={listing.id}
               available={available}
               unitPrice={listing.price}
+              suggestedBid={bestOfferPrice}
             />
-          ) : isBuy && listing.price !== null && (available === null || available > 0) ? (
+          ) : isBuy && (available === null || available > 0) ? (
             <OfferToFulfillForm
+              key={`fulfill-${available}-${bestOfferPrice}`}
               listingId={listing.id}
               available={available}
               unitPrice={listing.price}
+              suggestedAsk={bestOfferPrice}
             />
           ) : isGift && (available === null || available > 0) ? (
             <ClaimGiftForm listingId={listing.id} available={available} />
@@ -303,16 +331,26 @@ export async function ListingDetailContent({ id }: { id: string }) {
       {isSale && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
         <div className="mt-3">
           <p className={labelClass}>
-            {isPoster ? t("detail.reservationsReceived") : t("detail.yourReservations")}
+            {isCompetitive
+              ? isPoster
+                ? t("detail.offersReceived")
+                : t("detail.yourOffers")
+              : isPoster
+                ? t("detail.reservationsReceived")
+                : t("detail.yourReservations")}
           </p>
           <ul className="mt-2 flex flex-col gap-3">
-            {(isPoster ? pendingOffers : myOffers).map((deal) => (
+            {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
               <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
                     x{deal.quantity}
                     <span className="ml-1 font-normal text-ro-text-muted">
-                      · {formatPrice(deal.quantity * (deal.unitPrice ?? 0))}
+                      {isCompetitive
+                        ? ` · ${formatPrice(deal.unitPrice ?? 0)}${t("detail.perUnit")} (${formatPrice(
+                            deal.quantity * (deal.unitPrice ?? 0),
+                          )})`
+                        : ` · ${formatPrice(deal.quantity * (deal.unitPrice ?? 0))}`}
                     </span>
                   </span>
                   {!isPoster && (
@@ -346,16 +384,26 @@ export async function ListingDetailContent({ id }: { id: string }) {
       {isBuy && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
         <div className="mt-3">
           <p className={labelClass}>
-            {isPoster ? t("detail.fulfillOffersReceived") : t("detail.yourFulfillOffers")}
+            {isCompetitive
+              ? isPoster
+                ? t("detail.offersReceived")
+                : t("detail.yourOffers")
+              : isPoster
+                ? t("detail.fulfillOffersReceived")
+                : t("detail.yourFulfillOffers")}
           </p>
           <ul className="mt-2 flex flex-col gap-3">
-            {(isPoster ? pendingOffers : myOffers).map((deal) => (
+            {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
               <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
                     x{deal.quantity}
                     <span className="ml-1 font-normal text-ro-text-muted">
-                      · {formatPrice(deal.quantity * (deal.unitPrice ?? 0))}
+                      {isCompetitive
+                        ? ` · ${formatPrice(deal.unitPrice ?? 0)}${t("detail.perUnit")} (${formatPrice(
+                            deal.quantity * (deal.unitPrice ?? 0),
+                          )})`
+                        : ` · ${formatPrice(deal.quantity * (deal.unitPrice ?? 0))}`}
                     </span>
                   </span>
                   {!isPoster && (

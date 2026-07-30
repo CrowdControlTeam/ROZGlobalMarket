@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
+import { listingCardState } from "@/lib/listing-card";
 import { loadMarketConfig } from "@/lib/market-config";
 import { sendDirectMessage } from "@/lib/discord-bot";
 import { getAppUrl } from "@/lib/app-url";
@@ -96,6 +97,7 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
   });
 
   revalidatePath(`/market/${listingId}`);
+  return listingCardState(listingId);
 }
 
 // Ownership + estado se comparten entre aceptar/rechazar/cancelar — solo cambia
@@ -192,6 +194,7 @@ export async function acceptTradeOffer(dealId: string) {
 
   revalidatePath(`/market/${deal.listingId}`);
   revalidatePath("/market");
+  return listingCardState(deal.listingId);
 }
 
 export async function rejectTradeOffer(dealId: string) {
@@ -201,6 +204,7 @@ export async function rejectTradeOffer(dealId: string) {
 
   await prisma.deal.update({ where: { id: dealId }, data: { status: "REJECTED" } });
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }
 
 export async function cancelTradeOffer(dealId: string) {
@@ -210,4 +214,5 @@ export async function cancelTradeOffer(dealId: string) {
 
   await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
   revalidatePath(`/market/${deal.listingId}`);
+  return listingCardState(deal.listingId);
 }

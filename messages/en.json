@@ -76,8 +76,6 @@
     "listingNotFound": "Listing not found",
     "onlyPosterCancel": "Only the poster can cancel this",
     "listingNotActive": "This listing is no longer active",
-    "onlyBuyFulfill": "Only a buy request can be marked as fulfilled by hand",
-    "onlyPosterFulfill": "Only the poster can mark this as fulfilled",
     "cannotBuyOwn": "You can't buy your own listing",
     "notDirectSale": "This listing isn't a direct sale",
     "notEnoughStock": "Only {remaining} units are available",
@@ -240,7 +238,9 @@
       "refine": "Refine",
       "cardSlots": "Card slots",
       "minStats": "Minimum stats",
-      "payUpTo": "Pay/ea"
+      "payUpTo": "Pay/ea",
+      "bestOffer": "Make an offer",
+      "bestPrice": "Make an offer"
     },
     "filters": {
       "toggle": "Filters",
@@ -369,9 +369,11 @@
       "empty": "No listings match your search.",
       "wantedBy": "wanted by",
       "soldBy": "sold by",
+      "tradedBy": "traded by",
+      "giftedBy": "gifted by",
       "available": "x{count} available",
+      "wanted": "x{count}",
       "availableUnlimited": "∞",
-      "upTo": "up to ",
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
     },
@@ -382,8 +384,8 @@
       "sold": "Sold",
       "given": "Given",
       "of": "of",
-      "markFulfilled": "Completed",
       "cancelListing": "Cancel",
+      "closeListing": "Close",
       "tradedWith": "Traded with",
       "forItem": "for {item}",
       "offersReceived": "Offers received",
@@ -406,31 +408,34 @@
         "cancelOffer": "Cancel"
       },
       "reserve": {
-        "quantityLabel": "Quantity to reserve",
+        "quantityLabel": "Quantity to buy",
+        "bidLabel": "Your bid/ea",
         "total": "Total (if confirmed):",
-        "reserving": "Reserving...",
-        "submit": "Reserve"
+        "reserving": "Buying...",
+        "submit": "Buy"
       },
-      "reservationsReceived": "Reservations to confirm",
-      "yourReservations": "Your reservations",
-      "reservedBy": "Reserved by",
-      "reserved": "Reserved",
+      "perUnit": "/ea",
+      "reservationsReceived": "Sales to confirm",
+      "yourReservations": "Your purchases",
+      "reservedBy": "Bought by",
+      "reserved": "Pending",
       "reservationActions": {
-        "confirm": "Confirm sale",
+        "confirm": "Sell",
         "reject": "Reject",
-        "cancel": "Cancel reservation"
+        "cancel": "Cancel purchase"
       },
       "fulfillForm": {
         "quantityLabel": "Quantity to sell",
+        "askLabel": "Your price/ea",
         "total": "You'll receive:",
-        "offering": "Sending...",
-        "submit": "Offer to sell"
+        "offering": "Selling...",
+        "submit": "Sell"
       },
       "fulfillOffersReceived": "Sell offers",
       "yourFulfillOffers": "Your sell offers",
       "offeredBy": "Offered by",
       "fulfillActions": {
-        "confirm": "Confirm purchase",
+        "confirm": "Buy",
         "reject": "Reject",
         "cancel": "Cancel offer"
       },
@@ -439,7 +444,7 @@
         "claiming": "Claiming...",
         "submit": "Claim"
       },
-      "claimsReceived": "Claims to confirm",
+      "claimsReceived": "Gifts to confirm",
       "yourClaims": "Your claims",
       "claimedBy": "Claimed by",
       "claimActions": {
@@ -468,6 +473,7 @@
       "priceLabel": "Price/ea",
       "payUpToLabel": "Pay/ea",
       "unlimitedLabel": "Unlimited",
+      "noPriceLabel": "No price",
       "recipientLabel": "Recipient (optional — without one, anyone can claim it)",
       "recognitionNoMatchNamed": "No item in the catalog looks like \"{name}\". Select it manually.",
       "recognitionNoMatch": "Couldn't read the item in the screenshot. Select it manually.",
@@ -519,9 +525,9 @@
     },
     "dm": {
       "purchased": "{username} bought your {item}",
-      "reserveRequested": "{username} wants to reserve your {item}",
-      "reserveAccepted": "{username} confirmed your reservation of {item}",
-      "reserveRejected": "{username} rejected your reservation of {item}",
+      "reserveRequested": "{username} wants to buy your {item}",
+      "reserveAccepted": "{username} confirmed your purchase of {item}",
+      "reserveRejected": "{username} rejected your purchase of {item}",
       "fulfillOffered": "{username} offers to sell you {item}",
       "fulfillAccepted": "{username} accepted your sell offer for {item}",
       "fulfillRejected": "{username} rejected your sell offer for {item}",
