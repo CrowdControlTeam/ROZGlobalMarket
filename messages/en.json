@@ -48,6 +48,12 @@
     "intro": "Private market for guild members. Sign in with Discord to enter.",
     "signIn": "Log in with Discord"
   },
+  "maintenancePage": {
+    "title": "Under maintenance",
+    "message": "The market is temporarily down for maintenance. Check back in a bit.",
+    "adminNote": "You're an admin: you still have full access.",
+    "backToMarket": "Go to the market"
+  },
   "authError": {
     "title": "Access denied",
     "message": "This market is only for guild members. We couldn't verify that your Discord account belongs to the guild server.",

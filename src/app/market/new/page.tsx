@@ -1,8 +1,6 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/lib/guard";
 import { isImageRecognitionAvailable } from "@/lib/item-recognition";
-import { loadMarketConfig } from "@/lib/market-config";
 import { Panel } from "@/components/Panel";
 import { BackLink } from "@/components/BackLink";
 import { NewPublicationForm, type PublicationType } from "./NewPublicationForm";
@@ -18,10 +16,8 @@ export default async function NewListingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireSession();
-
-  const { maintenanceModeEnabled } = await loadMarketConfig();
-  if (maintenanceModeEnabled && !session.user.isAdmin) redirect("/market");
+  // requireSession ya manda a /maintenance a los no-admin cuando está activo.
+  await requireSession();
 
   const recognitionEnabled = await isImageRecognitionAvailable();
   const raw = await searchParams;
