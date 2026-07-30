@@ -241,8 +241,8 @@
       "cardSlots": "Slots de carta",
       "minStats": "Stats mínimos",
       "payUpTo": "Pago/ud",
-      "bestOffer": "Al mejor postor",
-      "bestPrice": "Al mejor precio"
+      "bestOffer": "Hacer oferta",
+      "bestPrice": "Hacer oferta"
     },
     "filters": {
       "toggle": "Filtros",
@@ -411,9 +411,8 @@
         "quantityLabel": "Cantidad a reservar",
         "bidLabel": "Tu oferta/ud",
         "total": "Total (si se confirma):",
-        "reserving": "Reservando...",
-        "submit": "Reservar",
-        "bidSubmit": "Enviar oferta"
+        "reserving": "Comprando...",
+        "submit": "Comprar"
       },
       "perUnit": "/ud",
       "reservationsReceived": "Reservas por confirmar",
@@ -429,8 +428,8 @@
         "quantityLabel": "Cantidad a vender",
         "askLabel": "Tu precio/ud",
         "total": "Recibirás:",
-        "offering": "Enviando...",
-        "submit": "Ofrecer venta"
+        "offering": "Vendiendo...",
+        "submit": "Vender"
       },
       "fulfillOffersReceived": "Ofertas de venta",
       "yourFulfillOffers": "Tus ofertas de venta",

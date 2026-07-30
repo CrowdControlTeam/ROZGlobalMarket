@@ -17,14 +17,18 @@ export function OfferToFulfillForm({
   listingId,
   available,
   unitPrice,
+  suggestedAsk,
 }: {
   listingId: string;
   available: number | null; // null = compra ilimitada ("los que tengas")
   unitPrice: number | null; // null = "sin precio" (competitivo): el vendedor pide
+  suggestedAsk: number | null; // mejor oferta actual (competitivo) para prefijar; null = sin ninguna
 }) {
   const router = useRouter();
-  const [quantity, setQuantity] = useState(1);
-  const [ask, setAsk] = useState(1);
+  // Por defecto se vende todo lo pedido (1 si es ilimitado) y, en competitivo,
+  // se pide la mejor oferta actual (1 si aún no hay ninguna).
+  const [quantity, setQuantity] = useState(available ?? 1);
+  const [ask, setAsk] = useState(suggestedAsk ?? 1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market.detail.fulfillForm");

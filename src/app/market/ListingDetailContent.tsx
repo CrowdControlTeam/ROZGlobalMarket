@@ -94,6 +94,9 @@ export async function ListingDetailContent({ id }: { id: string }) {
     const pb = b.unitPrice ?? 0;
     return isBuy ? pa - pb : pb - pa;
   });
+  // Precio sugerido al pujar/ofertar en competitivo = la mejor oferta actual (la
+  // primera ya ordenada); null si aún no hay ninguna (el form arranca en 1).
+  const bestOfferPrice = isCompetitive ? (pendingByBestPrice[0]?.unitPrice ?? null) : null;
 
   return (
     <>
@@ -226,12 +229,14 @@ export async function ListingDetailContent({ id }: { id: string }) {
               listingId={listing.id}
               available={available}
               unitPrice={listing.price}
+              suggestedBid={bestOfferPrice}
             />
           ) : isBuy && (available === null || available > 0) ? (
             <OfferToFulfillForm
               listingId={listing.id}
               available={available}
               unitPrice={listing.price}
+              suggestedAsk={bestOfferPrice}
             />
           ) : isGift && (available === null || available > 0) ? (
             <ClaimGiftForm listingId={listing.id} available={available} />

@@ -241,8 +241,8 @@
       "cardSlots": "Card slots",
       "minStats": "Minimum stats",
       "payUpTo": "Pay/ea",
-      "bestOffer": "Highest bidder",
-      "bestPrice": "Best price"
+      "bestOffer": "Make an offer",
+      "bestPrice": "Make an offer"
     },
     "filters": {
       "toggle": "Filters",
@@ -411,9 +411,8 @@
         "quantityLabel": "Quantity to reserve",
         "bidLabel": "Your bid/ea",
         "total": "Total (if confirmed):",
-        "reserving": "Reserving...",
-        "submit": "Reserve",
-        "bidSubmit": "Send offer"
+        "reserving": "Buying...",
+        "submit": "Buy"
       },
       "perUnit": "/ea",
       "reservationsReceived": "Reservations to confirm",
@@ -429,8 +428,8 @@
         "quantityLabel": "Quantity to sell",
         "askLabel": "Your price/ea",
         "total": "You'll receive:",
-        "offering": "Sending...",
-        "submit": "Offer to sell"
+        "offering": "Selling...",
+        "submit": "Sell"
       },
       "fulfillOffersReceived": "Sell offers",
       "yourFulfillOffers": "Your sell offers",

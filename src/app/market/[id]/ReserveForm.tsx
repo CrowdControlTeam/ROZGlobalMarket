@@ -17,14 +17,18 @@ export function ReserveForm({
   listingId,
   available,
   unitPrice,
+  suggestedBid,
 }: {
   listingId: string;
   available: number | null; // null = ilimitado ("los que tengas"): sin tope
   unitPrice: number | null; // null = "sin precio" (competitivo): el comprador puja
+  suggestedBid: number | null; // mejor puja actual (competitivo) para prefijar; null = sin ninguna
 }) {
   const router = useRouter();
-  const [quantity, setQuantity] = useState(1);
-  const [bid, setBid] = useState(1);
+  // Por defecto se compra todo lo disponible (1 si es ilimitado) y, en
+  // competitivo, se puja la mejor oferta actual (1 si aún no hay ninguna).
+  const [quantity, setQuantity] = useState(available ?? 1);
+  const [bid, setBid] = useState(suggestedBid ?? 1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market.detail.reserve");
@@ -91,7 +95,7 @@ export function ReserveForm({
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <button type="submit" disabled={isPending} className={buttonClass("primary")}>
-        {isPending ? t("reserving") : competitive ? t("bidSubmit") : t("submit")}
+        {isPending ? t("reserving") : t("submit")}
       </button>
     </form>
   );
