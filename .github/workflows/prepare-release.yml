@@ -1,10 +1,19 @@
 name: Prepare release
 
-# Manually-triggered release cut. Computes the next version, bumps package.json
-# on a fresh `release/<version>` branch off develop, and opens a PR to main.
-# It does NOT deploy or tag: merging that PR to main is what triggers the
-# production deploy (ci.yml) and the tag/release (release.yml). Only the version
-# lives here — package.json is the single source of truth.
+# Manually-triggered release cut. Computes the next version from the latest
+# published tag plus the chosen bump, writes it to package.json on a fresh
+# `release/<version>` branch, and opens a PR to main.
+#
+# Base branch depends on the bump:
+#   - minor / major / exact -> cut from `develop` (bundles the accumulated work)
+#   - patch (hotfix)        -> cut from `main` (a fix on top of the released
+#                              code); push your fix commits onto the branch
+#                              before merging it.
+#
+# It does NOT deploy or tag: merging the PR to main triggers the production
+# deploy (ci.yml) and the tag/release (release.yml). release.yml then opens a
+# follow-up PR advancing develop to the next `-dev` version, so there is never a
+# `main -> develop` merge.
 on:
   workflow_dispatch:
     inputs:
@@ -29,7 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: develop
+          # Hotfixes (patch) branch off the released code on main; normal
+          # releases (minor/major/exact) branch off develop.
+          ref: ${{ inputs.bump == 'patch' && 'main' || 'develop' }}
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -47,9 +58,10 @@ jobs:
             # and fails on garbage.
             npm version "$EXACT" --no-git-tag-version --allow-same-version
           else
-            # Compute from the highest existing tag (independent of branch
-            # reachability), then apply the bump. package.json is briefly set to
-            # that base so npm bumps from the right number.
+            # Compute from the highest existing tag (the source of truth for
+            # what is released), then apply the bump. No tags yet -> base
+            # v0.0.0, so the first minor release is 0.1.0. package.json is
+            # briefly set to the base so npm bumps from the right number.
             LATEST=$(git tag --sort=-v:refname | head -n1)
             LATEST=${LATEST:-v0.0.0}
             npm pkg set "version=${LATEST#v}"
@@ -62,6 +74,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.bump.outputs.version }}
+          BUMP: ${{ inputs.bump }}
         run: |
           BRANCH="release/$VERSION"
           git config user.name "github-actions[bot]"
@@ -69,5 +82,9 @@ jobs:
           git checkout -b "$BRANCH"
           git commit -am "chore(release): v$VERSION"
           git push origin "$BRANCH"
-          BODY="Version bump to $VERSION. Merging this to main triggers the production deploy and tags v$VERSION (release.yml). Git Flow: after merging, also merge $BRANCH back into develop so develop tracks the version."
+          if [ "$BUMP" = "patch" ]; then
+            BODY="Hotfix **v$VERSION**, cut from \`main\`. Push your fix commits onto this branch, then merge it to \`main\`: that triggers the production deploy (ci.yml) and tags v$VERSION (release.yml). Afterwards, cherry-pick the fix onto \`develop\` (its version is left untouched by a hotfix) — do not merge \`main\` into \`develop\`."
+          else
+            BODY="Release **v$VERSION**, cut from \`develop\`. Merging this to \`main\` triggers the production deploy (ci.yml) and tags v$VERSION (release.yml). release.yml then opens a follow-up PR advancing \`develop\` to the next \`-dev\` version — no \`main -> develop\` merge needed."
+          fi
           gh pr create --base main --head "$BRANCH" --title "Release v$VERSION" --body "$BODY"

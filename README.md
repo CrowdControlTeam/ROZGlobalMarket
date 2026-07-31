@@ -6,12 +6,31 @@ Mercado para la comunidad de Ragnarok Zero, con login por Discord.
 
 ## Versionado
 
-La versión vive en `package.json` (única fuente de verdad) y se muestra en el pie de la web (`-dev` en el entorno de dev). El flujo de release es:
+Se sigue [SemVer](https://semver.org/lang/es/). La **última tag publicada** (`vX.Y.Z`) es la fuente de verdad de lo que hay en producción; `package.json` guarda la versión que se **muestra** en la web (al fondo del menú de usuario) y de la que se taggea al publicar.
 
-1. Lanza el workflow **Prepare release** (Actions → Run workflow) y elige el salto: `patch` / `minor` / `major` (o una versión exacta en `exact_version` para forzarla).
-2. El workflow bumpea `package.json` en una rama `release/<version>` y abre una PR a `main`.
-3. Al mergear esa PR a `main`: se despliega a producción (`ci.yml`) y se crea el tag `v<version>` + Release (`release.yml`), leyendo la versión de `package.json`.
-4. Tras mergear, fusiona también `release/<version>` de vuelta a `develop` (Git Flow) para que `develop` siga la versión.
+- **`main`** lleva la versión publicada (`X.Y.Z`).
+- **`develop`** lleva la **siguiente minor con sufijo `-dev`** (`X.(Y+1).0-dev`): es la versión «en desarrollo» y es lo que muestra el Worker de dev.
+
+### Publicar una release (desde `develop`)
+
+1. Lanza el workflow **Prepare release** (Actions → *Run workflow*) y elige el salto: `minor` (por defecto) o `major` — o una versión exacta en `exact_version` para forzarla. La versión se calcula desde **la última tag + el salto**.
+2. El workflow crea una rama `release/<version>` **desde `develop`**, fija esa versión en `package.json` y abre una PR a `main`.
+3. Al mergear esa PR a `main`: se despliega a producción (`ci.yml`) y se crea el tag `v<version>` + Release (`release.yml`).
+4. `release.yml` abre **automáticamente** una PR `chore/next-dev-* → develop` que adelanta `develop` a la siguiente `-dev`. Solo cambia el número de versión: **nunca se mergea `main` en `develop`** (develop ya tiene el código; la release salió de ahí).
+
+### Hotfix (parche sobre producción)
+
+1. Lanza **Prepare release** con `patch`: crea una rama `release/<version>` **desde `main`** (`X.Y.Z+1`) y abre la PR a `main`.
+2. Empuja el arreglo a esa rama y mergéala: se despliega y se taggea.
+3. Lleva el arreglo a `develop` con un **cherry-pick** del commit del fix (no mergees `main` en `develop`). La versión de `develop` no cambia.
+
+> Regla de oro: a `develop` solo llegan cambios por ramas **cortadas de `develop`** (el bump de versión lo escribe el workflow; el hotfix lo cherry-pickeas). Nunca se mergea la rama o historia de `main` dentro de `develop`, para no arrastrar su ceremonia de versionado.
+
+### Arranque en un repo nuevo
+
+Sin tags, **Prepare release** parte de `v0.0.0`, así que el primer `minor` publica `0.1.0`. El único paso de _bootstrap_ es dejar `develop` con su `-dev` inicial (`0.1.0-dev`).
+
+> Los pasos que abren PRs desde Actions (`prepare-release.yml` y el `sync-develop` de `release.yml`) requieren activar **Settings → Actions → General → «Allow GitHub Actions to create and approve pull requests»**.
 
 ## Requisitos
 
@@ -80,10 +99,7 @@ El deploy lo hace la integración Git nativa de Cloudflare (**Workers Builds**),
 
 En ambas: build command `npx opennextjs-cloudflare build`, *"Builds for non-production branches"* **desactivado** (cada conexión solo despliega su rama de producción), y los secretos de runtime se ponen a nivel de cada Worker. El `env.dev` de `wrangler.jsonc` es lo que resuelve el `--env dev`. Al construirse en Linux, no aplica el problema de symlinks de Windows.
 
-### Versionado (SemVer)
-
-- **`release.yml`**: en cada push a `main`, tagea la versión y publica un GitHub Release con notas automáticas. El *bump* se controla con un token `#major` / `#minor` / `#patch` en el mensaje del commit de merge (patch por defecto).
-- **`prerelease.yml`**: on-demand desde `develop` (Actions → *Run workflow*), saca un tag de prerelease `vX.Y.Z-rc.N`.
+El deploy de Cloudflare es independiente del tag/Release de GitHub (ver [Versionado](#versionado)): Cloudflare despliega al hacer push a la rama, y `release.yml` solo taggea.
 
 ## Prisma
 
