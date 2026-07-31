@@ -11,7 +11,7 @@ La versión vive en `package.json` (única fuente de verdad) y se muestra en el 
 1. Lanza el workflow **Prepare release** (Actions → Run workflow) y elige el salto: `patch` / `minor` / `major` (o una versión exacta en `exact_version` para forzarla).
 2. El workflow bumpea `package.json` en una rama `release/<version>` y abre una PR a `main`.
 3. Al mergear esa PR a `main`: se despliega a producción (`ci.yml`) y se crea el tag `v<version>` + Release (`release.yml`), leyendo la versión de `package.json`.
-4. Tras mergear, fusiona también `release/<version>` de vuelta a `develop` (Git Flow) para que `develop` siga la versión.
+4. Tras mergear, fusiona `main` de vuelta a `develop` para que `develop` no quede por detrás (arrastra el bump y cualquier hotfix). Se usa `main → develop` en vez de `release → develop` porque el merge a `main` es con squash: así `develop` desciende del commit de `main` sin duplicar el bump con otro SHA.
 
 ## Requisitos
 

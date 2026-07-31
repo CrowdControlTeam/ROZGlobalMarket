@@ -69,5 +69,5 @@ jobs:
           git checkout -b "$BRANCH"
           git commit -am "chore(release): v$VERSION"
           git push origin "$BRANCH"
-          BODY="Version bump to $VERSION. Merging this to main triggers the production deploy and tags v$VERSION (release.yml). Git Flow: after merging, also merge $BRANCH back into develop so develop tracks the version."
+          BODY="Version bump to $VERSION. Merging this to main triggers the production deploy and tags v$VERSION (release.yml). After merging, merge main back into develop so develop is not left behind (we sync from main, not from this branch, because main is squash-merged)."
           gh pr create --base main --head "$BRANCH" --title "Release v$VERSION" --body "$BODY"
