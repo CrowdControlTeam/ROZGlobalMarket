@@ -11,11 +11,12 @@ import { CreatePublicationButton } from "./CreatePublicationButton";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
-// Displayed version: package.json is the single source of truth (bumped by the
-// "Prepare release" workflow and tagged from it). On the dev Worker (APP_ENV=dev,
-// set in wrangler.jsonc) it gets a "-dev" suffix. Shown at the bottom of the user
-// menu. Computed here (a server component) because APP_ENV is server-only env.
-const APP_VERSION = `v${pkg.version}${process.env.APP_ENV === "dev" ? "-dev" : ""}`;
+// Displayed version: package.json is the single source of truth. main carries
+// the released version (X.Y.Z); develop carries the next minor with a "-dev"
+// pre-release suffix (X.(Y+1).0-dev), so the dev Worker shows "-dev" straight
+// from the version field — no environment-based suffix needed. Shown at the
+// bottom of the user menu.
+const APP_VERSION = `v${pkg.version}`;
 
 // Fallback de <Suspense> para SiteHeader (ver layout.tsx) — misma forma
 // exacta (alto, borde, posición del logo) para que no haya salto de
