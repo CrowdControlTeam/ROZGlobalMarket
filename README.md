@@ -2,7 +2,16 @@
 
 Mercado para la comunidad de Ragnarok Zero, con login por Discord.
 
-> Este proyecto parte del código de [ROGuildMarket](https://github.com/CrowdControlTeam/ROGuildMarket) tal como estaba en su **v0.2.0**, del que se separa para evolucionar de forma independiente y con **su propio versionado desde 0.0.1**. La especificación funcional de aquel proyecto (el «plan original» al que hacen referencia algunos comentarios del código) pertenece a ROGuildMarket, no a este repositorio.
+> Este proyecto parte del código de [ROGuildMarket](https://github.com/CrowdControlTeam/ROGuildMarket) tal como estaba en su **v0.2.0**, del que se separa para evolucionar de forma independiente con **su propio versionado**. La especificación funcional de aquel proyecto (el «plan original» al que hacen referencia algunos comentarios del código) pertenece a ROGuildMarket, no a este repositorio.
+
+## Versionado
+
+La versión vive en `package.json` (única fuente de verdad) y se muestra en el pie de la web (`-dev` en el entorno de dev). El flujo de release es:
+
+1. Lanza el workflow **Prepare release** (Actions → Run workflow) y elige el salto: `patch` / `minor` / `major` (o una versión exacta en `exact_version` para forzarla).
+2. El workflow bumpea `package.json` en una rama `release/<version>` y abre una PR a `main`.
+3. Al mergear esa PR a `main`: se despliega a producción (`ci.yml`) y se crea el tag `v<version>` + Release (`release.yml`), leyendo la versión de `package.json`.
+4. Tras mergear, fusiona también `release/<version>` de vuelta a `develop` (Git Flow) para que `develop` siga la versión.
 
 ## Requisitos
 

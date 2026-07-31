@@ -1,12 +1,11 @@
 name: Release
 
-# En cada push a main (es decir, tras mergear un PR de release/hotfix):
-#   1. tagea la versión (SemVer, bump según un token #major/#minor/#patch en el
-#      mensaje del commit de merge; patch por defecto),
-#   2. publica un GitHub Release con notas autogeneradas.
-# El build/deploy NO va aquí: lo hace el job `deploy` del workflow de CI
-# (ci.yml) en el mismo push a main. Este workflow solo se encarga del
-# versionado y la publicación de la release.
+# On every push to main (i.e. after merging a release/* PR), tag the version and
+# publish a GitHub Release. The version is the single source of truth in
+# package.json (bumped by the "Prepare release" workflow); this workflow only
+# reads it and creates the matching tag `v<version>` if it does not exist yet.
+# Build/deploy to production is NOT here: the CI workflow (ci.yml) handles it on
+# the same push to main.
 on:
   push:
     branches: [main]
@@ -27,24 +26,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Tag release
-        id: tag
-        uses: anothrNick/github-tag-action@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_BUMP: patch
-          TAG_PREFIX: v
-          RELEASE_BRANCHES: main
-          # Lee el token de bump (#major/#minor/#patch) del mensaje completo del
-          # último commit (el de merge del PR). 'compare' (por defecto) daría un
-          # rango vacío en el primer tag e ignoraría el token.
-          BRANCH_HISTORY: last
+      - name: Read version from package.json
+        id: version
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - name: Publish GitHub Release
-        if: steps.tag.outputs.new_tag != ''
+      - name: Tag and publish release (skip if the tag already exists)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ steps.tag.outputs.new_tag }}" \
-            --title "${{ steps.tag.outputs.new_tag }}" \
-            --generate-notes
+          TAG="${{ steps.version.outputs.tag }}"
+          # Never move an already-published tag: if it exists, this is a push to
+          # main that did not bump the version, so there is nothing to release.
+          if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists; nothing to release."
+            exit 0
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" --title "$TAG" --generate-notes

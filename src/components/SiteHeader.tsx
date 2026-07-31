@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getLocale } from "next-intl/server";
+import pkg from "../../package.json";
 import { prisma } from "@/lib/prisma";
 import { loadMarketConfig, DEFAULT_SITE_NAME } from "@/lib/market-config";
 import { isAppLocale, DEFAULT_LOCALE } from "@/lib/locale-constants";
@@ -9,6 +10,12 @@ import { UserMenu } from "./UserMenu";
 import { CreatePublicationButton } from "./CreatePublicationButton";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleSwitcher } from "./LocaleSwitcher";
+
+// Displayed version: package.json is the single source of truth (bumped by the
+// "Prepare release" workflow and tagged from it). On the dev Worker (APP_ENV=dev,
+// set in wrangler.jsonc) it gets a "-dev" suffix. Shown at the bottom of the user
+// menu. Computed here (a server component) because APP_ENV is server-only env.
+const APP_VERSION = `v${pkg.version}${process.env.APP_ENV === "dev" ? "-dev" : ""}`;
 
 // Fallback de <Suspense> para SiteHeader (ver layout.tsx) — misma forma
 // exacta (alto, borde, posición del logo) para que no haya salto de
@@ -87,6 +94,7 @@ export async function SiteHeader({
               }}
               theme={theme}
               locale={locale}
+              version={APP_VERSION}
             />
           ) : (
             // Sin sesión (login) los controles no viven en el menú de usuario

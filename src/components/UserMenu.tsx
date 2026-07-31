@@ -25,10 +25,12 @@ export function UserMenu({
   user,
   theme,
   locale,
+  version,
 }: {
   user: FullUser;
   theme: "light" | "dark";
   locale: AppLocale;
+  version: string;
 }) {
   const [open, setOpen] = useState(false);
   const t = useTranslations("nav.account");
@@ -137,6 +139,10 @@ export function UserMenu({
             </button>
           </form>
         </div>
+
+        <p className="mt-6 border-t border-ro-panel-border/30 pt-3 text-center font-mono text-[0.65rem] text-ro-text-muted">
+          {version}
+        </p>
       </Sidebar>
     </>
   );
