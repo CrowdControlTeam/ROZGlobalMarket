@@ -13,15 +13,23 @@ Se sigue [SemVer](https://semver.org/lang/es/). La **última tag publicada** (`v
 
 ### Publicar una release (desde `develop`)
 
-1. Lanza el workflow **Prepare release** (Actions → *Run workflow*) y elige el salto: `minor` (por defecto) o `major` — o una versión exacta en `exact_version` para forzarla. La versión se calcula desde **la última tag + el salto**.
+Todas las releases salen de `develop`. El salto es solo el paso de SemVer, no un flujo distinto:
+
+- **`patch`** — release de solo correcciones (bugs acumulados, sin features nuevas).
+- **`minor`** — features nuevas (**por defecto**).
+- **`major`** — cambios incompatibles.
+
+1. Lanza el workflow **Prepare release** (Actions → *Run workflow*) y elige el salto (o una versión exacta en `exact_version` para forzarla). La versión se calcula desde **la última tag + el salto**.
 2. El workflow crea una rama `release/<version>` **desde `develop`**, fija esa versión en `package.json` y abre una PR a `main`.
 3. Al mergear esa PR a `main`: se despliega a producción (`ci.yml`) y se crea el tag `v<version>` + Release (`release.yml`).
 4. `release.yml` abre **automáticamente** una PR `chore/next-dev-* → develop` que adelanta `develop` a la siguiente `-dev`. Solo cambia el número de versión: **nunca se mergea `main` en `develop`** (develop ya tiene el código; la release salió de ahí).
 
-### Hotfix (parche sobre producción)
+### Hotfix urgente (desde `main`)
 
-1. Lanza **Prepare release** con `patch`: crea una rama `release/<version>` **desde `main`** (`X.Y.Z+1`) y abre la PR a `main`.
-2. Empuja el arreglo a esa rama y mergéala: se despliega y se taggea.
+Solo si producción está rota y no puede esperar al ciclo de `develop`. Es un flujo **manual** (no usa *Prepare release*, que siempre parte de `develop`):
+
+1. `git switch -c hotfix/<desc> main`, aplica el arreglo y bumpea a patch: `npm version patch --no-git-tag-version`.
+2. Abre PR a `main` y mergéala: se despliega y se taggea `vX.Y.Z+1`.
 3. Lleva el arreglo a `develop` con un **cherry-pick** del commit del fix (no mergees `main` en `develop`). La versión de `develop` no cambia.
 
 > Regla de oro: a `develop` solo llegan cambios por ramas **cortadas de `develop`** (el bump de versión lo escribe el workflow; el hotfix lo cherry-pickeas). Nunca se mergea la rama o historia de `main` dentro de `develop`, para no arrastrar su ceremonia de versionado.

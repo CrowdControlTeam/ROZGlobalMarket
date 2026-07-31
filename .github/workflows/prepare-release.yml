@@ -1,14 +1,14 @@
 name: Prepare release
 
-# Manually-triggered release cut. Computes the next version from the latest
-# published tag plus the chosen bump, writes it to package.json on a fresh
-# `release/<version>` branch, and opens a PR to main.
+# Manually-triggered release cut. Always cuts from `develop`: computes the next
+# version from the latest published tag plus the chosen bump, writes it to
+# package.json on a fresh `release/<version>` branch, and opens a PR to main.
 #
-# Base branch depends on the bump:
-#   - minor / major / exact -> cut from `develop` (bundles the accumulated work)
-#   - patch (hotfix)        -> cut from `main` (a fix on top of the released
-#                              code); push your fix commits onto the branch
-#                              before merging it.
+# The bump is just the semver step, not a different flow:
+#   - patch -> a fix-only release (bug corrections, no new features)
+#   - minor -> new features (the default)
+#   - major -> incompatible changes
+# (An urgent hotfix straight off main is a separate manual flow — see README.)
 #
 # It does NOT deploy or tag: merging the PR to main triggers the production
 # deploy (ci.yml) and the tag/release (release.yml). release.yml then opens a
@@ -38,9 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Hotfixes (patch) branch off the released code on main; normal
-          # releases (minor/major/exact) branch off develop.
-          ref: ${{ inputs.bump == 'patch' && 'main' || 'develop' }}
+          ref: develop
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -74,7 +72,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.bump.outputs.version }}
-          BUMP: ${{ inputs.bump }}
         run: |
           BRANCH="release/$VERSION"
           git config user.name "github-actions[bot]"
@@ -82,9 +79,5 @@ jobs:
           git checkout -b "$BRANCH"
           git commit -am "chore(release): v$VERSION"
           git push origin "$BRANCH"
-          if [ "$BUMP" = "patch" ]; then
-            BODY="Hotfix **v$VERSION**, cut from \`main\`. Push your fix commits onto this branch, then merge it to \`main\`: that triggers the production deploy (ci.yml) and tags v$VERSION (release.yml). Afterwards, cherry-pick the fix onto \`develop\` (its version is left untouched by a hotfix) — do not merge \`main\` into \`develop\`."
-          else
-            BODY="Release **v$VERSION**, cut from \`develop\`. Merging this to \`main\` triggers the production deploy (ci.yml) and tags v$VERSION (release.yml). release.yml then opens a follow-up PR advancing \`develop\` to the next \`-dev\` version — no \`main -> develop\` merge needed."
-          fi
+          BODY="Release **v$VERSION**, cut from \`develop\`. Merging this to \`main\` triggers the production deploy (ci.yml) and tags v$VERSION (release.yml). release.yml then opens a follow-up PR advancing \`develop\` to the next \`-dev\` version — no \`main -> develop\` merge needed."
           gh pr create --base main --head "$BRANCH" --title "Release v$VERSION" --body "$BODY"
