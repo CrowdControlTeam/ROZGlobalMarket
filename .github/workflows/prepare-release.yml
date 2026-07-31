@@ -1,10 +1,19 @@
 name: Prepare release
 
-# Manually-triggered release cut. Computes the next version, bumps package.json
-# on a fresh `release/<version>` branch off develop, and opens a PR to main.
-# It does NOT deploy or tag: merging that PR to main is what triggers the
-# production deploy (ci.yml) and the tag/release (release.yml). Only the version
-# lives here — package.json is the single source of truth.
+# Manually-triggered release cut. Always cuts from `develop`: computes the next
+# version from the latest published tag plus the chosen bump, writes it to
+# package.json on a fresh `release/<version>` branch, and opens a PR to main.
+#
+# The bump is just the semver step, not a different flow:
+#   - patch -> a fix-only release (bug corrections, no new features)
+#   - minor -> new features (the default)
+#   - major -> incompatible changes
+# (An urgent hotfix straight off main is a separate manual flow — see README.)
+#
+# It does NOT deploy or tag: merging the PR to main triggers the production
+# deploy (ci.yml) and the tag/release (release.yml). release.yml then opens a
+# follow-up PR advancing develop to the next `-dev` version, so there is never a
+# `main -> develop` merge.
 on:
   workflow_dispatch:
     inputs:
@@ -47,9 +56,10 @@ jobs:
             # and fails on garbage.
             npm version "$EXACT" --no-git-tag-version --allow-same-version
           else
-            # Compute from the highest existing tag (independent of branch
-            # reachability), then apply the bump. package.json is briefly set to
-            # that base so npm bumps from the right number.
+            # Compute from the highest existing tag (the source of truth for
+            # what is released), then apply the bump. No tags yet -> base
+            # v0.0.0, so the first minor release is 0.1.0. package.json is
+            # briefly set to the base so npm bumps from the right number.
             LATEST=$(git tag --sort=-v:refname | head -n1)
             LATEST=${LATEST:-v0.0.0}
             npm pkg set "version=${LATEST#v}"
@@ -69,5 +79,5 @@ jobs:
           git checkout -b "$BRANCH"
           git commit -am "chore(release): v$VERSION"
           git push origin "$BRANCH"
-          BODY="Version bump to $VERSION. Merging this to main triggers the production deploy and tags v$VERSION (release.yml). Git Flow: after merging, also merge $BRANCH back into develop so develop tracks the version."
+          BODY="Release **v$VERSION**, cut from \`develop\`. Merging this to \`main\` triggers the production deploy (ci.yml) and tags v$VERSION (release.yml). release.yml then opens a follow-up PR advancing \`develop\` to the next \`-dev\` version — no \`main -> develop\` merge needed."
           gh pr create --base main --head "$BRANCH" --title "Release v$VERSION" --body "$BODY"
