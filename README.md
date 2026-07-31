@@ -22,7 +22,7 @@ Todas las releases salen de `develop`. El salto es solo el paso de SemVer, no un
 1. Lanza el workflow **Prepare release** (Actions → *Run workflow*) y elige el salto (o una versión exacta en `exact_version` para forzarla). La versión se calcula desde **la última tag + el salto**.
 2. El workflow crea una rama `release/<version>` **desde `develop`**, fija esa versión en `package.json` y abre una PR a `main`.
 3. Al mergear esa PR a `main`: se despliega a producción (`ci.yml`) y se crea el tag `v<version>` + Release (`release.yml`).
-4. `release.yml` abre **automáticamente** una PR `chore/next-dev-* → develop` que adelanta `develop` a la siguiente `-dev`. Solo cambia el número de versión: **nunca se mergea `main` en `develop`** (develop ya tiene el código; la release salió de ahí).
+4. `release.yml` abre y **auto-mergea** (squash) una PR `chore/next-dev-* → develop` que adelanta `develop` a la siguiente `-dev`. Como solo cambia el número de versión, se mergea sola: **nunca se mergea `main` en `develop`** (develop ya tiene el código; la release salió de ahí).
 
 ### Hotfix urgente (desde `main`)
 

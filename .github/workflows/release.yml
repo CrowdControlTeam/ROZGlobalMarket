@@ -102,6 +102,24 @@ jobs:
           npm version "$NEXT" --no-git-tag-version --allow-same-version
           git commit -am "chore(release): bump develop to $NEXT"
           git push origin "$BRANCH"
-          gh pr create --base develop --head "$BRANCH" \
+          PR_URL=$(gh pr create --base develop --head "$BRANCH" \
             --title "chore: bump develop to $NEXT" \
-            --body "Automated follow-up to release v$RELEASED: advance develop to the next in-development version \`$NEXT\` (next minor + \`-dev\`). Only the version field changes — no code from main is merged into develop."
+            --body "Automated follow-up to release v$RELEASED: advance develop to the next in-development version \`$NEXT\` (next minor + \`-dev\`). Only the version field changes — no code from main is merged into develop.")
+          # This PR is fully deterministic (only the version field changes), so
+          # merge it automatically. Native auto-merge is off and develop is
+          # unprotected, so squash-merge it directly, retrying a few times while
+          # GitHub computes mergeability. If it never merges, leave it open for a
+          # manual merge and fail loudly.
+          merged=false
+          for i in 1 2 3 4 5; do
+            if gh pr merge "$PR_URL" --squash --delete-branch; then
+              merged=true
+              break
+            fi
+            echo "PR not mergeable yet (attempt $i/5); retrying in 5s..."
+            sleep 5
+          done
+          if [ "$merged" != true ]; then
+            echo "::error::Could not auto-merge $PR_URL; left open for manual merge."
+            exit 1
+          fi
