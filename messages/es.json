@@ -43,10 +43,17 @@
   },
   "home": {
     "welcome": "Bienvenido",
-    "greeting": "Hola, <strong>{username}</strong>. ¿Qué se cuece hoy en el mercado de la guild?",
-    "goToMarket": "Ir al mercado",
+    "hubGreeting": "Hola, <strong>{username}</strong>",
+    "whereTo": "¿A dónde vamos?",
     "intro": "Mercado privado para miembros de la guild. Inicia sesión con Discord para entrar.",
-    "signIn": "Entrar con Discord"
+    "signIn": "Entrar con Discord",
+    "tiles": {
+      "market": { "label": "Mercado", "desc": "Explora y filtra todo lo que hay a la venta, compra e intercambio." },
+      "activity": { "label": "Mi actividad", "desc": "Tus publicaciones, solicitudes y regalos." },
+      "publish": { "label": "Publicar", "desc": "Pon un objeto a la venta, compra o intercambio." },
+      "gifts": { "label": "Regalos", "desc": "Objetos que se regalan a la comunidad." },
+      "stats": { "label": "Estadísticas", "desc": "Rankings y actividad del mercado." }
+    }
   },
   "maintenancePage": {
     "title": "En mantenimiento",

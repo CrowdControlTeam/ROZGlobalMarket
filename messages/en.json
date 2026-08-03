@@ -43,10 +43,17 @@
   },
   "home": {
     "welcome": "Welcome",
-    "greeting": "Hi, <strong>{username}</strong>. What's cooking in the guild market today?",
-    "goToMarket": "Go to the market",
+    "hubGreeting": "Hi, <strong>{username}</strong>",
+    "whereTo": "Where to?",
     "intro": "Private market for guild members. Sign in with Discord to enter.",
-    "signIn": "Log in with Discord"
+    "signIn": "Log in with Discord",
+    "tiles": {
+      "market": { "label": "Market", "desc": "Browse and filter everything for sale, purchase and trade." },
+      "activity": { "label": "My activity", "desc": "Your listings, requests and gifts." },
+      "publish": { "label": "Create listing", "desc": "Put an item up for sale, purchase or trade." },
+      "gifts": { "label": "Gifts", "desc": "Items given away to the community." },
+      "stats": { "label": "Statistics", "desc": "Market rankings and activity." }
+    }
   },
   "maintenancePage": {
     "title": "Under maintenance",
