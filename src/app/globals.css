@@ -10,6 +10,12 @@
  * valor por tema. --ro-text y --ro-text-light apuntan al mismo texto primario
  * (dentro de un tema todas las superficies comparten luminancia); --ro-navy /
  * --ro-red / --ro-on-navy son fijos de marca (la cabecera es navy en ambos).
+ *
+ * Reglas de color firmes del rediseño:
+ *   - gold  → SOLO precios < 1M (ver src/lib/price.ts).
+ *   - red   → SOLO botones/acciones (comprar, publicar, enviar).
+ *   - accent (Azul ROZ) → estados activos, foco, líneas de pestañas.
+ *   - type-* → color por tipo de listing (badges + selector de tipo).
  */
 :root {
   color-scheme: light;
@@ -27,6 +33,22 @@
   --ro-navy: #012553;
   --ro-on-navy: #ffffff;
   --ro-red: #e23a32;
+  /* Acento de marca (Azul ROZ), configurable con un solo token. Estados
+     activos, foco de inputs y líneas de pestañas. NO se usa para acciones
+     (rojo) ni para precios (gold). */
+  --ro-accent: #1d6fd0;
+  --ro-accent-contrast: #ffffff;
+  /* Colores por tipo de listing (badges + selector de tipo). Fijos en ambos
+     temas (se definen solo aquí y el tema oscuro los hereda): se usan como
+     relleno sólido con texto --ro-on-type. Todo = navy visible (no --ro-navy,
+     que se pierde en oscuro), Venta = ámbar (no reusa gold), Compra = verde,
+     Interc. = azul, Regalo = rojo. */
+  --ro-type-all: #2b4f8f;
+  --ro-type-sale: #bd7e11;
+  --ro-type-buy: #1a9d4b;
+  --ro-type-trade: #2f6fe0;
+  --ro-type-gift: #dc3b32;
+  --ro-on-type: #ffffff;
 }
 
 :root[data-theme="dark"] {
@@ -45,6 +67,10 @@
   --ro-navy: #0c1322;
   --ro-on-navy: #e9eef8;
   --ro-red: #e8483f;
+  /* Acento más claro sobre fondo oscuro; contraste oscuro para texto sobre
+     un relleno de acento. Los --ro-type-* se heredan del bloque :root. */
+  --ro-accent: #75b9ff;
+  --ro-accent-contrast: #08121f;
 }
 
 @theme inline {
@@ -62,7 +88,15 @@
   --color-ro-navy: var(--ro-navy);
   --color-ro-on-navy: var(--ro-on-navy);
   --color-ro-red: var(--ro-red);
-  --font-sans: var(--font-geist-sans);
+  --color-ro-accent: var(--ro-accent);
+  --color-ro-accent-contrast: var(--ro-accent-contrast);
+  --color-ro-type-all: var(--ro-type-all);
+  --color-ro-type-sale: var(--ro-type-sale);
+  --color-ro-type-buy: var(--ro-type-buy);
+  --color-ro-type-trade: var(--ro-type-trade);
+  --color-ro-type-gift: var(--ro-type-gift);
+  --color-ro-on-type: var(--ro-on-type);
+  --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-heading);
 }

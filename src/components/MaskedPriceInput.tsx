@@ -20,7 +20,7 @@ export function MaskedPriceInput({
   className?: string;
   // Borde rojo cuando el campo era obligatorio y se envió vacío — estilo
   // inline porque un className condicional pierde contra el orden interno
-  // con el que Tailwind genera focus:border-ro-gold-dark (ver mismo patrón
+  // con el que Tailwind genera focus:border-ro-accent (ver mismo patrón
   // en NewPublicationForm para las options fuera de rango).
   invalid?: boolean;
 }) {
