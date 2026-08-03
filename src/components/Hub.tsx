@@ -30,13 +30,9 @@ export async function Hub({
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-12 sm:py-16">
       <header className="mb-8 text-center sm:mb-10">
-        {/* Eyebrow en pixel (único uso permitido de la fuente pixel junto al
-            logo); el saludo va en la fuente de cuerpo. */}
-        <p className="font-heading text-[0.6rem] uppercase tracking-[0.2em] text-ro-accent">
-          {t("welcome")}
-        </p>
-        <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">
-          {t.rich("hubGreeting", {
+        {/* Saludo grande con el nombre en acento + la pregunta como subtítulo. */}
+        <h1 className="text-2xl font-semibold sm:text-3xl">
+          {t.rich("hubWelcome", {
             username,
             strong: (chunks) => <strong className="font-semibold text-ro-accent">{chunks}</strong>,
           })}

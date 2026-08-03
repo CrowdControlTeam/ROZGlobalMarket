@@ -43,6 +43,7 @@
   },
   "home": {
     "welcome": "Bienvenido",
+    "hubWelcome": "Bienvenido, <strong>{username}</strong>",
     "hubGreeting": "Hola, <strong>{username}</strong>",
     "whereTo": "¿A dónde vamos?",
     "intro": "Mercado privado para miembros de la guild. Inicia sesión con Discord para entrar.",
