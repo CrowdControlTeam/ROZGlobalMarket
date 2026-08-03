@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { loadMarketConfig, DEFAULT_SITE_NAME } from "@/lib/market-config";
 import { isAppLocale, DEFAULT_LOCALE } from "@/lib/locale-constants";
 import { loadGuildRoleNames } from "@/lib/discord-bot";
-import { HamburgerMenu } from "./HamburgerMenu";
 import { UserMenu } from "./UserMenu";
 import { CreatePublicationButton } from "./CreatePublicationButton";
 import { ThemeToggle } from "./ThemeToggle";
@@ -27,12 +26,9 @@ export function SiteHeaderFallback() {
   return (
     <header className="border-b border-ro-gold/25 bg-ro-navy text-ro-on-navy">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
-        <div className="flex items-center gap-3">
-          <HamburgerMenu />
-          <span className="font-heading text-[0.65rem] leading-none tracking-wide text-ro-on-navy sm:text-xs">
-            {DEFAULT_SITE_NAME}
-          </span>
-        </div>
+        <span className="font-heading text-[0.65rem] leading-none tracking-wide text-ro-on-navy sm:text-xs">
+          {DEFAULT_SITE_NAME}
+        </span>
         <div className="flex items-center gap-3" />
       </div>
     </header>
@@ -71,15 +67,12 @@ export async function SiteHeader({
   return (
     <header className="border-b border-ro-gold/25 bg-ro-navy text-ro-on-navy">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
-        <div className="flex items-center gap-3">
-          <HamburgerMenu />
-          <Link
-            href="/market"
-            className="font-heading text-[0.65rem] leading-none tracking-wide text-ro-on-navy sm:text-xs"
-          >
-            {siteName}
-          </Link>
-        </div>
+        <Link
+          href="/"
+          className="font-heading text-[0.65rem] leading-none tracking-wide text-ro-on-navy sm:text-xs"
+        >
+          {siteName}
+        </Link>
 
         <div className="flex items-center gap-3">
           {canCreate && <CreatePublicationButton />}
