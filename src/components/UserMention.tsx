@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { sendContactMessage } from "@/lib/contact-messages";
-import { Sidebar } from "./Sidebar";
+import { Drawer } from "./Drawer";
 import { buttonClass, inputBaseClass, labelClass } from "@/lib/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { useIsClient } from "@/lib/use-is-client";
@@ -119,7 +119,7 @@ function ContactModal({
 
   // Portal a document.body: UserMention aparece dentro de texto en línea
   // (<p>, <dd>) e incluso dentro del <Link> que envuelve toda la tarjeta en
-  // MarketResults.tsx — el overlay de pantalla completa de Sidebar (con su
+  // MarketResults.tsx — el overlay de pantalla completa de Drawer (con su
   // <form>/<h2>/<div>) no puede vivir ahí sin romper el HTML (un <p> no
   // puede contener un <div>). El propio portal resuelve el problema del HTML,
   // pero React sigue burbujeando los eventos por el árbol de React (no el
@@ -127,7 +127,7 @@ function ContactModal({
   // llegando al <Link> ancestro y navegando a la tarjeta por debajo.
   return createPortal(
     <div onClick={(e) => e.stopPropagation()}>
-    <Sidebar side="right" open={open} onClose={handleClose} title={t("writeTo", { username: recipientUsername })}>
+    <Drawer side="right" mobileSheet open={open} onClose={handleClose} title={t("writeTo", { username: recipientUsername })}>
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 rounded-md border-2 border-ro-panel-border/30 p-2">
           <Image src={item.iconUrl} alt={item.name} width={32} height={32} />
@@ -173,7 +173,7 @@ function ContactModal({
           </form>
         )}
       </div>
-    </Sidebar>
+    </Drawer>
     </div>,
     document.body
   );
