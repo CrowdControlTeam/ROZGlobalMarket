@@ -1,9 +1,9 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Layers, Tag, ShoppingCart, ArrowLeftRight, Gift } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useMarketSearch } from "./marketSearchStore";
 
 // Selector de tipo del mercado unificado: pill a todo el ancho con un segmento
 // por tipo (Todo · Venta · Compra · Intercambio · Regalo), todos del mismo
@@ -30,20 +30,15 @@ const OPTIONS: TypeOption[] = [
 ];
 
 export function SegmentedTypeSelector() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const t = useTranslations("market");
-  const current = searchParams.get("type") ?? "";
+  const { filters, setFilter } = useMarketSearch();
+  const current = filters.type ?? "";
 
   function select(value: string) {
     if (value === current) return;
-    const params = new URLSearchParams(searchParams.toString());
-    if (value) params.set("type", value);
-    else params.delete("type");
-    // Cambiar de tipo cierra el detalle abierto y reinicia la paginación.
-    params.delete("listing");
-    router.push(`${pathname}?${params.toString()}`);
+    // El tipo es un filtro más de la pestaña activa; el store lo serializa a la
+    // URL (que cierra el detalle y reinicia la paginación).
+    setFilter("type", value);
   }
 
   return (

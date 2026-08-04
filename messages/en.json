@@ -274,11 +274,22 @@
       "optionPlaceholder": "-- Option {slot} --",
       "min": "Min",
       "max": "Max",
-      "value": "Value"
+      "value": "Value",
+      "priceSection": "Price",
+      "clearN": "Clear ({count})",
+      "clearSection": "Clear section",
+      "expand": "Expand filters",
+      "collapse": "Collapse filters"
     },
     "typeSelector": {
       "label": "Listing type",
       "all": "All"
+    },
+    "searchTabs": {
+      "indicator": "This session's searches",
+      "add": "New search",
+      "close": "Close search",
+      "untitled": "Search {n}"
     },
     "view": {
       "label": "View",

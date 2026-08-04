@@ -16,6 +16,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { UserMention, ContactModal } from "@/components/UserMention";
 import { KebabMenu, type KebabItem } from "@/components/KebabMenu";
 import { SortSelect } from "./SortSelect";
+import { useMarketSearch } from "./marketSearchStore";
 import { useListingPatches, clearListingPatches } from "./listingStore";
 import type { ListingCardPatch } from "@/lib/listing-card";
 
@@ -317,11 +318,25 @@ export function MarketResults({
 }) {
   const [listings, setListings] = useState(initialListings);
   const [cursor, setCursor] = useState(initialCursor);
+
+  // El grid mantiene los listings en estado de cliente (para "Cargar más").
+  // Cuando el servidor entrega una nueva página inicial —al cambiar filtros,
+  // orden o la búsqueda `q`— reseteamos ese estado en el propio render (patrón
+  // sancionado de React: ajustar estado durante el render al cambiar una prop,
+  // rastreando el valor previo con estado). Así la lista se refresca SIN
+  // remontar la sección, lo que permite dejar `q` fuera de la key del Suspense
+  // y conservar el foco del buscador al teclear.
+  const [prevInitial, setPrevInitial] = useState(initialListings);
+  if (prevInitial !== initialListings) {
+    setPrevInitial(initialListings);
+    setListings(initialListings);
+    setCursor(initialCursor);
+  }
+
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market");
   const tCommon = useTranslations("common");
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -339,16 +354,15 @@ export function MarketResults({
     localStorage.setItem(VIEW_STORAGE_KEY, next);
   }
 
-  // Buscador por nombre (cabecera de resultados): aplica al enviar (Enter).
-  const [q, setQ] = useState(searchParams.get("q") ?? "");
+  // Buscador por nombre (cabecera de resultados): controlado por el store, que
+  // aplica al vuelo (serializa `q` a la URL con debounce). Al estar controlado
+  // por el store —estable, no se remonta al teclear— conserva el foco. Enter no
+  // hace nada especial (ya aplica al escribir); se evita el submit por defecto
+  // para no recargar la página.
+  const { filters: searchFilters, setFilter: setSearchFilter } = useMarketSearch();
+  const q = searchFilters.q ?? "";
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
-    const params = new URLSearchParams(searchParams.toString());
-    const trimmed = q.trim();
-    if (trimmed) params.set("q", trimmed);
-    else params.delete("q");
-    params.delete("listing");
-    router.push(`${pathname}?${params.toString()}`);
   }
 
   // Patches de mutaciones hechas en el detalle (ver listingStore.ts): se fusionan
@@ -403,7 +417,7 @@ export function MarketResults({
           <input
             type="text"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => setSearchFilter("q", e.target.value)}
             placeholder={t("filters.namePlaceholder")}
             aria-label={t("filters.name")}
             className="min-w-0 flex-1 bg-transparent text-xs text-ro-text placeholder:text-ro-text-muted focus:outline-none"

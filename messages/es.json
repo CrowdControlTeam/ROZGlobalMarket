@@ -274,11 +274,22 @@
       "optionPlaceholder": "-- Option {slot} --",
       "min": "Mín",
       "max": "Máx",
-      "value": "Valor"
+      "value": "Valor",
+      "priceSection": "Precio",
+      "clearN": "Limpiar ({count})",
+      "clearSection": "Limpiar sección",
+      "expand": "Expandir filtros",
+      "collapse": "Colapsar filtros"
     },
     "typeSelector": {
       "label": "Tipo de anuncio",
       "all": "Todo"
+    },
+    "searchTabs": {
+      "indicator": "Búsquedas de esta sesión",
+      "add": "Nueva búsqueda",
+      "close": "Cerrar búsqueda",
+      "untitled": "Búsqueda {n}"
     },
     "view": {
       "label": "Vista",
