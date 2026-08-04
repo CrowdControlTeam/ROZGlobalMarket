@@ -459,8 +459,12 @@ function AffixToggle({
         e.preventDefault();
         onToggle();
       }}
-      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md transition-colors ${
-        active ? "bg-ro-accent text-ro-accent-contrast" : "text-ro-text-muted hover:bg-ro-panel-border/60 hover:text-ro-text"
+      // Aspecto de botón (borde + fondo propio) para que se lea como un control
+      // aparte del input, no como un icono decorativo del campo.
+      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md border transition-colors ${
+        active
+          ? "border-ro-accent bg-ro-accent text-ro-accent-contrast"
+          : "border-ro-panel-border bg-ro-panel-alt text-ro-text-muted hover:border-ro-accent hover:text-ro-text"
       }`}
     >
       {children}
