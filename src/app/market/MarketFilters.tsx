@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -32,12 +31,9 @@ import { inputBaseClass, selectClass } from "@/lib/ui";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { UserPicker, type UserResult } from "@/components/UserPicker";
 import { Drawer } from "@/components/Drawer";
+import { useMarketSearch } from "./marketSearchStore";
 
 type OptionFilterSelection = { statCode: string; min: number | ""; max: number | "" };
-
-function emptyOptionFilterSelections(): OptionFilterSelection[] {
-  return Array.from({ length: MAX_OPTION_SLOTS }, () => ({ statCode: "", min: "", max: "" }));
-}
 
 type StatOption = { statCode: string; label: string; minValue: number; maxValue: number };
 
@@ -61,45 +57,17 @@ function dedupeByStat(defs: ItemOptionDef[]): StatOption[] {
 type Section = { id: string; Icon: LucideIcon; label: string; count: number; clear: () => void; content: ReactNode };
 
 export function MarketFilters() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const t = useTranslations("market");
+  // El store es la fuente de verdad de los filtros de la pestaña activa; este
+  // panel solo lee de `filters` y escribe con setFilter/setFilters. El store
+  // serializa a la URL (con debounce) y la URL es lo que lee el servidor.
+  const { filters, setFilter, setFilters } = useMarketSearch();
 
-  // El tipo lo fija el SegmentedTypeSelector (query ?type=), no este panel —
-  // aquí solo se lee para adaptar la semántica de las options en BUY.
-  const type = searchParams.get("type") ?? "";
-
-  const [poster, setPoster] = useState<UserResult | null>(() => {
-    const posterId = searchParams.get("posterId");
-    const posterName = searchParams.get("posterName");
-    return posterId && posterName ? { id: posterId, username: posterName, avatarUrl: null } : null;
-  });
-  const [category, setCategory] = useState(searchParams.get("category") ?? "");
-  const [slot, setSlot] = useState(searchParams.get("slot") ?? "");
-  const [weaponType, setWeaponType] = useState(searchParams.get("weaponType") ?? "");
-  const [minPrice, setMinPrice] = useState<number | "">(toNumberOrEmpty(searchParams.get("minPrice")));
-  const [maxPrice, setMaxPrice] = useState<number | "">(toNumberOrEmpty(searchParams.get("maxPrice")));
-  const [refineMin, setRefineMin] = useState<number | "">(toNumberOrEmpty(searchParams.get("refineMin")));
-  const [refineMax, setRefineMax] = useState<number | "">(toNumberOrEmpty(searchParams.get("refineMax")));
+  // Metadatos async (no son filtros): límite de refino y catálogo de options.
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
   useEffect(() => {
     getMaxRefineLevel().then(setMaxRefineLevel);
   }, []);
-  const [cardSlotsMin, setCardSlotsMin] = useState<number | "">(toNumberOrEmpty(searchParams.get("cardSlotsMin")));
-  const [cardSlotsMax, setCardSlotsMax] = useState<number | "">(toNumberOrEmpty(searchParams.get("cardSlotsMax")));
-
-  const [optionSelections, setOptionSelections] = useState<OptionFilterSelection[]>(() =>
-    Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => {
-      const n = i + 1;
-      return {
-        statCode: searchParams.get(`option${n}Stat`) ?? "",
-        min: toNumberOrEmpty(searchParams.get(`option${n}Min`)),
-        max: toNumberOrEmpty(searchParams.get(`option${n}Max`)),
-      };
-    }),
-  );
-
   const [allOptionDefs, setAllOptionDefs] = useState<ItemOptionDef[]>([]);
   const [optionsFeatureAvailable, setOptionsFeatureAvailable] = useState(true);
   useEffect(() => {
@@ -108,6 +76,32 @@ export function MarketFilters() {
       if (available) getAllOptionChoices().then(setAllOptionDefs);
     });
   }, []);
+
+  // Valores derivados de los filtros de la pestaña activa. El tipo lo fija el
+  // SegmentedTypeSelector; aquí solo se lee para adaptar la semántica de las
+  // options en BUY.
+  const type = filters.type ?? "";
+  const poster: UserResult | null =
+    filters.posterId && filters.posterName
+      ? { id: filters.posterId, username: filters.posterName, avatarUrl: null }
+      : null;
+  const category = filters.category ?? "";
+  const slot = filters.slot ?? "";
+  const weaponType = filters.weaponType ?? "";
+  const minPrice = toNumberOrEmpty(filters.minPrice);
+  const maxPrice = toNumberOrEmpty(filters.maxPrice);
+  const refineMin = filters.refineMin ?? "";
+  const refineMax = filters.refineMax ?? "";
+  const cardSlotsMin = filters.cardSlotsMin ?? "";
+  const cardSlotsMax = filters.cardSlotsMax ?? "";
+  const optionSelections: OptionFilterSelection[] = Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => {
+    const n = i + 1;
+    return {
+      statCode: filters[`option${n}Stat`] ?? "",
+      min: toNumberOrEmpty(filters[`option${n}Min`]),
+      max: toNumberOrEmpty(filters[`option${n}Max`]),
+    };
+  });
 
   const statsBySlot = useMemo(() => {
     const bySlot: StatOption[][] = [];
@@ -135,77 +129,74 @@ export function MarketFilters() {
       ? getMaxCardSlots({ category: ItemCategory.ARMOR, slot: slot as EquipSlot })
       : MAX_WEAPON_CARD_SLOTS;
 
-  function handleOptionSelectChange(index: number, statCode: string) {
-    setOptionSelections((prev) => {
-      const next = [...prev];
-      next[index] = { statCode, min: "", max: "" };
-      return next;
-    });
-  }
-  function handleOptionMinChange(index: number, value: number | "") {
-    setOptionSelections((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], min: value };
-      return next;
-    });
-  }
-  function handleOptionMaxChange(index: number, value: number | "") {
-    setOptionSelections((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], max: value };
-      return next;
-    });
-  }
-
-  // Aplicar AL VUELO: cada cambio de filtro empuja la URL con un debounce. El
-  // orden (sort), la búsqueda por nombre (q) y el tipo viven fuera y se
-  // conservan tal cual. En el montaje inicial el estado ya viene de la URL, así
-  // que la comparación evita un push redundante.
+  // Normalización: al cambiar categoría/slot/tipo, limpia del store los filtros
+  // dependientes que dejan de aplicar (equivale al "drop" condicional que antes
+  // hacía el efecto de aplicar). Solo escribe si hay algo que limpiar (evita
+  // bucle: tras limpiar ya no queda nada que limpiar).
   useEffect(() => {
-    const handle = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      setOrDelete(params, "posterId", poster?.id ?? "");
-      setOrDelete(params, "posterName", poster?.username ?? "");
-      setOrDelete(params, "category", category);
-      setOrDelete(params, "slot", slot);
-      setOrDelete(params, "weaponType", weaponType);
-      optionSelections.forEach((sel, i) => {
-        const n = i + 1;
-        setOrDelete(params, `option${n}Stat`, sel.statCode);
-        setOrDelete(params, `option${n}Min`, !isBuyFilter && sel.statCode && sel.min !== "" ? String(sel.min) : "");
-        setOrDelete(params, `option${n}Max`, sel.statCode && sel.max !== "" ? String(sel.max) : "");
-      });
-      setOrDelete(params, "refineMin", refineFilterEnabled && refineMin !== "" ? String(refineMin) : "");
-      setOrDelete(params, "refineMax", refineFilterEnabled && refineMax !== "" ? String(refineMax) : "");
-      setOrDelete(params, "cardSlotsMin", cardSlotsFilterEnabled && cardSlotsMin !== "" ? String(cardSlotsMin) : "");
-      setOrDelete(params, "cardSlotsMax", cardSlotsFilterEnabled && cardSlotsMax !== "" ? String(cardSlotsMax) : "");
-      setOrDelete(params, "minPrice", minPrice === "" ? "" : String(minPrice));
-      setOrDelete(params, "maxPrice", maxPrice === "" ? "" : String(maxPrice));
-      // Cerrar el detalle abierto al cambiar el filtro; reinicia paginación.
-      params.delete("listing");
-      const next = params.toString();
-      const current = new URLSearchParams(searchParams.toString());
-      current.delete("listing");
-      if (next !== current.toString()) router.push(`${pathname}?${next}`);
-    }, 400);
-    return () => clearTimeout(handle);
-  }, [
-    poster, category, slot, weaponType, optionSelections, refineMin, refineMax, cardSlotsMin, cardSlotsMax,
-    minPrice, maxPrice, isBuyFilter, refineFilterEnabled, cardSlotsFilterEnabled, searchParams, pathname, router,
-  ]);
+    const patch: Record<string, string> = {};
+    if (!refineFilterEnabled) {
+      if (filters.refineMin) patch.refineMin = "";
+      if (filters.refineMax) patch.refineMax = "";
+    }
+    if (!cardSlotsFilterEnabled) {
+      if (filters.cardSlotsMin) patch.cardSlotsMin = "";
+      if (filters.cardSlotsMax) patch.cardSlotsMax = "";
+    }
+    if (isBuyFilter) {
+      for (let n = 1; n <= MAX_OPTION_SLOTS; n++) if (filters[`option${n}Min`]) patch[`option${n}Min`] = "";
+    }
+    if (Object.keys(patch).length > 0) setFilters(patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refineFilterEnabled, cardSlotsFilterEnabled, isBuyFilter, filters]);
+
+  function handleCategoryChange(value: string) {
+    const patch: Record<string, string> = { category: value };
+    if (value !== ItemCategory.ARMOR && value !== ItemCategory.CARD) patch.slot = "";
+    if (value !== ItemCategory.WEAPON) patch.weaponType = "";
+    setFilters(patch);
+  }
+  function handleOptionSelectChange(index: number, statCode: string) {
+    const n = index + 1;
+    setFilters({ [`option${n}Stat`]: statCode, [`option${n}Min`]: "", [`option${n}Max`]: "" });
+  }
+  function handleOptionMinChange(index: number, value: string) {
+    setFilter(`option${index + 1}Min`, value);
+  }
+  function handleOptionMaxChange(index: number, value: string) {
+    setFilter(`option${index + 1}Max`, value);
+  }
 
   function clearAll() {
-    setPoster(null);
-    setCategory("");
-    setSlot("");
-    setWeaponType("");
-    setOptionSelections(emptyOptionFilterSelections());
-    setRefineMin("");
-    setRefineMax("");
-    setCardSlotsMin("");
-    setCardSlotsMax("");
-    setMinPrice("");
-    setMaxPrice("");
+    const patch: Record<string, string> = {
+      posterId: "",
+      posterName: "",
+      category: "",
+      slot: "",
+      weaponType: "",
+      minPrice: "",
+      maxPrice: "",
+      refineMin: "",
+      refineMax: "",
+      cardSlotsMin: "",
+      cardSlotsMax: "",
+    };
+    for (let n = 1; n <= MAX_OPTION_SLOTS; n++) {
+      patch[`option${n}Stat`] = "";
+      patch[`option${n}Min`] = "";
+      patch[`option${n}Max`] = "";
+    }
+    setFilters(patch);
+  }
+
+  function clearOptions() {
+    const patch: Record<string, string> = {};
+    for (let n = 1; n <= MAX_OPTION_SLOTS; n++) {
+      patch[`option${n}Stat`] = "";
+      patch[`option${n}Min`] = "";
+      patch[`option${n}Max`] = "";
+    }
+    setFilters(patch);
   }
 
   const optionsActive = optionSelections.filter((s) => s.statCode !== "").length;
@@ -215,14 +206,21 @@ export function MarketFilters() {
       Icon: Coins,
       label: t("filters.priceSection"),
       count: (minPrice !== "" ? 1 : 0) + (maxPrice !== "" ? 1 : 0),
-      clear: () => {
-        setMinPrice("");
-        setMaxPrice("");
-      },
+      clear: () => setFilters({ minPrice: "", maxPrice: "" }),
       content: (
         <MinMaxRow>
-          <MaskedPriceInput value={minPrice} onChange={setMinPrice} placeholder={t("filters.min")} className={`w-full ${inputBaseClass}`} />
-          <MaskedPriceInput value={maxPrice} onChange={setMaxPrice} placeholder={t("filters.max")} className={`w-full ${inputBaseClass}`} />
+          <MaskedPriceInput
+            value={minPrice}
+            onChange={(v) => setFilter("minPrice", v === "" ? "" : String(v))}
+            placeholder={t("filters.min")}
+            className={`w-full ${inputBaseClass}`}
+          />
+          <MaskedPriceInput
+            value={maxPrice}
+            onChange={(v) => setFilter("maxPrice", v === "" ? "" : String(v))}
+            placeholder={t("filters.max")}
+            className={`w-full ${inputBaseClass}`}
+          />
         </MinMaxRow>
       ),
     },
@@ -231,19 +229,11 @@ export function MarketFilters() {
       Icon: Boxes,
       label: t("filters.category"),
       count: category ? 1 : 0,
-      clear: () => {
-        setCategory("");
-        setSlot("");
-        setWeaponType("");
-      },
+      clear: () => setFilters({ category: "", slot: "", weaponType: "" }),
       content: (
         <select
           value={category}
-          onChange={(e) => {
-            setCategory(e.target.value);
-            if (e.target.value !== ItemCategory.ARMOR && e.target.value !== ItemCategory.CARD) setSlot("");
-            if (e.target.value !== ItemCategory.WEAPON) setWeaponType("");
-          }}
+          onChange={(e) => handleCategoryChange(e.target.value)}
           className={`w-full ${selectClass}`}
         >
           <option value="">{t("filters.all")}</option>
@@ -260,9 +250,9 @@ export function MarketFilters() {
       Icon: Shield,
       label: t("filters.slot"),
       count: slot ? 1 : 0,
-      clear: () => setSlot(""),
+      clear: () => setFilter("slot", ""),
       content: (
-        <select value={slot} disabled={!showSlot} onChange={(e) => setSlot(e.target.value)} className={`w-full ${selectClass}`}>
+        <select value={slot} disabled={!showSlot} onChange={(e) => setFilter("slot", e.target.value)} className={`w-full ${selectClass}`}>
           <option value="">{t("filters.any")}</option>
           {Object.values(EquipSlot).map((s) => (
             <option key={s} value={s}>
@@ -277,9 +267,9 @@ export function MarketFilters() {
       Icon: Sword,
       label: t("filters.weaponType"),
       count: weaponType ? 1 : 0,
-      clear: () => setWeaponType(""),
+      clear: () => setFilter("weaponType", ""),
       content: (
-        <select value={weaponType} disabled={!showWeaponType} onChange={(e) => setWeaponType(e.target.value)} className={`w-full ${selectClass}`}>
+        <select value={weaponType} disabled={!showWeaponType} onChange={(e) => setFilter("weaponType", e.target.value)} className={`w-full ${selectClass}`}>
           <option value="">{t("filters.any")}</option>
           {Object.values(WeaponType).map((w) => (
             <option key={w} value={w}>
@@ -294,16 +284,13 @@ export function MarketFilters() {
       Icon: Sparkles,
       label: t("field.refine"),
       count: (refineMin !== "" ? 1 : 0) + (refineMax !== "" ? 1 : 0),
-      clear: () => {
-        setRefineMin("");
-        setRefineMax("");
-      },
+      clear: () => setFilters({ refineMin: "", refineMax: "" }),
       content: (
         <MinMaxRow>
           <input type="number" min={0} max={maxRefineLevel} value={refineMin} disabled={!refineFilterEnabled} placeholder={t("filters.min")}
-            onChange={(e) => setRefineMin(e.target.value === "" ? "" : Number(e.target.value))} className={`w-full ${inputBaseClass}`} />
+            onChange={(e) => setFilter("refineMin", e.target.value)} className={`w-full ${inputBaseClass}`} />
           <input type="number" min={0} max={maxRefineLevel} value={refineMax} disabled={!refineFilterEnabled} placeholder={t("filters.max")}
-            onChange={(e) => setRefineMax(e.target.value === "" ? "" : Number(e.target.value))} className={`w-full ${inputBaseClass}`} />
+            onChange={(e) => setFilter("refineMax", e.target.value)} className={`w-full ${inputBaseClass}`} />
         </MinMaxRow>
       ),
     },
@@ -312,16 +299,13 @@ export function MarketFilters() {
       Icon: SquareStack,
       label: t("field.cardSlots"),
       count: (cardSlotsMin !== "" ? 1 : 0) + (cardSlotsMax !== "" ? 1 : 0),
-      clear: () => {
-        setCardSlotsMin("");
-        setCardSlotsMax("");
-      },
+      clear: () => setFilters({ cardSlotsMin: "", cardSlotsMax: "" }),
       content: (
         <MinMaxRow>
           <input type="number" min={0} max={cardSlotsFilterMax} value={cardSlotsMin} disabled={!cardSlotsFilterEnabled} placeholder={t("filters.min")}
-            onChange={(e) => setCardSlotsMin(e.target.value === "" ? "" : Number(e.target.value))} className={`w-full ${inputBaseClass}`} />
+            onChange={(e) => setFilter("cardSlotsMin", e.target.value)} className={`w-full ${inputBaseClass}`} />
           <input type="number" min={0} max={cardSlotsFilterMax} value={cardSlotsMax} disabled={!cardSlotsFilterEnabled} placeholder={t("filters.max")}
-            onChange={(e) => setCardSlotsMax(e.target.value === "" ? "" : Number(e.target.value))} className={`w-full ${inputBaseClass}`} />
+            onChange={(e) => setFilter("cardSlotsMax", e.target.value)} className={`w-full ${inputBaseClass}`} />
         </MinMaxRow>
       ),
     },
@@ -332,7 +316,7 @@ export function MarketFilters() {
             Icon: SlidersHorizontal,
             label: t("field.options"),
             count: optionsActive,
-            clear: () => setOptionSelections(emptyOptionFilterSelections()),
+            clear: clearOptions,
             content: (
               <div className="flex flex-col gap-2">
                 {isBuyFilter && <p className="text-xs italic text-ro-text-muted">{t("filters.buyOptionsHint")}</p>}
@@ -359,13 +343,13 @@ export function MarketFilters() {
                         <div className="flex items-center gap-2">
                           {!isBuyFilter && (
                             <input type="number" placeholder={selectedStat ? String(selectedStat.minValue) : t("filters.min")} value={sel.min}
-                              onChange={(e) => handleOptionMinChange(index, e.target.value === "" ? "" : Number(e.target.value))}
+                              onChange={(e) => handleOptionMinChange(index, e.target.value)}
                               className={`w-full ${inputBaseClass}`} style={isMinOutOfRange ? { borderColor: "#dc2626" } : undefined} />
                           )}
                           <input type="number"
                             placeholder={selectedStat ? (isBuyFilter ? `${selectedStat.minValue}-${selectedStat.maxValue}` : String(selectedStat.maxValue)) : isBuyFilter ? t("filters.value") : t("filters.max")}
                             value={sel.max}
-                            onChange={(e) => handleOptionMaxChange(index, e.target.value === "" ? "" : Number(e.target.value))}
+                            onChange={(e) => handleOptionMaxChange(index, e.target.value)}
                             className={`w-full ${inputBaseClass}`} style={isMaxOutOfRange ? { borderColor: "#dc2626" } : undefined} />
                         </div>
                       )}
@@ -382,9 +366,14 @@ export function MarketFilters() {
       Icon: User,
       label: t("filters.poster"),
       count: poster ? 1 : 0,
-      clear: () => setPoster(null),
+      clear: () => setFilters({ posterId: "", posterName: "" }),
       content: (
-        <UserPicker key={poster?.id ?? "empty"} selected={poster} onSelect={setPoster} onClear={() => setPoster(null)} />
+        <UserPicker
+          key={poster?.id ?? "empty"}
+          selected={poster}
+          onSelect={(u) => setFilters({ posterId: u.id, posterName: u.username })}
+          onClear={() => setFilters({ posterId: "", posterName: "" })}
+        />
       ),
     },
   ];
@@ -460,24 +449,31 @@ export function MarketFilters() {
           const open = openSections[s.id] ?? true;
           return (
             <div key={s.id} className="border-t border-ro-panel-border/60 first:border-t-0">
+              {/* El botón de colapsar (etiqueta) y el badge de limpiar son
+                  HERMANOS, no anidados: un <button> dentro de otro es HTML
+                  inválido y rompe la hidratación. */}
               <div className="flex items-center gap-2 py-2">
                 <button type="button" onClick={() => toggleSection(s.id)} aria-expanded={open} className="flex flex-1 items-center gap-2 text-left text-sm font-medium text-ro-text">
                   <s.Icon size={16} className="shrink-0 text-ro-accent" aria-hidden />
                   <span className="flex-1">{s.label}</span>
-                  {s.count > 0 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        s.clear();
-                      }}
-                      title={t("filters.clearSection")}
-                      className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-ro-accent px-1 text-[10px] font-bold text-ro-accent-contrast"
-                    >
-                      {s.count}
-                    </button>
-                  )}
-                  <ChevronDown size={14} className={`shrink-0 text-ro-text-muted transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+                </button>
+                {s.count > 0 && (
+                  <button
+                    type="button"
+                    onClick={s.clear}
+                    title={t("filters.clearSection")}
+                    className="grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-ro-accent px-1 text-[10px] font-bold text-ro-accent-contrast"
+                  >
+                    {s.count}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => toggleSection(s.id)}
+                  aria-label={open ? t("filters.collapse") : t("filters.expand")}
+                  className="grid shrink-0 place-items-center text-ro-text-muted"
+                >
+                  <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
                 </button>
               </div>
               {open && <div className="pb-3">{s.content}</div>}
@@ -583,12 +579,7 @@ function MinMaxRow({ children }: { children: ReactNode }) {
   );
 }
 
-function setOrDelete(params: URLSearchParams, key: string, value: string) {
-  if (value) params.set(key, value);
-  else params.delete(key);
-}
-
-function toNumberOrEmpty(value: string | null): number | "" {
+function toNumberOrEmpty(value: string | null | undefined): number | "" {
   if (!value) return "";
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : "";

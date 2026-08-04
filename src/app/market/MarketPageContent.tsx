@@ -7,6 +7,8 @@ import { MarketNav } from "./MarketNav";
 import { MarketFilters } from "./MarketFilters";
 import { SearchTabs } from "./SearchTabs";
 import { SegmentedTypeSelector } from "./SegmentedTypeSelector";
+import { MarketSearchProvider } from "./marketSearchStore";
+import { FILTER_KEYS, type Filters } from "./marketFilterKeys";
 import { MarketListingsSection } from "./MarketListingsSection";
 import { MarketResultsSkeleton } from "./MarketResultsSkeleton";
 
@@ -82,37 +84,52 @@ export async function MarketPageContent({
   delete suspenseKeyFilters.q;
   const suspenseKey = JSON.stringify(suspenseKeyFilters);
 
+  // Filtros iniciales para el store (objeto plano de queryParams conocidos),
+  // tomados de la URL aquí en el servidor para no llamar a useSearchParams en el
+  // provider (rompería la hidratación en carga dura).
+  const initialFilters: Filters = {};
+  for (const key of FILTER_KEYS) {
+    const value = firstValue(raw[key]);
+    if (value) initialFilters[key] = value;
+  }
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
-      {/* Hub superior (fuera de las pestañas) + barra de "Mis búsquedas". El
-          selector de tipo queda DENTRO del contexto de la pestaña activa (cada
-          búsqueda tiene su propio tipo), así que va debajo de las pestañas. */}
+      {/* Hub superior (fuera de las pestañas). El resto —pestañas, selector de
+          tipo, filtros y resultados— vive DENTRO del store de búsqueda: cada
+          pestaña tiene su propio objeto de filtros (fuente de verdad) que se
+          serializa a la URL, y la URL es lo que lee el servidor. */}
       <MarketNav />
-      <div className="mb-3">
-        <SearchTabs />
-      </div>
-      <div className="mb-4">
-        <SegmentedTypeSelector />
-      </div>
+      <MarketSearchProvider initialFilters={initialFilters}>
+        <div className="mb-3">
+          <SearchTabs />
+        </div>
+        {/* El selector de tipo queda DENTRO del contexto de la pestaña activa
+            (cada búsqueda tiene su propio tipo), así que va debajo de las
+            pestañas. */}
+        <div className="mb-4">
+          <SegmentedTypeSelector />
+        </div>
 
-      {/* Los filtros se auto-posicionan (fijos en el margen izquierdo en
-          desktop; botón "Filtros" + bottom-sheet en móvil), así que los
-          resultados ocupan el ancho completo del contenedor. */}
-      <MarketFilters />
+        {/* Los filtros se auto-posicionan (fijos en el margen izquierdo en
+            desktop; botón "Filtros" + bottom-sheet en móvil), así que los
+            resultados ocupan el ancho completo del contenedor. */}
+        <MarketFilters />
 
-      {/* key en el propio Suspense: al cambiar cualquier filtro/orden, React
-          trata la sección como nueva y muestra el skeleton mientras llega el
-          resultado. Excluimos `q` de la key a propósito: el buscador aplica al
-          vuelo, así que si `q` remontara la sección, el input perdería el foco
-          en cada tecla. Al dejarlo fuera, la búsqueda actualiza los resultados
-          en su sitio (sin skeleton) y el foco se conserva. */}
-      <Suspense key={suspenseKey} fallback={<MarketResultsSkeleton />}>
-        <MarketListingsSection
-          filters={filters}
-          currentUserId={session.user.discordId}
-          isAdmin={session.user.isAdmin}
-        />
-      </Suspense>
+        {/* key en el propio Suspense: al cambiar cualquier filtro/orden, React
+            trata la sección como nueva y muestra el skeleton mientras llega el
+            resultado. Excluimos `q` de la key a propósito: el buscador aplica al
+            vuelo, así que si `q` remontara la sección, el input perdería el foco
+            en cada tecla. Al dejarlo fuera, la búsqueda actualiza los resultados
+            en su sitio (sin skeleton) y el foco se conserva. */}
+        <Suspense key={suspenseKey} fallback={<MarketResultsSkeleton />}>
+          <MarketListingsSection
+            filters={filters}
+            currentUserId={session.user.discordId}
+            isAdmin={session.user.isAdmin}
+          />
+        </Suspense>
+      </MarketSearchProvider>
     </main>
   );
 }

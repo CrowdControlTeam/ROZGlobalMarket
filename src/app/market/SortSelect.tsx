@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { SORT_VALUES, SORT_DIRECTION } from "@/lib/market-sort";
 import { sortLabel } from "@/lib/market-labels";
+import { useMarketSearch } from "./marketSearchStore";
 
 // Marca de dirección: flecha estilizada de punta triangular ⭣ (descendente) /
 // ⭡ (ascendente), separada del texto con un em-space ( ) para que no
@@ -12,20 +12,12 @@ import { sortLabel } from "@/lib/market-labels";
 const DIR_MARK = { desc: "⭣", asc: "⭡" } as const;
 
 export function SortSelect() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const t = useTranslations("market");
+  const { filters, setFilter } = useMarketSearch();
 
   function handleChange(value: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value === "newest") {
-      params.delete("sort");
-    } else {
-      params.set("sort", value);
-    }
-    // Solo cambia el orden; los filtros ya presentes en la URL se mantienen.
-    router.push(`${pathname}?${params.toString()}`);
+    // "newest" es el valor por defecto: se guarda vacío para no ensuciar la URL.
+    setFilter("sort", value === "newest" ? "" : value);
   }
 
   // El <select> ES la píldora (ocupa todo el ancho, clicable en cualquier
@@ -36,7 +28,7 @@ export function SortSelect() {
   return (
     <div className="relative inline-flex items-center">
       <select
-        value={searchParams.get("sort") ?? "newest"}
+        value={filters.sort ?? "newest"}
         onChange={(e) => handleChange(e.target.value)}
         aria-label={t("sort.label")}
         className="min-w-[190px] cursor-pointer appearance-none rounded-lg border border-ro-panel-border bg-ro-panel-alt py-1.5 pl-3 pr-9 text-xs text-ro-text focus:outline-none"
