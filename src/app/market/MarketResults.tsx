@@ -423,7 +423,7 @@ export function MarketResults({
       {displayed.length === 0 ? (
         <p className="text-ro-text-light/70">{t("results.empty")}</p>
       ) : view === "grid" ? (
-        <ul className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2">
+        <ul className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {displayed.map((listing) => (
             <li key={listing.id}>
               <ListingCard {...cardProps(listing)} variant="tile" />

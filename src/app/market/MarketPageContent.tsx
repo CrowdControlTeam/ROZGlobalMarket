@@ -77,7 +77,7 @@ export async function MarketPageContent({
   const filters: MarketFiltersType = parsed.success ? parsed.data : { sort: "newest" };
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
+    <main className="mx-auto max-w-5xl px-6 py-8">
       {/* Barra de nav superior (sustituye al título) + selector de tipo. */}
       <MarketNav />
       <div className="mb-4">
