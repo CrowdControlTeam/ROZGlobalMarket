@@ -274,7 +274,12 @@
       "optionPlaceholder": "-- Option {slot} --",
       "min": "Mín",
       "max": "Máx",
-      "value": "Valor"
+      "value": "Valor",
+      "priceSection": "Precio",
+      "clearN": "Limpiar ({count})",
+      "clearSection": "Limpiar sección",
+      "expand": "Expandir filtros",
+      "collapse": "Colapsar filtros"
     },
     "typeSelector": {
       "label": "Tipo de anuncio",

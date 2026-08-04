@@ -274,7 +274,12 @@
       "optionPlaceholder": "-- Option {slot} --",
       "min": "Min",
       "max": "Max",
-      "value": "Value"
+      "value": "Value",
+      "priceSection": "Price",
+      "clearN": "Clear ({count})",
+      "clearSection": "Clear section",
+      "expand": "Expand filters",
+      "collapse": "Collapse filters"
     },
     "typeSelector": {
       "label": "Listing type",
