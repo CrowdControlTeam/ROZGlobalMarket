@@ -65,7 +65,7 @@ export function ItemPicker({
   // "Cambiar"); sin selección, el buscador con su desplegable de resultados.
   if (selected) {
     return (
-      <div className="flex items-center gap-2.5 rounded-lg border border-ro-accent bg-ro-accent/10 p-2">
+      <div className="flex h-12 items-center gap-2.5 rounded-lg border border-ro-accent bg-ro-accent/10 px-2">
         <Image src={selected.iconUrl} alt="" width={32} height={32} className="h-8 w-8 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-ro-text">{selected.name}</p>
@@ -90,7 +90,7 @@ export function ItemPicker({
           value={query}
           onChange={(e) => handleChange(e.target.value)}
           placeholder={t("itemPicker.placeholder")}
-          className={inputClass}
+          className={`${inputClass} h-12`}
         />
       </div>
       {isPending && (
