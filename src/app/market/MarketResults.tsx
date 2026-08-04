@@ -177,11 +177,11 @@ function ListingCard({
 
   if (variant === "row") {
     return (
-      <div className={`relative ${className ?? ""}`}>
+      <div className={`relative h-full ${className ?? ""}`}>
         <Link
           href={href}
           scroll={false}
-          className="flex items-center gap-3 rounded-xl border border-ro-panel-border bg-ro-panel p-3 pr-10 transition-colors hover:border-ro-accent"
+          className="flex h-full items-center gap-3 rounded-xl border border-ro-panel-border bg-ro-panel p-3 pr-10 transition-colors hover:border-ro-accent"
         >
           {iconBox}
           <div className="min-w-0 flex-1">
@@ -391,7 +391,7 @@ export function MarketResults({
           ))}
         </ul>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid auto-rows-fr grid-cols-1 gap-3">
           {displayed.map((listing) => (
             <li key={listing.id}>
               {/* Fila en desktop; tile apilado en móvil. */}
