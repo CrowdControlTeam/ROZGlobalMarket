@@ -31,6 +31,7 @@ import {
 import { inputBaseClass, selectClass } from "@/lib/ui";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { UserPicker, type UserResult } from "@/components/UserPicker";
+import { Drawer } from "@/components/Drawer";
 
 type OptionFilterSelection = { statCode: string; min: number | ""; max: number | "" };
 
@@ -390,15 +391,17 @@ export function MarketFilters() {
 
   const totalCount = sections.reduce((n, s) => n + s.count, 0);
 
-  // Secciones abiertas dentro del panel. Por defecto, las que ya traen filtro.
+  // Secciones abiertas dentro del panel. Por defecto todas abiertas (panel
+  // descolapsado); el usuario colapsa las que no le interesen.
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(sections.filter((s) => s.count > 0).map((s) => [s.id, true])),
+    Object.fromEntries(sections.map((s) => [s.id, true])),
   );
   function toggleSection(id: string) {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   }
-  // Panel colapsado a rail o abierto.
+  // Panel (desktop) colapsado a rail o abierto; bottom-sheet en móvil.
   const [collapsed, setCollapsed] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Al pulsar un icono del rail: abrir el panel y expandir esa sección.
   function openFromRail(id: string) {
@@ -406,19 +409,8 @@ export function MarketFilters() {
     setOpenSections((prev) => ({ ...prev, [id]: true }));
   }
 
-  if (collapsed) {
-    return (
-      <FilterRail
-        sections={sections}
-        onIcon={openFromRail}
-        onExpand={() => setCollapsed(false)}
-        expandLabel={t("filters.expand")}
-      />
-    );
-  }
-
-  return (
-    <div className="w-64 rounded-xl border border-ro-panel-border bg-ro-panel p-3 shadow-sm">
+  const panelBody = (
+    <div className="flex flex-col">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-bold text-ro-text">{t("filters.toggle")}</span>
         {totalCount > 0 && (
@@ -459,13 +451,49 @@ export function MarketFilters() {
           );
         })}
       </div>
-
-      <div className="mt-2 flex justify-end border-t border-ro-panel-border/60 pt-2">
-        <button type="button" onClick={() => setCollapsed(true)} title={t("filters.collapse")} aria-label={t("filters.collapse")} className="grid h-7 w-7 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel-alt hover:text-ro-text">
-          <ChevronsLeft size={16} />
-        </button>
-      </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop: fijo en el margen izquierdo. Panel embebido cuando el margen
+          da de sí (≳1560px) o flotando sobre los resultados en anchos medios;
+          rail al colapsar. Posiciones aproximadas — ajuste fino pendiente. */}
+      <aside
+        className={`fixed top-[9.5rem] z-30 hidden max-h-[calc(100dvh-11rem)] overflow-y-auto min-[1100px]:block ${
+          collapsed
+            ? "left-[calc(50vw-36.25rem)]"
+            : "left-[calc(50vw-32rem)] min-[1560px]:left-[calc(50vw-48.75rem)]"
+        }`}
+      >
+        {collapsed ? (
+          <FilterRail sections={sections} onIcon={openFromRail} onExpand={() => setCollapsed(false)} expandLabel={t("filters.expand")} />
+        ) : (
+          <div className="w-64 rounded-xl border border-ro-panel-border bg-ro-panel p-3 shadow-lg">
+            {panelBody}
+            <div className="mt-2 flex justify-end border-t border-ro-panel-border/60 pt-2">
+              <button type="button" onClick={() => setCollapsed(true)} title={t("filters.collapse")} aria-label={t("filters.collapse")} className="grid h-7 w-7 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel-alt hover:text-ro-text">
+                <ChevronsLeft size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* Móvil: botón "Filtros (N)" + bottom-sheet. */}
+      <div className="mb-3 min-[1100px]:hidden">
+        <button type="button" onClick={() => setSheetOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-3 py-1.5 text-xs font-medium text-ro-text">
+          <SlidersHorizontal size={14} className="text-ro-accent" aria-hidden />
+          {t("filters.toggle")}
+          {totalCount > 0 && (
+            <span className="grid h-4 min-w-[16px] place-items-center rounded-full bg-ro-accent px-1 text-[10px] font-bold text-ro-accent-contrast">{totalCount}</span>
+          )}
+        </button>
+        <Drawer side="bottom" open={sheetOpen} onClose={() => setSheetOpen(false)} title={t("filters.toggle")}>
+          {panelBody}
+        </Drawer>
+      </div>
+    </>
   );
 }
 

@@ -84,26 +84,21 @@ export async function MarketPageContent({
         <SegmentedTypeSelector />
       </div>
 
-      <div className="flex items-start gap-4">
-        {/* Filtros (Fase 4): sidebar sticky. El posicionado en el margen
-            izquierdo (según ancho) y el bottom-sheet en móvil llegan en los
-            siguientes pasos; de momento oculto en móvil. */}
-        <div className="sticky top-4 hidden shrink-0 md:block">
-          <MarketFilters />
-        </div>
-        <div className="min-w-0 flex-1">
-          {/* key en el propio Suspense: al cambiar cualquier filtro/orden,
-              React trata la sección como nueva y muestra el skeleton mientras
-              llega el resultado. */}
-          <Suspense key={JSON.stringify(filters)} fallback={<MarketResultsSkeleton />}>
-            <MarketListingsSection
-              filters={filters}
-              currentUserId={session.user.discordId}
-              isAdmin={session.user.isAdmin}
-            />
-          </Suspense>
-        </div>
-      </div>
+      {/* Los filtros se auto-posicionan (fijos en el margen izquierdo en
+          desktop; botón "Filtros" + bottom-sheet en móvil), así que los
+          resultados ocupan el ancho completo del contenedor. */}
+      <MarketFilters />
+
+      {/* key en el propio Suspense: al cambiar cualquier filtro/orden, React
+          trata la sección como nueva y muestra el skeleton mientras llega el
+          resultado. */}
+      <Suspense key={JSON.stringify(filters)} fallback={<MarketResultsSkeleton />}>
+        <MarketListingsSection
+          filters={filters}
+          currentUserId={session.user.discordId}
+          isAdmin={session.user.isAdmin}
+        />
+      </Suspense>
     </main>
   );
 }
