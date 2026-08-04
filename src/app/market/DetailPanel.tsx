@@ -10,7 +10,7 @@ import { useTranslations } from "next-intl";
 // @detail/DetailSlot.tsx), manteniendo el mercado montado detrás. El
 // acceso directo/enlace compartido (market/[id]/page.tsx) usa un layout de
 // página normal en vez de este panel.
-// A diferencia de Sidebar.tsx (menú hamburguesa), esto NO es un modal: sin
+// A diferencia de Drawer.tsx (menú de usuario/contacto), esto NO es un modal: sin
 // fondo oscurecido y sin cierre al hacer clic fuera. Se cierra con la X,
 // Escape, o (en móvil) deslizando el panel hacia abajo; `close()` usa
 // router.back() porque se llega aquí navegando (Link push, ver

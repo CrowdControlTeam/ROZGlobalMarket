@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { Wrench } from "lucide-react";
 import { auth } from "@/auth";
 import { loadMarketConfig } from "@/lib/market-config";
 import { Panel } from "@/components/Panel";
@@ -22,6 +23,9 @@ export default async function MaintenancePage() {
     <main className="mx-auto flex max-w-xl flex-col items-center px-6 py-16">
       <Panel title={t("title")} className="w-full text-center">
         <div className="flex flex-col items-center gap-4">
+          <span className="grid h-14 w-14 place-items-center rounded-full bg-ro-accent/10 text-ro-accent">
+            <Wrench size={28} aria-hidden />
+          </span>
           <p>{t("message")}</p>
           {isAdmin && (
             <>

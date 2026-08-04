@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Settings, LogOut, Package } from "lucide-react";
-import { Sidebar } from "./Sidebar";
+import { Drawer } from "./Drawer";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { buttonClass } from "@/lib/ui";
@@ -54,7 +54,7 @@ export function UserMenu({
         <span className="hidden text-sm sm:inline">{user.username}</span>
       </button>
 
-      <Sidebar side="right" open={open} onClose={() => setOpen(false)} title={t("title")}>
+      <Drawer side="right" mobileSheet open={open} onClose={() => setOpen(false)} title={t("title")}>
         <div className="flex flex-col items-center gap-3 text-center">
           {user.avatarUrl && (
             <Image
@@ -65,7 +65,7 @@ export function UserMenu({
               className="rounded-full border-2 border-ro-panel-border"
             />
           )}
-          <p className="font-heading text-xs">{user.username}</p>
+          <p className="text-sm font-semibold">{user.username}</p>
         </div>
 
         <dl className="mt-6 flex flex-col gap-3 text-sm">
@@ -125,7 +125,7 @@ export function UserMenu({
             <Link
               href="/admin"
               onClick={() => setOpen(false)}
-              className={`w-full ${buttonClass("discord")}`}
+              className={`w-full ${buttonClass("outline")}`}
             >
               <Settings size={16} />
               {t("settings")}
@@ -143,7 +143,7 @@ export function UserMenu({
         <p className="mt-6 border-t border-ro-panel-border/30 pt-3 text-center font-mono text-[0.65rem] text-ro-text-muted">
           {version}
         </p>
-      </Sidebar>
+      </Drawer>
     </>
   );
 }
