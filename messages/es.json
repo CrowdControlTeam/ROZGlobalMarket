@@ -287,8 +287,10 @@
     },
     "card": {
       "menu": "Opciones del anuncio",
+      "edit": "Editar",
       "viewDetail": "Ver detalle",
-      "copyLink": "Copiar enlace"
+      "share": "Compartir",
+      "contact": "Contactar"
     },
     "sort": {
       "label": "Orden",

@@ -26,6 +26,7 @@ export function UserMention({
   item,
   listingId,
   dmAvailable = false,
+  onContactClick,
 }: {
   userId: string;
   username: string;
@@ -37,6 +38,10 @@ export function UserMention({
   // menciones tienen una (p.ej. en Regalos no hay listing que enlazar).
   listingId?: string;
   dmAvailable?: boolean;
+  // Si el padre gestiona el panel de contacto (p.ej. la tarjeta lo comparte
+  // con la opción "Contactar" del kebab), el click del nombre lo delega en
+  // vez de abrir su propio ContactModal.
+  onContactClick?: () => void;
 }) {
   const t = useTranslations("common");
   const isSelf = userId === viewerId;
@@ -56,25 +61,28 @@ export function UserMention({
           // Y ADEMÁS navega a la página de detalle por el bubbling al <Link>.
           e.preventDefault();
           e.stopPropagation();
-          setOpen(true);
+          if (onContactClick) onContactClick();
+          else setOpen(true);
         }}
         className="underline decoration-dotted underline-offset-2 hover:text-ro-gold"
       >
         {label}
       </button>
-      <ContactModal
-        open={open}
-        onClose={() => setOpen(false)}
-        recipientId={userId}
-        recipientUsername={username}
-        item={item}
-        listingId={listingId}
-      />
+      {!onContactClick && (
+        <ContactModal
+          open={open}
+          onClose={() => setOpen(false)}
+          recipientId={userId}
+          recipientUsername={username}
+          item={item}
+          listingId={listingId}
+        />
+      )}
     </>
   );
 }
 
-function ContactModal({
+export function ContactModal({
   open,
   onClose,
   recipientId,

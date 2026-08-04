@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutGrid, Search, Eye, Copy } from "lucide-react";
+import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare } from "lucide-react";
 import { loadMoreListings } from "@/lib/market-actions";
 import type { MarketFilters } from "@/lib/market";
 import { buttonClass } from "@/lib/ui";
@@ -13,8 +13,8 @@ import { formatPrice, priceColorClass } from "@/lib/price";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { listingTypeLabel, LISTING_TYPE_BADGE_CLASS, formatOptionAmount } from "@/lib/market-labels";
 import { getErrorMessage } from "@/lib/errors";
-import { UserMention } from "@/components/UserMention";
-import { KebabMenu } from "@/components/KebabMenu";
+import { UserMention, ContactModal } from "@/components/UserMention";
+import { KebabMenu, type KebabItem } from "@/components/KebabMenu";
 import { SortSelect } from "./SortSelect";
 import { useListingPatches, clearListingPatches } from "./listingStore";
 import type { ListingCardPatch } from "@/lib/listing-card";
@@ -89,6 +89,12 @@ function ListingCard({
 }) {
   const t = useTranslations("market");
   const router = useRouter();
+  const [contactOpen, setContactOpen] = useState(false);
+  // Editar: solo el dueño y sin ofertas pendientes (reserved = Σ PENDING). De
+  // momento no hace nada (placeholder para la edición futura).
+  const canEdit = listing.poster.id === currentUserId && listing.reserved === 0;
+  // Contactar: al vendedor (no a uno mismo) y con el bot de DMs disponible.
+  const canContact = dmAvailable && listing.poster.id !== currentUserId && !!listing.item;
 
   const badge = showBadge ? (
     <span
@@ -141,7 +147,7 @@ function ListingCard({
     <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ro-text-muted">
       {badge}
       <span>
-        · <UserMention userId={listing.poster.id} username={listing.poster.username} viewerId={currentUserId} capitalize item={listing.item} listingId={listing.id} dmAvailable={dmAvailable} />
+        · <UserMention userId={listing.poster.id} username={listing.poster.username} viewerId={currentUserId} capitalize item={listing.item} listingId={listing.id} dmAvailable={dmAvailable} onContactClick={canContact ? () => setContactOpen(true) : undefined} />
       </span>
     </p>
   );
@@ -159,21 +165,53 @@ function ListingCard({
       </div>
     ) : null;
 
+  const kebabItems: KebabItem[] = [
+    ...(canEdit
+      ? [{ label: t("card.edit"), icon: <Pencil size={14} aria-hidden />, onSelect: () => {} }]
+      : []),
+    { label: t("card.viewDetail"), icon: <Eye size={14} aria-hidden />, onSelect: () => router.push(href) },
+    {
+      label: t("card.share"),
+      icon: <Share2 size={14} aria-hidden />,
+      onSelect: () => {
+        const url = `${window.location.origin}/market/${listing.id}`;
+        if (typeof navigator !== "undefined" && navigator.share) {
+          navigator.share({ url }).catch(() => {});
+        } else {
+          navigator.clipboard?.writeText(url);
+        }
+      },
+    },
+    ...(canContact
+      ? [
+          {
+            label: t("card.contact"),
+            icon: <MessageSquare size={14} aria-hidden />,
+            onSelect: () => setContactOpen(true),
+          },
+        ]
+      : []),
+  ];
+
   const kebab = (
     <div className="absolute right-1.5 top-1.5">
-      <KebabMenu
-        label={t("card.menu")}
-        items={[
-          { label: t("card.viewDetail"), icon: <Eye size={14} aria-hidden />, onSelect: () => router.push(href) },
-          {
-            label: t("card.copyLink"),
-            icon: <Copy size={14} aria-hidden />,
-            onSelect: () => navigator.clipboard?.writeText(`${window.location.origin}/market/${listing.id}`),
-          },
-        ]}
-      />
+      <KebabMenu label={t("card.menu")} items={kebabItems} />
     </div>
   );
+
+  // Panel de contacto compartido por el kebab ("Contactar") y el click en el
+  // nombre del vendedor. Portalea a document.body, así que da igual desde qué
+  // rama se renderice.
+  const contactModal = canContact ? (
+    <ContactModal
+      open={contactOpen}
+      onClose={() => setContactOpen(false)}
+      recipientId={listing.poster.id}
+      recipientUsername={listing.poster.username}
+      item={listing.item}
+      listingId={listing.id}
+    />
+  ) : null;
 
   if (variant === "row") {
     return (
@@ -195,6 +233,7 @@ function ListingCard({
           </div>
         </Link>
         {kebab}
+        {contactModal}
       </div>
     );
   }
@@ -222,6 +261,7 @@ function ListingCard({
         </div>
       </Link>
       {kebab}
+      {contactModal}
     </div>
   );
 }
