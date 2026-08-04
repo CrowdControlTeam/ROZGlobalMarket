@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Search, Plus, X } from "lucide-react";
 import { useMarketSearch, type MarketTab } from "./marketSearchStore";
+import { countFilters } from "./marketFilterKeys";
 
 // Barra de pestañas de "Mis búsquedas" de la sesión. La lógica de estado vive
 // en el store (marketSearchStore): aquí solo se pinta y se delega en sus
@@ -41,17 +42,23 @@ export function SearchTabs() {
 
       {tabs.map((tab) => {
         const active = tab.id === activeId;
+        const count = countFilters(tab.filters ?? {});
         return (
           <div
             key={tab.id}
             className={`-mb-0.5 flex items-center gap-1 rounded-t-lg border border-b-2 px-2.5 py-1.5 text-xs ${
               active
-                ? "border-ro-accent border-b-ro-panel bg-ro-panel font-medium text-ro-text"
-                : "border-ro-panel-border border-b-transparent bg-ro-panel-alt text-ro-text-muted hover:text-ro-text"
+                ? // La activa "corta" la línea: su borde inferior es del color del
+                  // panel y conecta con el contenido.
+                  "border-ro-accent border-b-ro-panel bg-ro-panel font-medium text-ro-text"
+                : // Las inactivas continúan la línea: su borde inferior es acento
+                  // (antes transparente, que la cortaba).
+                  "border-ro-panel-border border-b-ro-accent bg-ro-panel-alt text-ro-text-muted hover:text-ro-text"
             }`}
           >
-            <button type="button" onClick={() => switchTab(tab.id)} className="max-w-[12rem] truncate">
-              {labelOf(tab)}
+            <button type="button" onClick={() => switchTab(tab.id)} className="flex min-w-0 items-center gap-1">
+              <span className="max-w-[12rem] truncate">{labelOf(tab)}</span>
+              {count > 0 && <span className="shrink-0 text-ro-text-muted">({count})</span>}
             </button>
             <button
               type="button"
