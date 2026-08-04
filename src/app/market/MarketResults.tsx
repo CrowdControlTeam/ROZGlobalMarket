@@ -214,7 +214,9 @@ function ListingCard({
           </div>
         </div>
         {optionChips}
-        <div className="mt-2 flex items-end justify-between gap-2 pt-1">
+        {/* mt-auto ancla el precio abajo: con auto-rows-fr todas las tarjetas
+            de la fila igualan altura y el precio queda alineado. */}
+        <div className="mt-auto flex items-end justify-between gap-2 pt-2">
           <span className="text-xs text-ro-text-muted">{countLabel}</span>
           <span className="text-sm">{priceLine}</span>
         </div>
@@ -381,7 +383,7 @@ export function MarketResults({
       {displayed.length === 0 ? (
         <p className="text-ro-text-light/70">{t("results.empty")}</p>
       ) : view === "grid" ? (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <ul className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2">
           {displayed.map((listing) => (
             <li key={listing.id}>
               <ListingCard {...cardProps(listing)} variant="tile" />
