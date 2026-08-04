@@ -25,7 +25,7 @@ export function SiteHeaderFallback() {
   return (
     <header className="border-b border-ro-gold/25 bg-ro-navy text-ro-on-navy">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-        <span className="font-heading text-[0.65rem] leading-none tracking-wide text-ro-on-navy sm:text-xs">
+        <span className="font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy">
           {DEFAULT_SITE_NAME}
         </span>
         <div className="flex items-center gap-3" />
@@ -67,7 +67,7 @@ export async function SiteHeader({
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
         <Link
           href="/"
-          className="font-heading text-[0.65rem] leading-none tracking-wide text-ro-on-navy sm:text-xs"
+          className="font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy"
         >
           {siteName}
         </Link>

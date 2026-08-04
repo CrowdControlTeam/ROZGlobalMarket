@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
-import { Geist, Geist_Mono, Poppins, Press_Start_2P } from "next/font/google";
+import { Geist, Geist_Mono, Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
@@ -34,10 +35,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const pressStart2P = Press_Start_2P({
+// Fuente de título/logo (--font-heading): Pixeloid Sans (la que usa la web
+// oficial de ROZ), auto-alojada. Licencia SIL Open Font License 1.1 — ver
+// src/app/fonts/License.txt (debe acompañar a la fuente). Sustituye a la
+// antigua Press Start 2P. El logo usa la variante bold (weight 700).
+const pixeloid = localFont({
   variable: "--font-heading",
-  weight: "400",
-  subsets: ["latin"],
+  src: [
+    { path: "./fonts/PixeloidSans.ttf", weight: "400", style: "normal" },
+    { path: "./fonts/PixeloidSans-Bold.ttf", weight: "700", style: "normal" },
+  ],
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -65,7 +72,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       data-theme={theme}
-      className={`${bodyFont.variable} ${geistMono.variable} ${pressStart2P.variable} h-full antialiased`}
+      className={`${bodyFont.variable} ${geistMono.variable} ${pixeloid.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider>
