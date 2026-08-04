@@ -221,8 +221,8 @@ export function MarketFilters() {
       },
       content: (
         <MinMaxRow>
-          <MaskedPriceInput value={minPrice} onChange={setMinPrice} className={`w-full ${inputBaseClass}`} />
-          <MaskedPriceInput value={maxPrice} onChange={setMaxPrice} className={`w-full ${inputBaseClass}`} />
+          <MaskedPriceInput value={minPrice} onChange={setMinPrice} placeholder={t("filters.min")} className={`w-full ${inputBaseClass}`} />
+          <MaskedPriceInput value={maxPrice} onChange={setMaxPrice} placeholder={t("filters.max")} className={`w-full ${inputBaseClass}`} />
         </MinMaxRow>
       ),
     },
@@ -300,9 +300,9 @@ export function MarketFilters() {
       },
       content: (
         <MinMaxRow>
-          <input type="number" min={0} max={maxRefineLevel} value={refineMin} disabled={!refineFilterEnabled}
+          <input type="number" min={0} max={maxRefineLevel} value={refineMin} disabled={!refineFilterEnabled} placeholder={t("filters.min")}
             onChange={(e) => setRefineMin(e.target.value === "" ? "" : Number(e.target.value))} className={`w-full ${inputBaseClass}`} />
-          <input type="number" min={0} max={maxRefineLevel} value={refineMax} disabled={!refineFilterEnabled}
+          <input type="number" min={0} max={maxRefineLevel} value={refineMax} disabled={!refineFilterEnabled} placeholder={t("filters.max")}
             onChange={(e) => setRefineMax(e.target.value === "" ? "" : Number(e.target.value))} className={`w-full ${inputBaseClass}`} />
         </MinMaxRow>
       ),
@@ -318,9 +318,9 @@ export function MarketFilters() {
       },
       content: (
         <MinMaxRow>
-          <input type="number" min={0} max={cardSlotsFilterMax} value={cardSlotsMin} disabled={!cardSlotsFilterEnabled}
+          <input type="number" min={0} max={cardSlotsFilterMax} value={cardSlotsMin} disabled={!cardSlotsFilterEnabled} placeholder={t("filters.min")}
             onChange={(e) => setCardSlotsMin(e.target.value === "" ? "" : Number(e.target.value))} className={`w-full ${inputBaseClass}`} />
-          <input type="number" min={0} max={cardSlotsFilterMax} value={cardSlotsMax} disabled={!cardSlotsFilterEnabled}
+          <input type="number" min={0} max={cardSlotsFilterMax} value={cardSlotsMax} disabled={!cardSlotsFilterEnabled} placeholder={t("filters.max")}
             onChange={(e) => setCardSlotsMax(e.target.value === "" ? "" : Number(e.target.value))} className={`w-full ${inputBaseClass}`} />
         </MinMaxRow>
       ),
