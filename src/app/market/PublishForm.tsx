@@ -198,12 +198,13 @@ export function PublishForm({
         })}
       </div>
 
-      {/* Pestañas Info / Opciones (Opciones solo si el ítem las admite). */}
-      <div className="flex gap-1 border-b border-ro-panel-border">
-        <TabButton active={tab === "info"} onClick={() => setTab("info")}>
-          {t("tabs.info")}
-        </TabButton>
-        {hasOptionCatalog && (
+      {/* Pestañas SOLO si el ítem admite opciones (con un único "Info" no aporta
+          nada). Sin opciones, los campos de Info van directos, sin barra. */}
+      {hasOptionCatalog && (
+        <div className="flex gap-1 border-b border-ro-panel-border">
+          <TabButton active={tab === "info"} onClick={() => setTab("info")}>
+            {t("tabs.info")}
+          </TabButton>
           <TabButton active={tab === "options"} onClick={() => setTab("options")}>
             {type === "BUY" ? tField("minStats") : tField("options")}
             {optionsCount > 0 && (
@@ -212,8 +213,8 @@ export function PublishForm({
               </span>
             )}
           </TabButton>
-        )}
-      </div>
+        </div>
+      )}
 
       {tab === "info" || !hasOptionCatalog ? (
         <div className="flex flex-col gap-3">
@@ -395,8 +396,11 @@ export function PublishForm({
       className="flex flex-col"
     >
       {recognitionEnabled ? (
-        // 2 columnas iguales (escáner · O · formulario); apiladas en móvil.
-        <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-[1fr_auto_1fr] sm:gap-0">
+        // 2 columnas iguales (escáner · O · formulario), apiladas en móvil. Alto
+        // fijo en desktop para que el modal no cambie de tamaño al aparecer/
+        // desaparecer campos; el formulario hace scroll interno si algún caso se
+        // pasa, y el cuadro de escaneo rellena ese alto.
+        <div className="grid grid-cols-1 gap-3 p-3 sm:h-[22rem] sm:grid-cols-[1fr_auto_1fr] sm:gap-0">
           <div className="flex min-w-0 flex-col sm:p-2">
             <ScreenshotDropzone onScan={handleScreenshotScan} isScanning={isRecognizing} />
             {recognitionNote && <p className="mt-2 text-xs text-ro-text-muted">{recognitionNote}</p>}
@@ -407,7 +411,7 @@ export function PublishForm({
             <span className="shrink-0 text-[11px] font-bold text-ro-text-muted">{t("or")}</span>
             <span className="h-px flex-1 bg-ro-panel-border sm:h-auto sm:w-px" />
           </div>
-          <div className="min-w-0 sm:p-2">{formColumn}</div>
+          <div className="min-w-0 sm:overflow-y-auto sm:p-2">{formColumn}</div>
         </div>
       ) : (
         <div className="p-4">{formColumn}</div>
