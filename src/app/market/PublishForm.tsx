@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Tag, ShoppingCart, ArrowLeftRight, Gift } from "lucide-react";
+import { Tag, ShoppingCart, ArrowLeftRight, Gift, Gavel, Infinity as InfinityIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ItemOptionDef } from "@prisma/client";
 import { createListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
@@ -224,14 +224,25 @@ export function PublishForm({
                 label={type === "BUY" ? t("payUpToLabel") : t("priceLabel")}
                 className={priceMissing ? "border-red-600" : undefined}
               >
+                <div className="flex items-center gap-1">
+                  <div className="min-w-0 flex-1">
+                    {noPrice ? (
+                      <span className="text-sm text-ro-text-muted">
+                        {type === "BUY" ? tField("bestPrice") : tField("bestOffer")}
+                      </span>
+                    ) : (
+                      <MaskedPriceInput value={price} onChange={setPrice} placeholder="0" className={floatingControlClass} />
+                    )}
+                  </div>
+                  <AffixToggle active={noPrice} onToggle={() => setNoPrice(!noPrice)} label={t("noPriceLabel")}>
+                    <Gavel size={12} />
+                  </AffixToggle>
+                </div>
                 {noPrice ? (
-                  <span className="text-sm text-ro-text-muted">
-                    {type === "BUY" ? tField("bestPrice") : tField("bestOffer")}
-                  </span>
+                  <input type="hidden" name="noPrice" value="on" />
                 ) : (
-                  <MaskedPriceInput value={price} onChange={setPrice} placeholder="0" className={floatingControlClass} />
+                  <input type="hidden" name="price" value={price === "" ? "" : String(price)} />
                 )}
-                <input type="hidden" name="price" value={price === "" ? "" : String(price)} />
               </FloatingField>
             )}
 
@@ -242,15 +253,21 @@ export function PublishForm({
                   <input type="hidden" name="quantity" value={1} />
                 </>
               ) : (
-                <input
-                  type="number"
-                  name="quantity"
-                  min={1}
-                  defaultValue={1}
-                  required={!unlimited}
-                  disabled={canBeUnlimited && unlimited}
-                  className={floatingControlClass}
-                />
+                <div className="flex items-center gap-1">
+                  <div className="min-w-0 flex-1">
+                    {unlimited ? (
+                      <span className="text-sm text-ro-text-muted">{t("unlimitedLabel")}</span>
+                    ) : (
+                      <input type="number" name="quantity" min={1} defaultValue={1} required className={floatingControlClass} />
+                    )}
+                  </div>
+                  {canBeUnlimited && (
+                    <AffixToggle active={unlimited} onToggle={() => setUnlimited(!unlimited)} label={t("unlimitedLabel")}>
+                      <InfinityIcon size={13} />
+                    </AffixToggle>
+                  )}
+                  {unlimited && <input type="hidden" name="unlimited" value="on" />}
+                </div>
               )}
             </FloatingField>
 
@@ -282,24 +299,6 @@ export function PublishForm({
               </FloatingField>
             )}
           </div>
-
-          {/* Toggles contextuales. */}
-          {(canBeUnlimited || showPrice) && (
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {canBeUnlimited && (
-                <label className="flex items-center gap-2 text-xs text-ro-text-muted">
-                  <input type="checkbox" name="unlimited" checked={unlimited} onChange={(e) => setUnlimited(e.target.checked)} />
-                  {t("unlimitedLabel")}
-                </label>
-              )}
-              {showPrice && (
-                <label className="flex items-center gap-2 text-xs text-ro-text-muted">
-                  <input type="checkbox" name="noPrice" checked={noPrice} onChange={(e) => setNoPrice(e.target.checked)} />
-                  {t("noPriceLabel")}
-                </label>
-              )}
-            </div>
-          )}
 
           {/* Destinatario (regalo). */}
           {type === "GIFT" && (
@@ -433,6 +432,39 @@ export function PublishForm({
         </button>
       </div>
     </form>
+  );
+}
+
+// Toggle "affix" en el borde derecho de un campo: absorbe el antiguo checkbox
+// (ilimitados / sin precio) dentro del propio campo. preventDefault evita que el
+// clic active la etiqueta contenedora (FloatingField es un <label>).
+function AffixToggle({
+  active,
+  onToggle,
+  label,
+  children,
+}: {
+  active: boolean;
+  onToggle: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      aria-label={label}
+      title={label}
+      onClick={(e) => {
+        e.preventDefault();
+        onToggle();
+      }}
+      className={`grid h-5 w-5 shrink-0 place-items-center rounded transition-colors ${
+        active ? "bg-ro-accent text-ro-accent-contrast" : "text-ro-text-muted hover:bg-ro-panel-border/60 hover:text-ro-text"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
