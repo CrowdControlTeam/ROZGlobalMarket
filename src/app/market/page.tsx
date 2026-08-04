@@ -5,5 +5,5 @@ export default async function MarketPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  return <MarketPageContent screenType={null} searchParams={searchParams} />;
+  return <MarketPageContent searchParams={searchParams} />;
 }

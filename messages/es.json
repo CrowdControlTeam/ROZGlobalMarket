@@ -276,6 +276,10 @@
       "max": "Máx",
       "value": "Valor"
     },
+    "typeSelector": {
+      "label": "Tipo de anuncio",
+      "all": "Todo"
+    },
     "sort": {
       "label": "Orden",
       "newest": "Más recientes",

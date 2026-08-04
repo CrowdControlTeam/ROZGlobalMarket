@@ -171,7 +171,7 @@ export async function sendGift(formData: FormData) {
     const itemName = formatItemDisplayName(item.name, refineLevel, cardSlots);
     await sendDirectMessage(recipientId, {
       title: tDiscord("dm.gifted", { username: session.user.username, item: itemName }),
-      url: `${appUrl}/market/gifts`,
+      url: `${appUrl}/my/gifts`,
       color: DISCORD_EMBED_COLOR.GIFT,
       itemIconUrl: `${appUrl}${item.iconUrl}`,
       fields: [
@@ -192,7 +192,7 @@ export async function sendGift(formData: FormData) {
     });
   }
 
-  revalidatePath("/market/gifts");
+  revalidatePath("/my/gifts");
   revalidatePath("/market");
   return { id: listing.id };
 }

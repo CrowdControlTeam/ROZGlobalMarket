@@ -63,17 +63,18 @@ export function sortLabel(t: T, sort: MarketSort): string {
   return t(`sort.${sort}`);
 }
 
-// Badge de tipo en las cards/detalle. Mismos colores que
-// DISCORD_EMBED_COLOR (ver discord-colors.ts) traducidos a Tailwind. Solo
-// tiene sentido en la vista general "Mercado" (mezcla los 3 tipos) — en
-// una vista ya filtrada por tipo (Ventas/Compras/Intercambios) el badge es
-// redundante, así que el caller lo omite ahí (ver MarketResults.tsx). Solo
-// estilo, no texto — el label viene de listingTypeLabel.
+// Badge de tipo en las cards/detalle. Usa los tokens de color por tipo del
+// rediseño (--ro-type-*, ver globals.css): Venta ámbar, Compra verde,
+// Intercambio azul, Regalo rojo — los mismos colores que el
+// SegmentedTypeSelector, para que badge y selector sean consistentes. Solo
+// tiene sentido en la vista general "Todo" (mezcla los tipos); en una vista ya
+// filtrada por tipo el badge es redundante y el caller lo omite (ver
+// MarketResults.tsx). Solo estilo, no texto — el label viene de listingTypeLabel.
 export const LISTING_TYPE_BADGE_CLASS: Record<ListingType, string> = {
-  SALE: "border-ro-gold-dark/50 bg-ro-gold/10 text-ro-gold-dark",
-  TRADE: "border-blue-500/50 bg-blue-500/10 text-blue-600",
-  BUY: "border-green-600/50 bg-green-600/10 text-green-700",
-  GIFT: "border-rose-500/50 bg-rose-500/10 text-rose-600",
+  SALE: "border-ro-type-sale/50 bg-ro-type-sale/10 text-ro-type-sale",
+  TRADE: "border-ro-type-trade/50 bg-ro-type-trade/10 text-ro-type-trade",
+  BUY: "border-ro-type-buy/50 bg-ro-type-buy/10 text-ro-type-buy",
+  GIFT: "border-ro-type-gift/50 bg-ro-type-gift/10 text-ro-type-gift",
 };
 
 // SALE/TRADE/GIFT muestran el roll exacto de una instancia real ("+20");

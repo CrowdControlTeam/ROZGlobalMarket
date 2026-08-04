@@ -6,21 +6,18 @@ import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { buttonClass } from "@/lib/ui";
 
-// El tipo preseleccionado depende de la pantalla activa (norma del punto
-// 2 del refactor): desde Comprar/Comerciar se preselecciona ese tipo,
-// desde Regalos el Regalo, en cualquier otro sitio (incluida Mercado sin
-// filtrar o Vender) el formulario arranca en Venta por defecto.
+// El tipo preseleccionado depende del filtro de tipo activo en el mercado
+// unificado: con ?type=BUY/TRADE/GIFT se preselecciona ese tipo; en cualquier
+// otro caso (mercado sin tipo, o ?type=SALE) el formulario arranca en Venta.
 export function CreatePublicationButton() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations("nav");
 
   let href = "/market/new";
-  if (pathname === "/market/gifts") {
-    href = "/market/new?type=GIFT";
-  } else if (pathname === "/market") {
+  if (pathname === "/market") {
     const type = searchParams.get("type");
-    if (type === "BUY" || type === "TRADE") {
+    if (type === "BUY" || type === "TRADE" || type === "GIFT") {
       href = `/market/new?type=${type}`;
     }
   }

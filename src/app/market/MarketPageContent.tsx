@@ -4,8 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@prisma/client";
 import { isMarketSort, type MarketFilters as MarketFiltersType } from "@/lib/market";
 import { requireSession } from "@/lib/guard";
-import { marketViewTitle } from "@/lib/market-labels";
 import { MarketFilters } from "./MarketFilters";
+import { SegmentedTypeSelector } from "./SegmentedTypeSelector";
 import { MarketListingsSection } from "./MarketListingsSection";
 import { MarketResultsSkeleton } from "./MarketResultsSkeleton";
 import { SortSelect } from "./SortSelect";
@@ -15,8 +15,8 @@ const searchParamsSchema = z.object({
   category: z.enum(ItemCategory).optional(),
   slot: z.enum(EquipSlot).optional(),
   weaponType: z.enum(WeaponType).optional(),
-  // Solo se lee de la query string en /market (screenType null) — en las
-  // pantallas fijas el tipo lo da la ruta, no la URL (ver más abajo).
+  // El tipo (Venta/Compra/Interc./Regalo) es un filtro más, fijado desde la
+  // query string por el SegmentedTypeSelector — ya no hay rutas por tipo.
   type: z.enum(ListingType).optional(),
   posterId: z.string().trim().min(1).optional(),
   option1Stat: z.string().trim().min(1).optional(),
@@ -40,17 +40,12 @@ const searchParamsSchema = z.object({
     .transform((v) => (v && isMarketSort(v) ? v : "newest")),
 });
 
-// screenType viene de la ruta (null = /market, o el segmento /market/sale,
-// /market/buy, /market/trade), nunca de la query string — así la
-// identidad de "en qué pantalla estoy" no puede mezclarse con los filtros
-// normales (ver resetFilters en MarketFilters.tsx: ya no necesita tratar
-// "type" como caso especial, porque en las pantallas fijas ni siquiera
-// existe como filtro).
+// Mercado unificado: una sola pantalla para todos los tipos. El tipo se lee de
+// `?type=` (lo fija el SegmentedTypeSelector), no de la ruta — antes había
+// /market/sale|buy|trade y /market/gifts, ahora fusionados aquí.
 export async function MarketPageContent({
-  screenType,
   searchParams,
 }: {
-  screenType: ListingType | null;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await requireSession();
@@ -80,22 +75,21 @@ export async function MarketPageContent({
     sort: firstValue(raw.sort),
   });
 
-  const filters: MarketFiltersType = parsed.success
-    ? parsed.data
-    : { sort: "newest" };
-  if (screenType) filters.type = screenType;
+  const filters: MarketFiltersType = parsed.success ? parsed.data : { sort: "newest" };
 
   const t = await getTranslations("market");
-  const pageTitle = screenType ? marketViewTitle(t, screenType) : t("title");
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <h1 className="mb-6 font-heading text-lg text-ro-text">{pageTitle}</h1>
+      <div className="mb-6 flex flex-col gap-4">
+        <h1 className="text-xl font-semibold text-ro-text">{t("title")}</h1>
+        <SegmentedTypeSelector />
+      </div>
 
       {/* Nada de lo de aquí arriba toca la base de datos (MarketFilters es
           "use client" y busca sus propios datos aparte) — solo el grid de
           resultados, más abajo, se envuelve en Suspense. */}
-      <MarketFilters screenType={screenType} />
+      <MarketFilters />
 
       <SortSelect />
       {/* key en el propio Suspense (no solo en MarketResults más abajo):

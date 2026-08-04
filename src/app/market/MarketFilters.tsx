@@ -4,8 +4,8 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { ItemCategory, EquipSlot, WeaponType, ListingType, type ItemOptionDef } from "@prisma/client";
-import { categoryLabel, slotLabel, weaponTypeLabel, listingTypeLabel } from "@/lib/market-labels";
+import { ItemCategory, EquipSlot, WeaponType, type ItemOptionDef } from "@prisma/client";
+import { categoryLabel, slotLabel, weaponTypeLabel } from "@/lib/market-labels";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { getMaxCardSlots, MAX_WEAPON_CARD_SLOTS } from "@/lib/card-slots-constants";
@@ -47,7 +47,7 @@ function dedupeByStat(defs: ItemOptionDef[]): StatOption[] {
   return Array.from(byCode.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
-export function MarketFilters({ screenType }: { screenType: ListingType | null }) {
+export function MarketFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -55,12 +55,10 @@ export function MarketFilters({ screenType }: { screenType: ListingType | null }
   const tCommon = useTranslations("common");
 
   const [q, setQ] = useState(searchParams.get("q") ?? "");
-  // En una pantalla fija (Ventas/Compras/Intercambios, ruta /market/sale|
-  // buy|trade) "type" viene de la ruta, no de la query string, y nunca
-  // cambia — el selector se oculta y no participa en Reset. Fuera de ahí
-  // (Mercado general) es un filtro normal como cualquier otro.
-  const [type, setType] = useState(screenType ?? searchParams.get("type") ?? "");
-  const typeLocked = screenType !== null;
+  // El tipo (Venta/Compra/Interc./Regalo) lo fija el SegmentedTypeSelector de
+  // la cabecera (query ?type=), no este panel — aquí solo se lee para adaptar
+  // la semántica de las options en BUY (ver isBuyFilter). No participa en Reset.
+  const type = searchParams.get("type") ?? "";
   // El id resuelto es lo que de verdad filtra (ver posterId en market.ts);
   // el nombre solo se guarda en la URL para poder repintar el campo ya
   // seleccionado tras recargar, sin tener que volver a buscar.
@@ -125,7 +123,6 @@ export function MarketFilters({ screenType }: { screenType: ListingType | null }
     () =>
       !!q ||
       !!poster ||
-      (!typeLocked && !!type) ||
       !!category ||
       !!slot ||
       !!weaponType ||
@@ -226,12 +223,8 @@ export function MarketFilters({ screenType }: { screenType: ListingType | null }
     e.preventDefault();
     const params = new URLSearchParams(searchParams.toString());
     setOrDelete(params, "q", q.trim());
-    // En pantalla fija, "type" ya lo da la ruta — no se duplica en la query.
-    if (typeLocked) {
-      params.delete("type");
-    } else {
-      setOrDelete(params, "type", type);
-    }
+    // El tipo lo gestiona el SegmentedTypeSelector; se conserva tal cual esté
+    // en la URL (este panel no lo toca).
     setOrDelete(params, "posterId", poster?.id ?? "");
     setOrDelete(params, "posterName", poster?.username ?? "");
     setOrDelete(params, "category", category);
@@ -275,12 +268,10 @@ export function MarketFilters({ screenType }: { screenType: ListingType | null }
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  // En pantalla fija, "type" es parte de la ruta (no un filtro), así que
-  // Reset ni lo toca ni hace falta que lo trate como caso especial: fuera
-  // de ahí (Mercado general) se limpia igual que cualquier otro filtro.
+  // "type" lo gestiona el SegmentedTypeSelector (cabecera), no este panel, así
+  // que Reset limpia el resto de filtros pero conserva el tipo seleccionado.
   function resetFilters() {
     setQ("");
-    if (!typeLocked) setType("");
     setPoster(null);
     setCategory("");
     setSlot("");
@@ -295,7 +286,6 @@ export function MarketFilters({ screenType }: { screenType: ListingType | null }
     const params = new URLSearchParams(searchParams.toString());
     const keys = [
       "q",
-      "type",
       "posterId",
       "posterName",
       "category",
@@ -350,20 +340,6 @@ export function MarketFilters({ screenType }: { screenType: ListingType | null }
                 onClear={() => setPoster(null)}
               />
             </div>
-
-            {!typeLocked && (
-              <div>
-                <label className={labelClass}>{t("filters.type")}</label>
-                <select value={type} onChange={(e) => setType(e.target.value)} className={selectClass}>
-                  <option value="">{t("filters.all")}</option>
-                  {Object.values(ListingType).map((type) => (
-                    <option key={type} value={type}>
-                      {listingTypeLabel(t, type)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             <div>
               <label className={labelClass}>{t("filters.category")}</label>

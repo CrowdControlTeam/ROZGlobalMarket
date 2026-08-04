@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/Skeleton";
 
 // Imita la fila real de GiftsHistory (icono de dirección + icono de item +
-// texto), usado en /market/gifts y /my/gifts.
+// texto), usado en /my/gifts.
 export function GiftsHistorySkeleton() {
   return (
     <ul className="flex flex-col gap-3">

@@ -276,6 +276,10 @@
       "max": "Max",
       "value": "Value"
     },
+    "typeSelector": {
+      "label": "Listing type",
+      "all": "All"
+    },
     "sort": {
       "label": "Sort",
       "newest": "Newest",
