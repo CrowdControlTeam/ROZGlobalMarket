@@ -64,7 +64,6 @@ export function PublishForm({
   const [isRecognizing, startRecognizeTransition] = useTransition();
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [recognitionNote, setRecognitionNote] = useState<string | null>(null);
-  const [tab, setTab] = useState<"info" | "options">("info");
   const t = useTranslations("market.form");
   const tField = useTranslations("market.field");
   const tFilters = useTranslations("market.filters");
@@ -173,10 +172,7 @@ export function PublishForm({
         const priceRequired = showPrice && !noPrice;
         const priceEmpty = priceRequired && !new FormData(e.currentTarget).get("price");
         setPriceMissing(priceEmpty);
-        if (priceEmpty) {
-          setTab("info");
-          e.preventDefault();
-        }
+        if (priceEmpty) e.preventDefault();
       }}
       action={(formData) => {
         if (submittingRef.current) return;
@@ -245,25 +241,8 @@ export function PublishForm({
             })}
           </div>
 
-          {/* Pestañas Info / Opciones. */}
-          <div className="flex gap-4 border-b border-ro-panel-border">
-            <TabButton active={tab === "info"} onClick={() => setTab("info")}>
-              {t("tabs.info")}
-            </TabButton>
-            {hasOptionCatalog && (
-              <TabButton active={tab === "options"} onClick={() => setTab("options")}>
-                {type === "BUY" ? tField("minStats") : tField("options")}
-                {optionsCount > 0 && (
-                  <span className="ml-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-ro-accent px-1 text-[10px] font-bold text-ro-accent-contrast">
-                    {optionsCount}
-                  </span>
-                )}
-              </TabButton>
-            )}
-          </div>
-
-          {tab === "info" ? (
-            <div className="flex flex-col gap-3">
+          {/* Info (siempre visible; sin pestañas). */}
+          <div className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-3">
                 {showPrice && (
                   <FloatingField
@@ -354,9 +333,18 @@ export function PublishForm({
                 </div>
               )}
             </div>
-          ) : (
-            /* Pestaña Opciones: 3 filas fijas (desplegable + valor). */
+
+          {/* Opciones (si el ítem las admite): apiladas bajo Info, sin pestañas. */}
+          {hasOptionCatalog && (
             <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-ro-text-muted">
+                {type === "BUY" ? tField("minStats") : tField("options")}
+                {optionsCount > 0 && (
+                  <span className="grid h-4 min-w-4 place-items-center rounded-full bg-ro-accent px-1 text-[10px] font-bold text-ro-accent-contrast">
+                    {optionsCount}
+                  </span>
+                )}
+              </div>
               {Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
                 const index = slotIndex - 1;
                 const selectEnabled = index === 0 || optionSelections[index - 1].defId !== "";
@@ -420,16 +408,3 @@ export function PublishForm({
   );
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`-mb-px flex items-center border-b-2 pb-2 text-sm font-medium transition-colors ${
-        active ? "border-ro-accent text-ro-text" : "border-transparent text-ro-text-muted hover:text-ro-text"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
