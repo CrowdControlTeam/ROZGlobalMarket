@@ -285,6 +285,13 @@
       "label": "Listing type",
       "all": "All"
     },
+    "searchTabs": {
+      "indicator": "This session's searches",
+      "save": "Save current search",
+      "close": "Close search",
+      "untitled": "Search {n}",
+      "all": "All"
+    },
     "view": {
       "label": "View",
       "grid": "Grid",

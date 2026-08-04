@@ -5,6 +5,7 @@ import { isMarketSort, type MarketFilters as MarketFiltersType } from "@/lib/mar
 import { requireSession } from "@/lib/guard";
 import { MarketNav } from "./MarketNav";
 import { MarketFilters } from "./MarketFilters";
+import { SearchTabs } from "./SearchTabs";
 import { SegmentedTypeSelector } from "./SegmentedTypeSelector";
 import { MarketListingsSection } from "./MarketListingsSection";
 import { MarketResultsSkeleton } from "./MarketResultsSkeleton";
@@ -83,8 +84,13 @@ export async function MarketPageContent({
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
-      {/* Barra de nav superior (sustituye al título) + selector de tipo. */}
+      {/* Hub superior (fuera de las pestañas) + barra de "Mis búsquedas". El
+          selector de tipo queda DENTRO del contexto de la pestaña activa (cada
+          búsqueda tiene su propio tipo), así que va debajo de las pestañas. */}
       <MarketNav />
+      <div className="mb-3">
+        <SearchTabs />
+      </div>
       <div className="mb-4">
         <SegmentedTypeSelector />
       </div>
