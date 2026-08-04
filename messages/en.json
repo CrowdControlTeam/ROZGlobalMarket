@@ -287,10 +287,9 @@
     },
     "searchTabs": {
       "indicator": "This session's searches",
-      "save": "Save current search",
+      "add": "New search",
       "close": "Close search",
-      "untitled": "Search {n}",
-      "all": "All"
+      "untitled": "Search {n}"
     },
     "view": {
       "label": "View",

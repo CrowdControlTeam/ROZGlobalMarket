@@ -287,10 +287,9 @@
     },
     "searchTabs": {
       "indicator": "Búsquedas de esta sesión",
-      "save": "Guardar búsqueda actual",
+      "add": "Nueva búsqueda",
       "close": "Cerrar búsqueda",
-      "untitled": "Búsqueda {n}",
-      "all": "Todo"
+      "untitled": "Búsqueda {n}"
     },
     "view": {
       "label": "Vista",
