@@ -67,9 +67,9 @@ export function sortLabel(t: T, sort: MarketSort): string {
 // rediseño (--ro-type-*, ver globals.css): Venta ámbar, Compra verde,
 // Intercambio azul, Regalo rojo — los mismos colores que el
 // SegmentedTypeSelector, para que badge y selector sean consistentes. Solo
-// tiene sentido en la vista general "Todo" (mezcla los tipos); en una vista ya
-// filtrada por tipo el badge es redundante y el caller lo omite (ver
-// MarketResults.tsx). Solo estilo, no texto — el label viene de listingTypeLabel.
+// Se muestra siempre en las cards (también con un tipo filtrado), como
+// referencia visual constante. Solo estilo, no texto — el label viene de
+// listingTypeLabel.
 export const LISTING_TYPE_BADGE_CLASS: Record<ListingType, string> = {
   SALE: "border-ro-type-sale/50 bg-ro-type-sale/10 text-ro-type-sale",
   TRADE: "border-ro-type-trade/50 bg-ro-type-trade/10 text-ro-type-trade",

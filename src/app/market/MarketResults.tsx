@@ -338,7 +338,9 @@ export function MarketResults({
     });
   }
 
-  const showBadge = !filters.type;
+  // El badge de tipo se muestra siempre (también con un tipo filtrado), como
+  // referencia visual constante.
+  const showBadge = true;
   const cardProps = (listing: Listing) => ({
     listing,
     href: listingHref(listing.id),
