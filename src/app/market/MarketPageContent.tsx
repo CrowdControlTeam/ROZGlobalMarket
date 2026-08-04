@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import { z } from "zod";
-import { getTranslations } from "next-intl/server";
 import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@prisma/client";
 import { isMarketSort, type MarketFilters as MarketFiltersType } from "@/lib/market";
 import { requireSession } from "@/lib/guard";
+import { MarketNav } from "./MarketNav";
 import { MarketFilters } from "./MarketFilters";
 import { SegmentedTypeSelector } from "./SegmentedTypeSelector";
 import { MarketListingsSection } from "./MarketListingsSection";
@@ -76,12 +76,11 @@ export async function MarketPageContent({
 
   const filters: MarketFiltersType = parsed.success ? parsed.data : { sort: "newest" };
 
-  const t = await getTranslations("market");
-
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <div className="mb-6 flex flex-col gap-4">
-        <h1 className="text-xl font-semibold text-ro-text">{t("title")}</h1>
+      {/* Barra de nav superior (sustituye al título) + selector de tipo. */}
+      <MarketNav />
+      <div className="mb-4">
         <SegmentedTypeSelector />
       </div>
 

@@ -285,6 +285,11 @@
       "grid": "Cuadrícula",
       "list": "Lista"
     },
+    "card": {
+      "menu": "Opciones del anuncio",
+      "viewDetail": "Ver detalle",
+      "copyLink": "Copiar enlace"
+    },
     "sort": {
       "label": "Orden",
       "newest": "Más recientes",
@@ -392,9 +397,10 @@
       "tradedBy": "intercambiado por",
       "giftedBy": "regalado por",
       "available": "x{count} disponibles",
-      "wanted": "x{count}",
+      "wanted": "x{count} unidades",
       "availableUnlimited": "∞",
-      "count": "{shown} de {total}",
+      "count": "<b>{shown}</b> de <b>{total}</b>",
+      "free": "Gratis",
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
     },

@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 import { ItemCategory, EquipSlot, WeaponType, type ItemOptionDef } from "@prisma/client";
 import { categoryLabel, slotLabel, weaponTypeLabel } from "@/lib/market-labels";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
@@ -14,7 +14,7 @@ import {
   getMaxRefineLevel,
   getOptionsFeatureAvailable,
 } from "@/lib/listings";
-import { buttonClass, inputClass, inputBaseClass, selectClass, labelClass } from "@/lib/ui";
+import { buttonClass, inputBaseClass, selectClass, labelClass } from "@/lib/ui";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { UserPicker, type UserResult } from "@/components/UserPicker";
 import { Panel } from "@/components/Panel";
@@ -54,7 +54,6 @@ export function MarketFilters() {
   const t = useTranslations("market");
   const tCommon = useTranslations("common");
 
-  const [q, setQ] = useState(searchParams.get("q") ?? "");
   // El tipo (Venta/Compra/Interc./Regalo) lo fija el SegmentedTypeSelector de
   // la cabecera (query ?type=), no este panel — aquí solo se lee para adaptar
   // la semántica de las options en BUY (ver isBuyFilter). No participa en Reset.
@@ -121,7 +120,6 @@ export function MarketFilters() {
   // está filtrando.
   const [filtersExpanded, setFiltersExpanded] = useState(
     () =>
-      !!q ||
       !!poster ||
       !!category ||
       !!slot ||
@@ -222,9 +220,8 @@ export function MarketFilters() {
   function applyFilters(e: React.FormEvent) {
     e.preventDefault();
     const params = new URLSearchParams(searchParams.toString());
-    setOrDelete(params, "q", q.trim());
-    // El tipo lo gestiona el SegmentedTypeSelector; se conserva tal cual esté
-    // en la URL (este panel no lo toca).
+    // q (buscador de la cabecera) y type (selector de tipo) viven fuera de este
+    // panel; se conservan tal cual estén en la URL (no se tocan aquí).
     setOrDelete(params, "posterId", poster?.id ?? "");
     setOrDelete(params, "posterName", poster?.username ?? "");
     setOrDelete(params, "category", category);
@@ -271,7 +268,6 @@ export function MarketFilters() {
   // "type" lo gestiona el SegmentedTypeSelector (cabecera), no este panel, así
   // que Reset limpia el resto de filtros pero conserva el tipo seleccionado.
   function resetFilters() {
-    setQ("");
     setPoster(null);
     setCategory("");
     setSlot("");
@@ -285,7 +281,6 @@ export function MarketFilters() {
     setMaxPrice("");
     const params = new URLSearchParams(searchParams.toString());
     const keys = [
-      "q",
       "posterId",
       "posterName",
       "category",
@@ -307,30 +302,21 @@ export function MarketFilters() {
 
   return (
     <div className="mb-6">
-      {/* Solo en móvil: en desktop hay sitio de sobra para tener los
-          filtros siempre visibles, sin necesidad de colapsarlos. */}
+      {/* Filtros colapsados por defecto; se abren con el botón. En Fase 4 esto
+          pasa a un rail de iconos lateral. Se auto-expanden si ya llega con
+          algún filtro aplicado desde la URL. */}
       <button
         type="button"
         onClick={() => setFiltersExpanded((prev) => !prev)}
         aria-expanded={filtersExpanded}
-        className="flex items-center gap-1 text-xs font-medium text-ro-text-light/80 sm:hidden"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-3 py-1.5 text-xs font-medium text-ro-text"
       >
+        <SlidersHorizontal size={14} className="text-ro-accent" />
         {t("filters.toggle")}
         {filtersExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </button>
-      <Panel className={`mt-2 sm:mt-0 sm:block ${filtersExpanded ? "" : "hidden"}`}>
+      <Panel className={`mt-2 ${filtersExpanded ? "" : "hidden"}`}>
         <form onSubmit={applyFilters} className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[160px] flex-1">
-              <label className={labelClass}>{t("filters.name")}</label>
-              <input
-                type="text"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={t("filters.namePlaceholder")}
-                className={inputClass}
-              />
-            </div>
-
             <div className="min-w-[160px] flex-1">
               <label className={labelClass}>{t("filters.poster")}</label>
               <UserPicker

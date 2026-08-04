@@ -6,7 +6,6 @@ import { loadMarketConfig, DEFAULT_SITE_NAME } from "@/lib/market-config";
 import { isAppLocale, DEFAULT_LOCALE } from "@/lib/locale-constants";
 import { loadGuildRoleNames } from "@/lib/discord-bot";
 import { UserMenu } from "./UserMenu";
-import { CreatePublicationButton } from "./CreatePublicationButton";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
@@ -49,12 +48,11 @@ export async function SiteHeader({
   user: SessionUser | null;
   theme: "light" | "dark";
 }) {
-  const [fullUser, { maintenanceModeEnabled, siteName }, rawLocale] = await Promise.all([
+  const [fullUser, { siteName }, rawLocale] = await Promise.all([
     user ? prisma.user.findUnique({ where: { id: user.discordId } }) : null,
     loadMarketConfig(),
     getLocale(),
   ]);
-  const canCreate = !!user && (!maintenanceModeEnabled || user.isAdmin);
   const locale = isAppLocale(rawLocale) ? rawLocale : DEFAULT_LOCALE;
 
   // Nombre del rol en vez del ID cuando el bot puede listarlos (configurado y en
@@ -75,7 +73,6 @@ export async function SiteHeader({
         </Link>
 
         <div className="flex items-center gap-3">
-          {canCreate && <CreatePublicationButton />}
           {fullUser && user ? (
             <UserMenu
               user={{

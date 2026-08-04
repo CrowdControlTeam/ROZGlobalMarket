@@ -285,6 +285,11 @@
       "grid": "Grid",
       "list": "List"
     },
+    "card": {
+      "menu": "Listing options",
+      "viewDetail": "View detail",
+      "copyLink": "Copy link"
+    },
     "sort": {
       "label": "Sort",
       "newest": "Newest",
@@ -392,9 +397,10 @@
       "tradedBy": "traded by",
       "giftedBy": "gifted by",
       "available": "x{count} available",
-      "wanted": "x{count}",
+      "wanted": "x{count} units",
       "availableUnlimited": "∞",
-      "count": "{shown} of {total}",
+      "count": "<b>{shown}</b> of <b>{total}</b>",
+      "free": "Free",
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
     },

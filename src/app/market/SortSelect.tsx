@@ -2,9 +2,9 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ArrowUpDown, ChevronDown } from "lucide-react";
 import { SORT_VALUES } from "@/lib/market-sort";
 import { sortLabel } from "@/lib/market-labels";
-import { selectClass } from "@/lib/ui";
 
 export function SortSelect() {
   const router = useRouter();
@@ -23,13 +23,17 @@ export function SortSelect() {
     router.push(`${pathname}?${params.toString()}`);
   }
 
+  // Píldora estilo diseño: icono de orden + valor actual + caret. El <select>
+  // nativo va transparente encima (appearance-none) para conservar el
+  // desplegable del sistema sin su chrome por defecto.
   return (
-    <div className="inline-flex items-center gap-2">
-      <label className="hidden text-xs font-medium text-ro-text-light/80 sm:inline">{t("sort.label")}</label>
+    <div className="relative inline-flex items-center gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt py-1.5 pl-3 pr-7 text-xs text-ro-text">
+      <ArrowUpDown size={13} className="shrink-0 text-ro-text-muted" aria-hidden />
       <select
         value={searchParams.get("sort") ?? "newest"}
         onChange={(e) => handleChange(e.target.value)}
-        className={selectClass}
+        aria-label={t("sort.label")}
+        className="cursor-pointer appearance-none bg-transparent text-ro-text focus:outline-none"
       >
         {SORT_VALUES.map((value) => (
           <option key={value} value={value}>
@@ -37,6 +41,11 @@ export function SortSelect() {
           </option>
         ))}
       </select>
+      <ChevronDown
+        size={13}
+        className="pointer-events-none absolute right-2 shrink-0 text-ro-text-muted"
+        aria-hidden
+      />
     </div>
   );
 }
