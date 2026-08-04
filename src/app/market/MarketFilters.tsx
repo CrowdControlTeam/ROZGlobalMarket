@@ -391,17 +391,26 @@ export function MarketFilters() {
 
   const totalCount = sections.reduce((n, s) => n + s.count, 0);
 
-  // Secciones abiertas dentro del panel. Por defecto todas abiertas (panel
-  // descolapsado); el usuario colapsa las que no le interesen.
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(sections.map((s) => [s.id, true])),
-  );
+  // Secciones abiertas dentro del panel. Por defecto TODAS abiertas —incluidas
+  // las que se añaden tras una carga async (p. ej. "options")— así que se tratan
+  // como abiertas salvo que el usuario las colapse explícitamente (`?? true`).
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   function toggleSection(id: string) {
-    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+    setOpenSections((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }));
   }
   // Panel (desktop) colapsado a rail o abierto; bottom-sheet en móvil.
   const [collapsed, setCollapsed] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Si el margen no da para el panel embebido (mismo umbral que el layout,
+  // 1560px), arrancar en rail: si no, el panel flotaría sobre los resultados
+  // nada más cargar. Se hace tras montar para evitar desajuste de hidratación.
+  useEffect(() => {
+    if (!window.matchMedia("(min-width: 1560px)").matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCollapsed(true);
+    }
+  }, []);
 
   // Al pulsar un icono del rail: abrir el panel y expandir esa sección.
   function openFromRail(id: string) {
@@ -423,7 +432,7 @@ export function MarketFilters() {
 
       <div className="flex flex-col">
         {sections.map((s) => {
-          const open = openSections[s.id] ?? false;
+          const open = openSections[s.id] ?? true;
           return (
             <div key={s.id} className="border-t border-ro-panel-border/60 first:border-t-0">
               <div className="flex items-center gap-2 py-2">
