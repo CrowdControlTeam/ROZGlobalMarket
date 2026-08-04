@@ -21,7 +21,7 @@ export async function Hub({
     { href: "/market", label: t("tiles.market.label"), desc: t("tiles.market.desc"), Icon: Store },
     { href: "/my/listings", label: t("tiles.activity.label"), desc: t("tiles.activity.desc"), Icon: Package },
     { href: "/market/new", label: t("tiles.publish.label"), desc: t("tiles.publish.desc"), Icon: Plus },
-    { href: "/market/gifts", label: t("tiles.gifts.label"), desc: t("tiles.gifts.desc"), Icon: Gift },
+    { href: "/market?type=GIFT", label: t("tiles.gifts.label"), desc: t("tiles.gifts.desc"), Icon: Gift },
     ...(isAdmin
       ? [{ href: "/admin/stats", label: t("tiles.stats.label"), desc: t("tiles.stats.desc"), Icon: BarChart3 }]
       : []),

@@ -276,6 +276,22 @@
       "max": "Máx",
       "value": "Valor"
     },
+    "typeSelector": {
+      "label": "Tipo de anuncio",
+      "all": "Todo"
+    },
+    "view": {
+      "label": "Vista",
+      "grid": "Cuadrícula",
+      "list": "Lista"
+    },
+    "card": {
+      "menu": "Opciones del anuncio",
+      "edit": "Editar",
+      "viewDetail": "Ver detalle",
+      "share": "Compartir",
+      "contact": "Contactar"
+    },
     "sort": {
       "label": "Orden",
       "newest": "Más recientes",
@@ -383,8 +399,10 @@
       "tradedBy": "intercambiado por",
       "giftedBy": "regalado por",
       "available": "x{count} disponibles",
-      "wanted": "x{count}",
+      "wanted": "x{count} unidades",
       "availableUnlimited": "∞",
+      "count": "<b>{shown}</b> de <b>{total}</b>",
+      "free": "Gratis",
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
     },

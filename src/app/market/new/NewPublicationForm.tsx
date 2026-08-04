@@ -206,7 +206,7 @@ export function NewPublicationForm({
           try {
             if (type === "GIFT") {
               await sendGift(formData);
-              router.push("/market/gifts");
+              router.push("/my/gifts");
             } else {
               const { id } = await createListing(formData);
               router.push(`/market/${id}`);

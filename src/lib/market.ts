@@ -223,7 +223,7 @@ export async function getListings(filters: MarketFilters) {
     ...(isPriceSort ? { not: null } : {}),
   };
 
-  const where: Prisma.ListingWhereInput = {
+  const baseWhere: Prisma.ListingWhereInput = {
     status: "ACTIVE",
     ...(filters.type ? { type: filters.type } : {}),
     ...(filters.posterId ? { posterId: filters.posterId } : {}),
@@ -250,19 +250,35 @@ export async function getListings(filters: MarketFilters) {
       ...(needsSlotFilter ? { slot: filters.slot } : {}),
       ...(needsWeaponTypeFilter ? { weaponType: filters.weaponType } : {}),
     },
-    ...(andConditions.length > 0 ? { AND: andConditions } : {}),
   };
 
-  const listings = await prisma.listing.findMany({
-    where,
-    orderBy: orderByFor(filters.sort),
-    take: PAGE_SIZE + 1,
-    include: {
-      item: true,
-      poster: true,
-      options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
-    },
-  });
+  // El listado pagina por cursor; el total (para "X de Y") cuenta lo mismo
+  // pero SIN la condición de cursor — es todo lo que casa, no solo lo que
+  // queda por paginar. Las condiciones de option sí van en ambos.
+  const where: Prisma.ListingWhereInput = {
+    ...baseWhere,
+    ...(andConditions.length > 0 ? { AND: andConditions } : {}),
+  };
+  const countWhere: Prisma.ListingWhereInput = {
+    ...baseWhere,
+    ...(optionConditions.length > 0 ? { AND: optionConditions } : {}),
+  };
+
+  // El count solo en la primera página (sin cursor): al "cargar más" el total
+  // no cambia, así que se devuelve null y el cliente conserva el que ya tenía.
+  const [listings, total] = await Promise.all([
+    prisma.listing.findMany({
+      where,
+      orderBy: orderByFor(filters.sort),
+      take: PAGE_SIZE + 1,
+      include: {
+        item: true,
+        poster: true,
+        options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
+      },
+    }),
+    cursor ? Promise.resolve<number | null>(null) : prisma.listing.count({ where: countWhere }),
+  ]);
 
   const hasMore = listings.length > PAGE_SIZE;
   const page = hasMore ? listings.slice(0, PAGE_SIZE) : listings;
@@ -300,5 +316,5 @@ export async function getListings(filters: MarketFilters) {
     reserved: reservedMap.get(l.id) ?? 0,
   }));
 
-  return { listings: pageWithSold, nextCursor };
+  return { listings: pageWithSold, nextCursor, total };
 }

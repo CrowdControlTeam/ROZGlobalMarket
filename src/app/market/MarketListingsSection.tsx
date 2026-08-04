@@ -17,7 +17,7 @@ export async function MarketListingsSection({
   currentUserId: string;
   isAdmin: boolean;
 }) {
-  const [{ listings, nextCursor }, { maintenanceModeEnabled }, dmAvailable, t] = await Promise.all([
+  const [{ listings, nextCursor, total }, { maintenanceModeEnabled }, dmAvailable, t] = await Promise.all([
     getListings(filters),
     loadMarketConfig(),
     isDmFeatureAvailable(),
@@ -34,6 +34,7 @@ export async function MarketListingsSection({
       <MarketResults
         initialListings={listings}
         initialCursor={nextCursor}
+        total={total ?? 0}
         filters={filters}
         currentUserId={currentUserId}
         dmAvailable={dmAvailable}

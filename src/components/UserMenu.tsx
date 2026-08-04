@@ -40,7 +40,7 @@ export function UserMenu({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-md px-2 py-1 text-ro-text-light hover:bg-white/5"
+        className="flex items-center gap-2 rounded-md px-2 py-1 text-ro-on-navy hover:bg-white/5"
       >
         {user.avatarUrl && (
           <Image

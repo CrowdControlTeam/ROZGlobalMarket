@@ -5,7 +5,13 @@ import { Skeleton } from "@/components/Skeleton";
 // por los listings reales.
 export function MarketResultsSkeleton() {
   return (
-    <ul className="flex flex-col gap-3">
+    <>
+      {/* Cabecera de resultados (contador + orden + vista). */}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-8 w-40" />
+      </div>
+      <ul className="flex flex-col gap-3">
       {Array.from({ length: 6 }, (_, i) => (
         <li
           key={i}
@@ -19,6 +25,7 @@ export function MarketResultsSkeleton() {
           <Skeleton className="h-4 w-16" />
         </li>
       ))}
-    </ul>
+      </ul>
+    </>
   );
 }

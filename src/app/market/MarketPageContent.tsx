@@ -1,22 +1,21 @@
 import { Suspense } from "react";
 import { z } from "zod";
-import { getTranslations } from "next-intl/server";
 import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@prisma/client";
 import { isMarketSort, type MarketFilters as MarketFiltersType } from "@/lib/market";
 import { requireSession } from "@/lib/guard";
-import { marketViewTitle } from "@/lib/market-labels";
+import { MarketNav } from "./MarketNav";
 import { MarketFilters } from "./MarketFilters";
+import { SegmentedTypeSelector } from "./SegmentedTypeSelector";
 import { MarketListingsSection } from "./MarketListingsSection";
 import { MarketResultsSkeleton } from "./MarketResultsSkeleton";
-import { SortSelect } from "./SortSelect";
 
 const searchParamsSchema = z.object({
   q: z.string().trim().min(1).optional(),
   category: z.enum(ItemCategory).optional(),
   slot: z.enum(EquipSlot).optional(),
   weaponType: z.enum(WeaponType).optional(),
-  // Solo se lee de la query string en /market (screenType null) — en las
-  // pantallas fijas el tipo lo da la ruta, no la URL (ver más abajo).
+  // El tipo (Venta/Compra/Interc./Regalo) es un filtro más, fijado desde la
+  // query string por el SegmentedTypeSelector — ya no hay rutas por tipo.
   type: z.enum(ListingType).optional(),
   posterId: z.string().trim().min(1).optional(),
   option1Stat: z.string().trim().min(1).optional(),
@@ -40,17 +39,12 @@ const searchParamsSchema = z.object({
     .transform((v) => (v && isMarketSort(v) ? v : "newest")),
 });
 
-// screenType viene de la ruta (null = /market, o el segmento /market/sale,
-// /market/buy, /market/trade), nunca de la query string — así la
-// identidad de "en qué pantalla estoy" no puede mezclarse con los filtros
-// normales (ver resetFilters en MarketFilters.tsx: ya no necesita tratar
-// "type" como caso especial, porque en las pantallas fijas ni siquiera
-// existe como filtro).
+// Mercado unificado: una sola pantalla para todos los tipos. El tipo se lee de
+// `?type=` (lo fija el SegmentedTypeSelector), no de la ruta — antes había
+// /market/sale|buy|trade y /market/gifts, ahora fusionados aquí.
 export async function MarketPageContent({
-  screenType,
   searchParams,
 }: {
-  screenType: ListingType | null;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await requireSession();
@@ -80,28 +74,26 @@ export async function MarketPageContent({
     sort: firstValue(raw.sort),
   });
 
-  const filters: MarketFiltersType = parsed.success
-    ? parsed.data
-    : { sort: "newest" };
-  if (screenType) filters.type = screenType;
-
-  const t = await getTranslations("market");
-  const pageTitle = screenType ? marketViewTitle(t, screenType) : t("title");
+  const filters: MarketFiltersType = parsed.success ? parsed.data : { sort: "newest" };
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
-      <h1 className="mb-6 font-heading text-lg text-ro-text">{pageTitle}</h1>
+    <main className="mx-auto max-w-5xl px-6 py-8">
+      {/* Barra de nav superior (sustituye al título) + selector de tipo. */}
+      <MarketNav />
+      <div className="mb-4">
+        <SegmentedTypeSelector />
+      </div>
 
       {/* Nada de lo de aquí arriba toca la base de datos (MarketFilters es
           "use client" y busca sus propios datos aparte) — solo el grid de
           resultados, más abajo, se envuelve en Suspense. */}
-      <MarketFilters screenType={screenType} />
+      <MarketFilters />
 
-      <SortSelect />
-      {/* key en el propio Suspense (no solo en MarketResults más abajo):
-          así, al cambiar cualquier filtro/orden, React trata la sección
-          como nueva y vuelve a mostrar el skeleton mientras llega el
-          resultado, en vez de dejar el listado anterior colgado. */}
+      {/* key en el propio Suspense: al cambiar cualquier filtro/orden, React
+          trata la sección como nueva y vuelve a mostrar el skeleton mientras
+          llega el resultado, en vez de dejar el listado anterior colgado. La
+          cabecera de resultados (contador + orden + vista) vive dentro de
+          MarketResults, así que también se cubre con el skeleton. */}
       <Suspense key={JSON.stringify(filters)} fallback={<MarketResultsSkeleton />}>
         <MarketListingsSection
           filters={filters}

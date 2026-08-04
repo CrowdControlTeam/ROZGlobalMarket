@@ -276,6 +276,22 @@
       "max": "Max",
       "value": "Value"
     },
+    "typeSelector": {
+      "label": "Listing type",
+      "all": "All"
+    },
+    "view": {
+      "label": "View",
+      "grid": "Grid",
+      "list": "List"
+    },
+    "card": {
+      "menu": "Listing options",
+      "edit": "Edit",
+      "viewDetail": "View detail",
+      "share": "Share",
+      "contact": "Contact"
+    },
     "sort": {
       "label": "Sort",
       "newest": "Newest",
@@ -383,8 +399,10 @@
       "tradedBy": "traded by",
       "giftedBy": "gifted by",
       "available": "x{count} available",
-      "wanted": "x{count}",
+      "wanted": "x{count} units",
       "availableUnlimited": "∞",
+      "count": "<b>{shown}</b> of <b>{total}</b>",
+      "free": "Free",
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
     },

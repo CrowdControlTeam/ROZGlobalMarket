@@ -6,7 +6,6 @@ import { loadMarketConfig, DEFAULT_SITE_NAME } from "@/lib/market-config";
 import { isAppLocale, DEFAULT_LOCALE } from "@/lib/locale-constants";
 import { loadGuildRoleNames } from "@/lib/discord-bot";
 import { UserMenu } from "./UserMenu";
-import { CreatePublicationButton } from "./CreatePublicationButton";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
@@ -25,8 +24,8 @@ const APP_VERSION = `v${pkg.version}`;
 export function SiteHeaderFallback() {
   return (
     <header className="border-b border-ro-gold/25 bg-ro-navy text-ro-on-navy">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
-        <span className="font-heading text-[0.65rem] leading-none tracking-wide text-ro-on-navy sm:text-xs">
+      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
+        <span className="font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy">
           {DEFAULT_SITE_NAME}
         </span>
         <div className="flex items-center gap-3" />
@@ -49,12 +48,11 @@ export async function SiteHeader({
   user: SessionUser | null;
   theme: "light" | "dark";
 }) {
-  const [fullUser, { maintenanceModeEnabled, siteName }, rawLocale] = await Promise.all([
+  const [fullUser, { siteName }, rawLocale] = await Promise.all([
     user ? prisma.user.findUnique({ where: { id: user.discordId } }) : null,
     loadMarketConfig(),
     getLocale(),
   ]);
-  const canCreate = !!user && (!maintenanceModeEnabled || user.isAdmin);
   const locale = isAppLocale(rawLocale) ? rawLocale : DEFAULT_LOCALE;
 
   // Nombre del rol en vez del ID cuando el bot puede listarlos (configurado y en
@@ -66,16 +64,15 @@ export async function SiteHeader({
 
   return (
     <header className="border-b border-ro-gold/25 bg-ro-navy text-ro-on-navy">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
+      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
         <Link
           href="/"
-          className="font-heading text-[0.65rem] leading-none tracking-wide text-ro-on-navy sm:text-xs"
+          className="font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy"
         >
           {siteName}
         </Link>
 
         <div className="flex items-center gap-3">
-          {canCreate && <CreatePublicationButton />}
           {fullUser && user ? (
             <UserMenu
               user={{

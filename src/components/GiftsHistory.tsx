@@ -8,10 +8,9 @@ import { UserMention } from "@/components/UserMention";
 import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { formatOptionAmount } from "@/lib/market-labels";
 
-// Cuerpo de la lista de regalos enviados/recibidos, compartido entre
-// /market/gifts (entrada del menú hamburguesa, sin cambios) y /my/gifts
-// (pestaña de la pantalla "Mi actividad") — mismo contenido, dos sitios
-// desde donde se llega.
+// Cuerpo de la lista de regalos enviados/recibidos (historial personal). Vive
+// en /my/gifts (pestaña "Regalos" de "Mi actividad"). Es distinto del tipo
+// Regalo del mercado unificado (?type=GIFT), que son listings reclamables.
 export async function GiftsHistory() {
   // Ninguna depende del resultado de otra (getMyGifts vuelve a resolver la
   // sesión por su cuenta) — en paralelo en vez de en serie.
