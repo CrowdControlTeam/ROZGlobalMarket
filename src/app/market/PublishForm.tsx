@@ -188,13 +188,11 @@ export function PublishForm({
               aria-label={label}
               title={label}
               onClick={() => handleTypeChange(seg.value)}
-              className={`flex min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                active ? `flex-1 ${seg.activeBg} text-ro-on-type` : "text-ro-text hover:bg-ro-panel-border/40"
+              className={`flex flex-1 items-center justify-center rounded-full py-1.5 transition-colors ${
+                active ? `${seg.activeBg} text-ro-on-type` : "text-ro-text hover:bg-ro-panel-border/40"
               }`}
             >
-              <seg.Icon size={14} className={`shrink-0 ${active ? "" : seg.iconColor}`} aria-hidden />
-              {/* Label solo en el activo: compacto y sin truncar en la columna estrecha. */}
-              {active && <span className="truncate">{label}</span>}
+              <seg.Icon size={15} className={active ? "" : seg.iconColor} aria-hidden />
             </button>
           );
         })}
