@@ -6,9 +6,10 @@ import { ChevronDown } from "lucide-react";
 import { SORT_VALUES, SORT_DIRECTION } from "@/lib/market-sort";
 import { sortLabel } from "@/lib/market-labels";
 
-// Triángulos de dirección (más limpios que las flechas ↓/↑) separados del texto
-// con un em-space ( ) para que no parezcan parte del nombre.
-const DIR_MARK = { desc: "▾", asc: "▴" } as const;
+// Marca de dirección: flecha estilizada de punta triangular ⭣ (descendente) /
+// ⭡ (ascendente), separada del texto con un em-space ( ) para que no
+// parezca parte del nombre.
+const DIR_MARK = { desc: "⭣", asc: "⭡" } as const;
 
 export function SortSelect() {
   const router = useRouter();
@@ -28,11 +29,10 @@ export function SortSelect() {
   }
 
   // El <select> ES la píldora (ocupa todo el ancho, clicable en cualquier
-  // punto). Cada opción lleva delante un triángulo ▾ (descendente) / ▴
-  // (ascendente) según su dirección — se ve en el desplegable y en el valor
-  // cerrado (aprovecha el espacio izquierdo). El caret va encima con
-  // pointer-events-none para no bloquear el click. Fondo sólido para que el
-  // popup nativo pinte las opciones legibles.
+  // punto). Cada opción lleva delante la flecha de dirección; se ve en el
+  // desplegable y en el valor cerrado (aprovecha el espacio izquierdo). El
+  // caret va encima con pointer-events-none para no bloquear el click. Fondo
+  // sólido para que el popup nativo pinte las opciones legibles.
   return (
     <div className="relative inline-flex items-center">
       <select
