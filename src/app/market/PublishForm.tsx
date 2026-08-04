@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Tag, ShoppingCart, ArrowLeftRight, Gift, Gavel, Infinity as InfinityIcon } from "lucide-react";
+import { Tag, ShoppingCart, ArrowLeftRight, Gift, HandCoins, Infinity as InfinityIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ItemOptionDef } from "@prisma/client";
 import { createListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
@@ -235,7 +235,7 @@ export function PublishForm({
                     )}
                   </div>
                   <AffixToggle active={noPrice} onToggle={() => setNoPrice(!noPrice)} label={t("noPriceLabel")}>
-                    <Gavel size={12} />
+                    <HandCoins size={13} />
                   </AffixToggle>
                 </div>
                 {noPrice ? (
