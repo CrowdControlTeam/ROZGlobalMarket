@@ -339,7 +339,8 @@ export function MarketResults({
     localStorage.setItem(VIEW_STORAGE_KEY, next);
   }
 
-  // Buscador por nombre (cabecera de resultados): aplica al enviar (Enter).
+  // Buscador por nombre (cabecera de resultados): aplica AL VUELO con debounce
+  // (consistente con los filtros); Enter aplica al instante.
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -350,6 +351,18 @@ export function MarketResults({
     params.delete("listing");
     router.push(`${pathname}?${params.toString()}`);
   }
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const trimmed = q.trim();
+      if (trimmed === (searchParams.get("q") ?? "")) return;
+      const params = new URLSearchParams(searchParams.toString());
+      if (trimmed) params.set("q", trimmed);
+      else params.delete("q");
+      params.delete("listing");
+      router.push(`${pathname}?${params.toString()}`);
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [q, searchParams, pathname, router]);
 
   // Patches de mutaciones hechas en el detalle (ver listingStore.ts): se fusionan
   // sobre las cards para reflejar la compra/venta sin recargar. Al montar el
