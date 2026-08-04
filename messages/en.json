@@ -280,6 +280,11 @@
       "label": "Listing type",
       "all": "All"
     },
+    "view": {
+      "label": "View",
+      "grid": "Grid",
+      "list": "List"
+    },
     "sort": {
       "label": "Sort",
       "newest": "Newest",
@@ -389,6 +394,7 @@
       "available": "x{count} available",
       "wanted": "x{count}",
       "availableUnlimited": "∞",
+      "count": "{shown} of {total}",
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
     },

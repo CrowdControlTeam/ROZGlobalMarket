@@ -8,7 +8,6 @@ import { MarketFilters } from "./MarketFilters";
 import { SegmentedTypeSelector } from "./SegmentedTypeSelector";
 import { MarketListingsSection } from "./MarketListingsSection";
 import { MarketResultsSkeleton } from "./MarketResultsSkeleton";
-import { SortSelect } from "./SortSelect";
 
 const searchParamsSchema = z.object({
   q: z.string().trim().min(1).optional(),
@@ -91,11 +90,11 @@ export async function MarketPageContent({
           resultados, más abajo, se envuelve en Suspense. */}
       <MarketFilters />
 
-      <SortSelect />
-      {/* key en el propio Suspense (no solo en MarketResults más abajo):
-          así, al cambiar cualquier filtro/orden, React trata la sección
-          como nueva y vuelve a mostrar el skeleton mientras llega el
-          resultado, en vez de dejar el listado anterior colgado. */}
+      {/* key en el propio Suspense: al cambiar cualquier filtro/orden, React
+          trata la sección como nueva y vuelve a mostrar el skeleton mientras
+          llega el resultado, en vez de dejar el listado anterior colgado. La
+          cabecera de resultados (contador + orden + vista) vive dentro de
+          MarketResults, así que también se cubre con el skeleton. */}
       <Suspense key={JSON.stringify(filters)} fallback={<MarketResultsSkeleton />}>
         <MarketListingsSection
           filters={filters}

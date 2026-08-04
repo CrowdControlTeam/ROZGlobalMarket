@@ -24,8 +24,8 @@ export function SortSelect() {
   }
 
   return (
-    <div className="mb-3 flex items-center justify-end gap-2">
-      <label className="text-xs font-medium text-ro-text-light/80">{t("sort.label")}</label>
+    <div className="inline-flex items-center gap-2">
+      <label className="hidden text-xs font-medium text-ro-text-light/80 sm:inline">{t("sort.label")}</label>
       <select
         value={searchParams.get("sort") ?? "newest"}
         onChange={(e) => handleChange(e.target.value)}

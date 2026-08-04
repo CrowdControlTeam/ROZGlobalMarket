@@ -280,6 +280,11 @@
       "label": "Tipo de anuncio",
       "all": "Todo"
     },
+    "view": {
+      "label": "Vista",
+      "grid": "Cuadrícula",
+      "list": "Lista"
+    },
     "sort": {
       "label": "Orden",
       "newest": "Más recientes",
@@ -389,6 +394,7 @@
       "available": "x{count} disponibles",
       "wanted": "x{count}",
       "availableUnlimited": "∞",
+      "count": "{shown} de {total}",
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
     },
