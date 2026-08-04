@@ -17,10 +17,14 @@ export function MarketNav() {
   const t = useTranslations();
   const type = searchParams.get("type");
   const onMarket = pathname === "/market";
-  // Publicar preselecciona el tipo si el mercado está filtrado por Compra/
-  // Intercambio/Regalo (Venta es el valor por defecto del formulario).
-  const publishHref =
-    type === "BUY" || type === "TRADE" || type === "GIFT" ? `/market/new?type=${type}` : "/market/new";
+  // Publicar abre el modal interceptado (?publish=<tipo>) sobre el mercado,
+  // preservando los filtros actuales; preselecciona el tipo por el que se esté
+  // filtrando (Venta por defecto). El acceso directo /market/new sigue siendo la
+  // página completa de respaldo.
+  const publishParams = new URLSearchParams(searchParams.toString());
+  publishParams.set("publish", type || "SALE");
+  publishParams.delete("listing");
+  const publishHref = `/market?${publishParams.toString()}`;
 
   const items: NavItem[] = [
     { href: "/market", labelKey: "home.tiles.market.label", Icon: Store, active: onMarket && type !== "GIFT" },
