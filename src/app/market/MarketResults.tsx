@@ -317,6 +317,21 @@ export function MarketResults({
 }) {
   const [listings, setListings] = useState(initialListings);
   const [cursor, setCursor] = useState(initialCursor);
+
+  // El grid mantiene los listings en estado de cliente (para "Cargar más").
+  // Cuando el servidor entrega una nueva página inicial —al cambiar filtros,
+  // orden o la búsqueda `q`— reseteamos ese estado en el propio render (patrón
+  // sancionado de React: ajustar estado durante el render al cambiar una prop,
+  // rastreando el valor previo con estado). Así la lista se refresca SIN
+  // remontar la sección, lo que permite dejar `q` fuera de la key del Suspense
+  // y conservar el foco del buscador al teclear.
+  const [prevInitial, setPrevInitial] = useState(initialListings);
+  if (prevInitial !== initialListings) {
+    setPrevInitial(initialListings);
+    setListings(initialListings);
+    setCursor(initialCursor);
+  }
+
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market");

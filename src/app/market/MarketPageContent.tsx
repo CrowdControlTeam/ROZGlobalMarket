@@ -76,6 +76,11 @@ export async function MarketPageContent({
 
   const filters: MarketFiltersType = parsed.success ? parsed.data : { sort: "newest" };
 
+  // La key del Suspense NO incluye `q` (ver comentario abajo).
+  const suspenseKeyFilters = { ...filters };
+  delete suspenseKeyFilters.q;
+  const suspenseKey = JSON.stringify(suspenseKeyFilters);
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
       {/* Barra de nav superior (sustituye al título) + selector de tipo. */}
@@ -91,8 +96,11 @@ export async function MarketPageContent({
 
       {/* key en el propio Suspense: al cambiar cualquier filtro/orden, React
           trata la sección como nueva y muestra el skeleton mientras llega el
-          resultado. */}
-      <Suspense key={JSON.stringify(filters)} fallback={<MarketResultsSkeleton />}>
+          resultado. Excluimos `q` de la key a propósito: el buscador aplica al
+          vuelo, así que si `q` remontara la sección, el input perdería el foco
+          en cada tecla. Al dejarlo fuera, la búsqueda actualiza los resultados
+          en su sitio (sin skeleton) y el foco se conserva. */}
+      <Suspense key={suspenseKey} fallback={<MarketResultsSkeleton />}>
         <MarketListingsSection
           filters={filters}
           currentUserId={session.user.discordId}
