@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   ChevronDown,
@@ -412,6 +412,31 @@ export function MarketFilters() {
     }
   }, []);
 
+  // El panel es `fixed`, así que al llegar al fondo se solaparía con el footer.
+  // Limitamos su altura en cada scroll/resize para que su borde inferior nunca
+  // baje del footer (ni del viewport). Antes de medir, cae en la clase CSS.
+  const asideRef = useRef<HTMLElement>(null);
+  const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const GAP = 16;
+    function update() {
+      const aside = asideRef.current;
+      if (!aside) return;
+      const top = aside.getBoundingClientRect().top;
+      const footer = document.querySelector("footer");
+      const footerTop = footer ? footer.getBoundingClientRect().top : Infinity;
+      const bottomLimit = Math.min(window.innerHeight, footerTop) - GAP;
+      setMaxHeight(Math.max(0, bottomLimit - top));
+    }
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
   // Al pulsar un icono del rail: abrir el panel y expandir esa sección.
   function openFromRail(id: string) {
     setCollapsed(false);
@@ -469,6 +494,8 @@ export function MarketFilters() {
           da de sí (≳1560px) o flotando sobre los resultados en anchos medios;
           rail al colapsar. Posiciones aproximadas — ajuste fino pendiente. */}
       <aside
+        ref={asideRef}
+        style={maxHeight !== undefined ? { maxHeight } : undefined}
         className={`fixed top-[9.5rem] z-30 hidden max-h-[calc(100dvh-11rem)] overflow-y-auto min-[1100px]:block ${
           collapsed
             ? "left-[calc(50vw-36.25rem)]"
