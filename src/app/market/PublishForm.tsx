@@ -330,15 +330,13 @@ export function PublishForm({
               (selection.value < selectedDef.minValue || selection.value > selectedDef.maxValue);
 
             return (
-              // Apilado: el select ocupa el ancho completo (así el nombre del
-              // stat se ve entero); el valor aparece debajo solo al elegir stat.
-              <div key={slotIndex} className="flex flex-col gap-1">
+              <div key={slotIndex} className="flex items-center gap-2">
                 <select
                   name={`option${slotIndex}DefId`}
                   value={selection.defId}
                   disabled={!selectEnabled}
                   onChange={(e) => handleSelectChange(index, e.target.value)}
-                  className={`w-full ${selectClass}`}
+                  className={`min-w-0 flex-1 ${selectClass}`}
                 >
                   <option value="">{tFilters("optionPlaceholder", { slot: slotIndex })}</option>
                   {defsForSlot.map((d) => (
@@ -347,20 +345,19 @@ export function PublishForm({
                     </option>
                   ))}
                 </select>
-                {selection.defId && (
-                  <input
-                    type="number"
-                    name={`option${slotIndex}Value`}
-                    min={selectedDef?.minValue}
-                    max={selectedDef?.maxValue}
-                    placeholder={selectedDef ? `${selectedDef.minValue}-${selectedDef.maxValue}` : undefined}
-                    value={selection.value}
-                    required
-                    onChange={(e) => handleValueChange(index, e.target.value === "" ? "" : Number(e.target.value))}
-                    className="w-32 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-2.5 py-1.5 text-sm text-ro-text focus:border-ro-accent focus:outline-none"
-                    style={isOutOfRange ? { borderColor: "#dc2626" } : undefined}
-                  />
-                )}
+                <input
+                  type="number"
+                  name={`option${slotIndex}Value`}
+                  min={selectedDef?.minValue}
+                  max={selectedDef?.maxValue}
+                  placeholder={selectedDef ? `${selectedDef.minValue}-${selectedDef.maxValue}` : undefined}
+                  value={selection.value}
+                  disabled={!selection.defId}
+                  required={!!selection.defId}
+                  onChange={(e) => handleValueChange(index, e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-24 shrink-0 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-2.5 py-1.5 text-sm text-ro-text focus:border-ro-accent focus:outline-none disabled:opacity-50"
+                  style={isOutOfRange ? { borderColor: "#dc2626" } : undefined}
+                />
               </div>
             );
           })}

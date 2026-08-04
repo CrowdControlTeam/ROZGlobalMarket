@@ -50,7 +50,7 @@ export function PublishModal({
         // cuando el reconocimiento está disponible; estrecho para solo-formulario
         // cuando no lo está.
         className={`relative z-10 flex max-h-full w-full flex-col overflow-hidden bg-ro-panel text-ro-text shadow-xl sm:rounded-2xl sm:border sm:border-ro-panel-border ${
-          recognitionEnabled ? "sm:max-w-3xl" : "sm:max-w-md"
+          recognitionEnabled ? "sm:max-w-4xl" : "sm:max-w-md"
         }`}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-ro-panel-border bg-ro-panel-header px-4 py-3">
