@@ -534,7 +534,8 @@
     },
     "itemPicker": {
       "placeholder": "Search for an item by name...",
-      "removeSelected": "Remove selected item"
+      "removeSelected": "Remove selected item",
+      "change": "Change"
     },
     "userPicker": {
       "placeholder": "Search for a user by name...",

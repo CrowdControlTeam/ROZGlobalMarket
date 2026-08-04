@@ -34,10 +34,10 @@ const TYPE_SEGMENTS: TypeSegment[] = [
   { value: "GIFT", Icon: Gift, activeBg: "bg-ro-type-gift", iconColor: "text-ro-type-gift" },
 ];
 
-// Formulario de publicar del rediseño (2 columnas: escaneo · O · formulario).
-// Reutiliza íntegra la lógica del NewPublicationForm de página; solo cambia la
-// presentación (FloatingField + pestañas Info/Opciones). El contrato de FormData
-// hacia createListing/sendGift es idéntico.
+// Formulario de publicar del rediseño (2 columnas: escaneo · O · formulario;
+// una sola columna si el reconocimiento no está disponible). Reutiliza íntegra
+// la lógica del NewPublicationForm de página; el contrato de FormData hacia
+// createListing/sendGift es idéntico.
 export function PublishForm({
   recognitionEnabled,
   initialType,
@@ -64,6 +64,7 @@ export function PublishForm({
   const [isRecognizing, startRecognizeTransition] = useTransition();
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [recognitionNote, setRecognitionNote] = useState<string | null>(null);
+  const [tab, setTab] = useState<"info" | "options">("info");
   const t = useTranslations("market.form");
   const tField = useTranslations("market.field");
   const tFilters = useTranslations("market.filters");
@@ -107,6 +108,7 @@ export function PublishForm({
     setRefineLevel(0);
     setCardSlots(0);
     setRecognitionNote(null);
+    setTab("info");
   }
 
   function handleScreenshotScan(file: File) {
@@ -166,13 +168,209 @@ export function PublishForm({
   const canSubmit = selectedItem !== null;
   const submittingRef = useRef(false);
 
+  // ── Columna de formulario (derecha, o única si no hay escáner). ──
+  const formColumn = (
+    <div className="flex min-w-0 flex-col gap-3">
+      {/* Ítem. */}
+      <ItemPicker selected={selectedItem} onSelect={handleItemSelect} onClear={handleItemClear} />
+      <input type="hidden" name="itemId" value={selectedItem?.id ?? ""} />
+
+      {/* Tipo (fuera de las pestañas). */}
+      <div role="group" aria-label={t("typeLabel")} className="flex gap-1 rounded-full border border-ro-panel-border bg-ro-panel-alt p-1">
+        {TYPE_SEGMENTS.map((seg) => {
+          const active = seg.value === type;
+          const label = t(`typeOptions.${seg.value}`);
+          return (
+            <button
+              key={seg.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() => handleTypeChange(seg.value)}
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full px-1 py-1.5 text-xs font-medium transition-colors ${
+                active ? `${seg.activeBg} text-ro-on-type` : "text-ro-text hover:bg-ro-panel-border/40"
+              }`}
+            >
+              <seg.Icon size={13} className={`shrink-0 ${active ? "" : seg.iconColor}`} aria-hidden />
+              <span className="hidden truncate min-[420px]:inline">{label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Pestañas Info / Opciones (Opciones solo si el ítem las admite). */}
+      <div className="flex gap-1 border-b border-ro-panel-border">
+        <TabButton active={tab === "info"} onClick={() => setTab("info")}>
+          {t("tabs.info")}
+        </TabButton>
+        {hasOptionCatalog && (
+          <TabButton active={tab === "options"} onClick={() => setTab("options")}>
+            {type === "BUY" ? tField("minStats") : tField("options")}
+            {optionsCount > 0 && (
+              <span className="grid h-3.5 min-w-3.5 place-items-center rounded-full bg-ro-accent px-1 text-[8px] font-bold text-ro-accent-contrast">
+                {optionsCount}
+              </span>
+            )}
+          </TabButton>
+        )}
+      </div>
+
+      {tab === "info" || !hasOptionCatalog ? (
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            {showPrice && (
+              <FloatingField
+                label={type === "BUY" ? t("payUpToLabel") : t("priceLabel")}
+                className={priceMissing ? "border-red-600" : undefined}
+              >
+                {noPrice ? (
+                  <span className="text-sm text-ro-text-muted">
+                    {type === "BUY" ? tField("bestPrice") : tField("bestOffer")}
+                  </span>
+                ) : (
+                  <MaskedPriceInput value={price} onChange={setPrice} placeholder="0" className={floatingControlClass} />
+                )}
+                <input type="hidden" name="price" value={price === "" ? "" : String(price)} />
+              </FloatingField>
+            )}
+
+            <FloatingField label={tField("quantity")}>
+              {quantityLocked ? (
+                <>
+                  <span className="text-sm text-ro-text">1</span>
+                  <input type="hidden" name="quantity" value={1} />
+                </>
+              ) : (
+                <input
+                  type="number"
+                  name="quantity"
+                  min={1}
+                  defaultValue={1}
+                  required={!unlimited}
+                  disabled={canBeUnlimited && unlimited}
+                  className={floatingControlClass}
+                />
+              )}
+            </FloatingField>
+
+            {refineEligible && (
+              <FloatingField label={tField("refine")}>
+                <input
+                  type="number"
+                  name="refineLevel"
+                  min={0}
+                  max={maxRefineLevel}
+                  value={refineLevel}
+                  onChange={(e) => setRefineLevel(e.target.value === "" ? 0 : Number(e.target.value))}
+                  className={floatingControlClass}
+                />
+              </FloatingField>
+            )}
+
+            {maxCardSlots > 0 && (
+              <FloatingField label={tField("cardSlots")}>
+                <input
+                  type="number"
+                  name="cardSlots"
+                  min={0}
+                  max={maxCardSlots}
+                  value={cardSlots}
+                  onChange={(e) => setCardSlots(e.target.value === "" ? 0 : Number(e.target.value))}
+                  className={floatingControlClass}
+                />
+              </FloatingField>
+            )}
+          </div>
+
+          {/* Toggles contextuales. */}
+          {(canBeUnlimited || showPrice) && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {canBeUnlimited && (
+                <label className="flex items-center gap-2 text-xs text-ro-text-muted">
+                  <input type="checkbox" name="unlimited" checked={unlimited} onChange={(e) => setUnlimited(e.target.checked)} />
+                  {t("unlimitedLabel")}
+                </label>
+              )}
+              {showPrice && (
+                <label className="flex items-center gap-2 text-xs text-ro-text-muted">
+                  <input type="checkbox" name="noPrice" checked={noPrice} onChange={(e) => setNoPrice(e.target.checked)} />
+                  {t("noPriceLabel")}
+                </label>
+              )}
+            </div>
+          )}
+
+          {/* Destinatario (regalo). */}
+          {type === "GIFT" && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ro-text-muted">{t("recipientLabel")}</label>
+              <UserPicker key={selectedRecipient?.id ?? "empty"} onSelect={setSelectedRecipient} />
+              <input type="hidden" name="recipientId" value={selectedRecipient?.id ?? ""} />
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Pestaña Opciones: 3 filas fijas (desplegable + valor). */
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
+            const index = slotIndex - 1;
+            const selectEnabled = index === 0 || optionSelections[index - 1].defId !== "";
+            const selection = optionSelections[index];
+            const defsForSlot = optionDefs.filter((d) => d.slotIndex === slotIndex);
+            const selectedDef = defsForSlot.find((d) => d.id === selection.defId);
+            const isOutOfRange =
+              selectedDef !== undefined &&
+              selection.value !== "" &&
+              (selection.value < selectedDef.minValue || selection.value > selectedDef.maxValue);
+
+            return (
+              <div key={slotIndex} className="flex items-center gap-2">
+                <select
+                  name={`option${slotIndex}DefId`}
+                  value={selection.defId}
+                  disabled={!selectEnabled}
+                  onChange={(e) => handleSelectChange(index, e.target.value)}
+                  className={`min-w-0 flex-1 ${selectClass}`}
+                >
+                  <option value="">{tFilters("optionPlaceholder", { slot: slotIndex })}</option>
+                  {defsForSlot.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  name={`option${slotIndex}Value`}
+                  min={selectedDef?.minValue}
+                  max={selectedDef?.maxValue}
+                  placeholder={selectedDef ? `${selectedDef.minValue}-${selectedDef.maxValue}` : undefined}
+                  value={selection.value}
+                  disabled={!selection.defId}
+                  required={!!selection.defId}
+                  onChange={(e) => handleValueChange(index, e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-20 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-2 py-1.5 text-sm text-ro-text focus:border-ro-accent focus:outline-none disabled:opacity-50"
+                  style={isOutOfRange ? { borderColor: "#dc2626" } : undefined}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {error && <p className="text-sm text-red-500">{error}</p>}
+    </div>
+  );
+
   return (
     <form
       onSubmit={(e) => {
         const priceRequired = showPrice && !noPrice;
         const priceEmpty = priceRequired && !new FormData(e.currentTarget).get("price");
         setPriceMissing(priceEmpty);
-        if (priceEmpty) e.preventDefault();
+        if (priceEmpty) {
+          setTab("info");
+          e.preventDefault();
+        }
       }}
       action={(formData) => {
         if (submittingRef.current) return;
@@ -195,205 +393,24 @@ export function PublishForm({
       }}
       className="flex flex-col"
     >
-      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:gap-0">
-        {/* Columna izquierda: escanear captura (si está disponible). */}
-        {recognitionEnabled && (
-          <>
-            <div className="sm:w-56 sm:shrink-0">
-              <ScreenshotDropzone onScan={handleScreenshotScan} isScanning={isRecognizing} />
-              {recognitionNote && <p className="mt-2 text-xs text-ro-text-muted">{recognitionNote}</p>}
-            </div>
-
-            {/* Separador "O": vertical en desktop, horizontal en móvil. */}
-            <div className="flex items-center gap-2 sm:mx-4 sm:flex-col">
-              <span className="h-px flex-1 bg-ro-panel-border sm:h-auto sm:w-px" />
-              <span className="text-xs font-bold text-ro-text-muted">{t("or")}</span>
-              <span className="h-px flex-1 bg-ro-panel-border sm:h-auto sm:w-px" />
-            </div>
-          </>
-        )}
-
-        {/* Columna derecha: formulario. */}
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
-          {/* Ítem. */}
-          <ItemPicker selected={selectedItem} onSelect={handleItemSelect} onClear={handleItemClear} />
-          <input type="hidden" name="itemId" value={selectedItem?.id ?? ""} />
-
-          {/* Tipo (fuera de las pestañas). */}
-          <div role="group" aria-label={t("typeLabel")} className="flex gap-1.5 rounded-full border border-ro-panel-border bg-ro-panel-alt p-1">
-            {TYPE_SEGMENTS.map((seg) => {
-              const active = seg.value === type;
-              const label = t(`typeOptions.${seg.value}`);
-              return (
-                <button
-                  key={seg.value}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => handleTypeChange(seg.value)}
-                  className={`flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full px-1.5 py-1.5 text-xs font-medium transition-colors ${
-                    active ? `${seg.activeBg} text-ro-on-type` : "text-ro-text hover:bg-ro-panel-border/40"
-                  }`}
-                >
-                  <seg.Icon size={14} className={`shrink-0 ${active ? "" : seg.iconColor}`} aria-hidden />
-                  <span className="hidden truncate sm:inline">{label}</span>
-                </button>
-              );
-            })}
+      {recognitionEnabled ? (
+        // 2 columnas iguales (escáner · O · formulario); apiladas en móvil.
+        <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-[1fr_auto_1fr] sm:gap-0">
+          <div className="flex min-w-0 flex-col sm:p-2">
+            <ScreenshotDropzone onScan={handleScreenshotScan} isScanning={isRecognizing} />
+            {recognitionNote && <p className="mt-2 text-xs text-ro-text-muted">{recognitionNote}</p>}
           </div>
-
-          {/* Info (siempre visible; sin pestañas). */}
-          <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                {showPrice && (
-                  <FloatingField
-                    label={type === "BUY" ? t("payUpToLabel") : t("priceLabel")}
-                    className={`col-span-2 ${priceMissing ? "border-red-600" : ""}`}
-                  >
-                    {noPrice ? (
-                      <span className="text-sm text-ro-text-muted">
-                        {type === "BUY" ? tField("bestPrice") : tField("bestOffer")}
-                      </span>
-                    ) : (
-                      <MaskedPriceInput value={price} onChange={setPrice} placeholder="0" className={floatingControlClass} />
-                    )}
-                    <input type="hidden" name="price" value={price === "" ? "" : String(price)} />
-                  </FloatingField>
-                )}
-
-                <FloatingField label={tField("quantity")} className={quantityLocked ? "col-span-2" : ""}>
-                  {quantityLocked ? (
-                    <>
-                      <span className="text-sm text-ro-text">1</span>
-                      <input type="hidden" name="quantity" value={1} />
-                    </>
-                  ) : (
-                    <input
-                      type="number"
-                      name="quantity"
-                      min={1}
-                      defaultValue={1}
-                      required={!unlimited}
-                      disabled={canBeUnlimited && unlimited}
-                      className={floatingControlClass}
-                    />
-                  )}
-                </FloatingField>
-
-                {refineEligible && (
-                  <FloatingField label={tField("refine")}>
-                    <input
-                      type="number"
-                      name="refineLevel"
-                      min={0}
-                      max={maxRefineLevel}
-                      value={refineLevel}
-                      onChange={(e) => setRefineLevel(e.target.value === "" ? 0 : Number(e.target.value))}
-                      className={floatingControlClass}
-                    />
-                  </FloatingField>
-                )}
-
-                {maxCardSlots > 0 && (
-                  <FloatingField label={tField("cardSlots")}>
-                    <input
-                      type="number"
-                      name="cardSlots"
-                      min={0}
-                      max={maxCardSlots}
-                      value={cardSlots}
-                      onChange={(e) => setCardSlots(e.target.value === "" ? 0 : Number(e.target.value))}
-                      className={floatingControlClass}
-                    />
-                  </FloatingField>
-                )}
-              </div>
-
-              {/* Toggles contextuales. */}
-              <div className="flex flex-wrap gap-4">
-                {canBeUnlimited && (
-                  <label className="flex items-center gap-2 text-xs text-ro-text-muted">
-                    <input type="checkbox" name="unlimited" checked={unlimited} onChange={(e) => setUnlimited(e.target.checked)} />
-                    {t("unlimitedLabel")}
-                  </label>
-                )}
-                {showPrice && (
-                  <label className="flex items-center gap-2 text-xs text-ro-text-muted">
-                    <input type="checkbox" name="noPrice" checked={noPrice} onChange={(e) => setNoPrice(e.target.checked)} />
-                    {t("noPriceLabel")}
-                  </label>
-                )}
-              </div>
-
-              {/* Destinatario (regalo). */}
-              {type === "GIFT" && (
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-ro-text-muted">{t("recipientLabel")}</label>
-                  <UserPicker key={selectedRecipient?.id ?? "empty"} onSelect={setSelectedRecipient} />
-                  <input type="hidden" name="recipientId" value={selectedRecipient?.id ?? ""} />
-                </div>
-              )}
-            </div>
-
-          {/* Opciones (si el ítem las admite): apiladas bajo Info, sin pestañas. */}
-          {hasOptionCatalog && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-ro-text-muted">
-                {type === "BUY" ? tField("minStats") : tField("options")}
-                {optionsCount > 0 && (
-                  <span className="grid h-4 min-w-4 place-items-center rounded-full bg-ro-accent px-1 text-[10px] font-bold text-ro-accent-contrast">
-                    {optionsCount}
-                  </span>
-                )}
-              </div>
-              {Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
-                const index = slotIndex - 1;
-                const selectEnabled = index === 0 || optionSelections[index - 1].defId !== "";
-                const selection = optionSelections[index];
-                const defsForSlot = optionDefs.filter((d) => d.slotIndex === slotIndex);
-                const selectedDef = defsForSlot.find((d) => d.id === selection.defId);
-                const isOutOfRange =
-                  selectedDef !== undefined &&
-                  selection.value !== "" &&
-                  (selection.value < selectedDef.minValue || selection.value > selectedDef.maxValue);
-
-                return (
-                  <div key={slotIndex} className="flex items-center gap-2">
-                    <select
-                      name={`option${slotIndex}DefId`}
-                      value={selection.defId}
-                      disabled={!selectEnabled}
-                      onChange={(e) => handleSelectChange(index, e.target.value)}
-                      className={`min-w-0 flex-1 ${selectClass}`}
-                    >
-                      <option value="">{tFilters("optionPlaceholder", { slot: slotIndex })}</option>
-                      {defsForSlot.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.label}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      name={`option${slotIndex}Value`}
-                      min={selectedDef?.minValue}
-                      max={selectedDef?.maxValue}
-                      placeholder={selectedDef ? `${selectedDef.minValue} - ${selectedDef.maxValue}` : undefined}
-                      value={selection.value}
-                      disabled={!selection.defId}
-                      required={!!selection.defId}
-                      onChange={(e) => handleValueChange(index, e.target.value === "" ? "" : Number(e.target.value))}
-                      className={`w-28 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-2.5 py-1.5 text-sm text-ro-text focus:border-ro-accent focus:outline-none disabled:opacity-50`}
-                      style={isOutOfRange ? { borderColor: "#dc2626" } : undefined}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {/* Separador "O": vertical en desktop, horizontal en móvil. */}
+          <div className="flex items-center gap-2 sm:flex-col sm:px-1">
+            <span className="h-px flex-1 bg-ro-panel-border sm:h-auto sm:w-px" />
+            <span className="shrink-0 text-[11px] font-bold text-ro-text-muted">{t("or")}</span>
+            <span className="h-px flex-1 bg-ro-panel-border sm:h-auto sm:w-px" />
+          </div>
+          <div className="min-w-0 sm:p-2">{formColumn}</div>
         </div>
-      </div>
+      ) : (
+        <div className="p-4">{formColumn}</div>
+      )}
 
       {/* Pie: Cancelar + Publicar (juntos a la derecha; Publicar rojo). */}
       <div className="flex shrink-0 justify-end gap-2 border-t border-ro-panel-border bg-ro-panel-header px-4 py-3">
@@ -408,3 +425,16 @@ export function PublishForm({
   );
 }
 
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`-mb-px flex items-center gap-1.5 border-b-2 px-2.5 py-1.5 text-[11px] transition-colors ${
+        active ? "border-ro-accent font-bold text-ro-text" : "border-transparent text-ro-text-muted hover:text-ro-text"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
