@@ -46,14 +46,14 @@ export function SearchTabs() {
         return (
           <div
             key={tab.id}
-            className={`-mb-0.5 flex items-center gap-1 rounded-t-lg border border-b-2 px-2.5 py-1.5 text-xs ${
+            className={`flex items-center gap-1 rounded-t-lg border px-2.5 py-1.5 text-xs ${
               active
-                ? // La activa "corta" la línea: su borde inferior es del color del
-                  // panel y conecta con el contenido.
-                  "border-ro-accent border-b-ro-panel bg-ro-panel font-medium text-ro-text"
-                : // Las inactivas continúan la línea: su borde inferior es acento
-                  // (antes transparente, que la cortaba).
-                  "border-ro-panel-border border-b-ro-accent bg-ro-panel-alt text-ro-text-muted hover:text-ro-text"
+                ? // La activa baja 2px y "corta" la línea: su borde inferior (2px)
+                  // es del color del panel y conecta con el contenido.
+                  "-mb-0.5 border-b-2 border-ro-accent border-b-ro-panel bg-ro-panel font-medium text-ro-text"
+                : // Las inactivas se apoyan sobre la línea SIN taparla: sin borde
+                  // inferior (caja abierta por abajo) y sin margen negativo.
+                  "border-b-0 border-ro-panel-border bg-ro-panel-alt text-ro-text-muted hover:text-ro-text"
             }`}
           >
             <button type="button" onClick={() => switchTab(tab.id)} className="flex min-w-0 items-center gap-1">
