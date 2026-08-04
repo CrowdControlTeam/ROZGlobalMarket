@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Tag, ShoppingCart, ArrowLeftRight, Gift, HandCoins, Infinity as InfinityIcon } from "lucide-react";
+import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ItemOptionDef } from "@prisma/client";
 import { createListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
@@ -235,7 +235,7 @@ export function PublishForm({
                     )}
                   </div>
                   <AffixToggle active={noPrice} onToggle={() => setNoPrice(!noPrice)} label={t("noPriceLabel")}>
-                    <HandCoins size={13} />
+                    <Coins size={15} />
                   </AffixToggle>
                 </div>
                 {noPrice ? (
@@ -263,7 +263,7 @@ export function PublishForm({
                   </div>
                   {canBeUnlimited && (
                     <AffixToggle active={unlimited} onToggle={() => setUnlimited(!unlimited)} label={t("unlimitedLabel")}>
-                      <InfinityIcon size={13} />
+                      <InfinityIcon size={15} />
                     </AffixToggle>
                   )}
                   {unlimited && <input type="hidden" name="unlimited" value="on" />}
@@ -459,7 +459,7 @@ function AffixToggle({
         e.preventDefault();
         onToggle();
       }}
-      className={`grid h-5 w-5 shrink-0 place-items-center rounded transition-colors ${
+      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md transition-colors ${
         active ? "bg-ro-accent text-ro-accent-contrast" : "text-ro-text-muted hover:bg-ro-panel-border/60 hover:text-ro-text"
       }`}
     >
