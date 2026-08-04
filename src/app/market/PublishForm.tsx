@@ -170,7 +170,7 @@ export function PublishForm({
 
   // ── Columna de formulario (derecha, o única si no hay escáner). ──
   const formColumn = (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-3 sm:h-full">
       {/* Ítem. */}
       <ItemPicker selected={selectedItem} onSelect={handleItemSelect} onClear={handleItemClear} />
       <input type="hidden" name="itemId" value={selectedItem?.id ?? ""} />
@@ -217,7 +217,7 @@ export function PublishForm({
       )}
 
       {tab === "info" || !hasOptionCatalog ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
             {showPrice && (
               <FloatingField
@@ -309,6 +309,12 @@ export function PublishForm({
               <input type="hidden" name="recipientId" value={selectedRecipient?.id ?? ""} />
             </div>
           )}
+
+          {/* Notas: rellena el hueco del alto fijo. Sin `name` — de momento no
+              se envía ni se guarda (solo diseño). */}
+          <FloatingField label={t("notes")} className="min-h-[3.5rem] flex-1">
+            <textarea className={`${floatingControlClass} h-full resize-none`} />
+          </FloatingField>
         </div>
       ) : (
         /* Pestaña Opciones: 3 filas fijas (desplegable + valor). */

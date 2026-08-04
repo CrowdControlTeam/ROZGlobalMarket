@@ -496,6 +496,7 @@
     "form": {
       "typeLabel": "Tipo de publicación",
       "or": "O",
+      "notes": "Notas",
       "tabs": {
         "info": "Info"
       },

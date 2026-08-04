@@ -496,6 +496,7 @@
     "form": {
       "typeLabel": "Listing type",
       "or": "OR",
+      "notes": "Notes",
       "tabs": {
         "info": "Info"
       },
