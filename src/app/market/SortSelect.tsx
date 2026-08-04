@@ -23,22 +23,23 @@ export function SortSelect() {
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  // Píldora estilo diseño: icono de orden + valor actual + caret. El <select>
-  // nativo va transparente encima (appearance-none) para conservar el
-  // desplegable del sistema sin su chrome por defecto.
+  // El <select> ES la píldora (ocupa todo el ancho, clicable en cualquier
+  // punto). El icono y el caret van encima con pointer-events-none, así el
+  // click los atraviesa y abre el desplegable. Fondo sólido para que el popup
+  // nativo pinte las opciones legibles; padding (pl/pr) para que el texto no
+  // toque los bordes.
   return (
-    <div className="relative inline-flex items-center gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt py-1.5 pl-3 pr-7 text-xs text-ro-text">
-      <ArrowUpDown size={13} className="shrink-0 text-ro-text-muted" aria-hidden />
-      {/* Fondo sólido (no transparent) para que el desplegable nativo pinte las
-          opciones legibles: al ser transparent, el popup salía con texto del
-          tema sobre fondo blanco del SO (invisibles). Igual bg que la píldora,
-          así se funde. Las opciones llevan color explícito por si el SO ignora
-          el del <select>. */}
+    <div className="relative inline-flex items-center">
+      <ArrowUpDown
+        size={13}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ro-text-muted"
+        aria-hidden
+      />
       <select
         value={searchParams.get("sort") ?? "newest"}
         onChange={(e) => handleChange(e.target.value)}
         aria-label={t("sort.label")}
-        className="cursor-pointer appearance-none bg-ro-panel-alt text-ro-text focus:outline-none"
+        className="min-w-[190px] cursor-pointer appearance-none rounded-lg border border-ro-panel-border bg-ro-panel-alt py-1.5 pl-9 pr-9 text-xs text-ro-text focus:outline-none"
       >
         {SORT_VALUES.map((value) => (
           <option key={value} value={value} className="bg-ro-panel text-ro-text">
@@ -47,8 +48,8 @@ export function SortSelect() {
         ))}
       </select>
       <ChevronDown
-        size={13}
-        className="pointer-events-none absolute right-2 shrink-0 text-ro-text-muted"
+        size={14}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ro-text-muted"
         aria-hidden
       />
     </div>
