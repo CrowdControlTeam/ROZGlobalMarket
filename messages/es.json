@@ -497,6 +497,8 @@
       "typeLabel": "Tipo de publicación",
       "or": "O",
       "notes": "Notas",
+      "confirm": "Confirmar",
+      "previewHint": "La ficha tal cual saldrá en el mercado.",
       "tabs": {
         "info": "Info"
       },

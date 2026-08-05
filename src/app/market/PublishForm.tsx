@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { ItemOptionDef } from "@prisma/client";
+import type { ItemOptionDef, ListingType } from "@prisma/client";
 import { createListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
 import { sendGift } from "@/lib/gifts";
 import { recognizeItemFromScreenshot } from "@/lib/item-recognition";
 import { buttonClass, selectClass } from "@/lib/ui";
+import { formatPrice, priceColorClass } from "@/lib/price";
+import { listingTypeLabel, LISTING_TYPE_BADGE_CLASS, formatOptionAmount } from "@/lib/market-labels";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { FloatingField, floatingControlClass } from "@/components/FloatingField";
 import {
@@ -19,7 +22,7 @@ import {
   type OptionSelection,
 } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
-import { getMaxCardSlots } from "@/lib/card-slots-constants";
+import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
 import { getErrorMessage, rethrowFrameworkErrors } from "@/lib/errors";
 import { ItemPicker, type ItemResult } from "./new/ItemPicker";
 import { ScreenshotDropzone } from "./new/ScreenshotDropzone";
@@ -55,6 +58,7 @@ export function PublishForm({
   const [optionSelections, setOptionSelections] = useState<OptionSelection[]>(emptyOptionSelections());
   const [refineLevel, setRefineLevel] = useState(0);
   const [cardSlots, setCardSlots] = useState(0);
+  const [quantity, setQuantity] = useState<number | "">(1);
   const [price, setPrice] = useState<number | "">("");
   const [unlimited, setUnlimited] = useState(false);
   const [noPrice, setNoPrice] = useState(false);
@@ -65,9 +69,13 @@ export function PublishForm({
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [recognitionNote, setRecognitionNote] = useState<string | null>(null);
   const [tab, setTab] = useState<"info" | "options">("info");
+  // Paso de confirmación: al pulsar Publicar se muestra la vista previa (la
+  // tarjeta tal cual saldrá) y solo Confirmar publica de verdad.
+  const [preview, setPreview] = useState(false);
   const t = useTranslations("market.form");
   const tField = useTranslations("market.field");
   const tFilters = useTranslations("market.filters");
+  const tMarket = useTranslations("market");
   const tCommon = useTranslations("common");
 
   useEffect(() => {
@@ -168,6 +176,129 @@ export function PublishForm({
   const canSubmit = selectedItem !== null;
   const submittingRef = useRef(false);
 
+  // Construye el FormData desde el ESTADO (no desde los inputs del form): con
+  // las pestañas, los inputs de la pestaña inactiva no están montados, así que
+  // leer del form perdería datos. El contrato de campos es el de createListing.
+  function buildFormData(): FormData {
+    const fd = new FormData();
+    fd.set("type", type);
+    fd.set("itemId", selectedItem?.id ?? "");
+    if (quantityLocked) fd.set("quantity", "1");
+    else if (unlimited) fd.set("unlimited", "on");
+    else fd.set("quantity", String(quantity || 1));
+    if (refineEligible) fd.set("refineLevel", String(refineLevel));
+    if (maxCardSlots > 0) fd.set("cardSlots", String(cardSlots));
+    if (showPrice) {
+      if (noPrice) fd.set("noPrice", "on");
+      else if (price !== "") fd.set("price", String(price));
+    }
+    if (type === "GIFT" && selectedRecipient) fd.set("recipientId", selectedRecipient.id);
+    optionSelections.forEach((sel, i) => {
+      if (sel.defId && sel.value !== "") {
+        fd.set(`option${i + 1}DefId`, sel.defId);
+        fd.set(`option${i + 1}Value`, String(sel.value));
+      }
+    });
+    return fd;
+  }
+
+  // Validación en cliente antes de la vista previa (la real está en el server).
+  // Si algo falla, va a la pestaña correspondiente y no muestra la preview.
+  function handlePublish() {
+    if (!selectedItem) return;
+    if (showPrice && !noPrice && price === "") {
+      setPriceMissing(true);
+      setTab("info");
+      return;
+    }
+    setPriceMissing(false);
+    if (!quantityLocked && !unlimited && (quantity === "" || quantity < 1)) {
+      setTab("info");
+      return;
+    }
+    const badOption = optionSelections.some((sel) => {
+      if (!sel.defId) return false;
+      if (sel.value === "") return true;
+      const def = optionDefs.find((d) => d.id === sel.defId);
+      return def !== undefined && (sel.value < def.minValue || sel.value > def.maxValue);
+    });
+    if (badOption) {
+      setTab("options");
+      return;
+    }
+    setError(null);
+    setPreview(true);
+  }
+
+  function handleConfirm() {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setError(null);
+    startSubmitTransition(async () => {
+      try {
+        const fd = buildFormData();
+        if (type === "GIFT") {
+          await sendGift(fd);
+          router.push("/my/gifts");
+        } else {
+          const { id } = await createListing(fd);
+          router.push(`/market/${id}`);
+        }
+      } catch (err) {
+        submittingRef.current = false;
+        setError(getErrorMessage(err));
+      }
+    });
+  }
+
+  // ── Tarjeta de vista previa (la ficha tal cual saldrá en el mercado). ──
+  const previewType = type as ListingType;
+  const selectedOptions = optionSelections
+    .map((sel) => ({ sel, def: optionDefs.find((d) => d.id === sel.defId) }))
+    .filter((o) => o.def !== undefined && o.sel.value !== "");
+  const previewCard = selectedItem && (
+    <div className="rounded-xl border border-ro-panel-border bg-ro-panel p-3">
+      <div className="flex gap-2.5">
+        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
+          <Image src={selectedItem.iconUrl} alt="" width={32} height={32} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-ro-text">
+            {formatItemDisplayName(selectedItem.name, refineLevel, cardSlots)}
+          </p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-ro-text-muted">
+            <span className={`shrink-0 rounded px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide ${LISTING_TYPE_BADGE_CLASS[previewType]}`}>
+              {listingTypeLabel(tMarket, previewType)}
+            </span>
+            <span>· {tCommon("you")}</span>
+          </p>
+        </div>
+      </div>
+      {selectedOptions.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {selectedOptions.map(({ sel, def }) => (
+            <span key={sel.defId} className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-[0.65rem] text-ro-accent">
+              {def!.label} {formatOptionAmount(Number(sel.value), type === "BUY")}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="mt-2 flex justify-end text-sm">
+        {type === "TRADE" ? (
+          <span className="font-extrabold text-ro-type-trade">{listingTypeLabel(tMarket, "TRADE")}</span>
+        ) : type === "GIFT" ? (
+          <span className="font-extrabold text-ro-type-buy">{tMarket("results.free")}</span>
+        ) : noPrice ? (
+          <span className="font-bold text-ro-text-muted">{type === "BUY" ? tField("bestPrice") : tField("bestOffer")}</span>
+        ) : (
+          <span className={`font-extrabold ${priceColorClass(price === "" ? 0 : price)}`}>
+            {formatPrice(price === "" ? 0 : price)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
   // ── Columna de formulario (derecha, o única si no hay escáner). ──
   const formColumn = (
     <div className="flex min-w-0 flex-col gap-3 sm:h-full">
@@ -258,7 +389,13 @@ export function PublishForm({
                     {unlimited ? (
                       <span className="text-sm text-ro-text-muted">{t("unlimitedLabel")}</span>
                     ) : (
-                      <input type="number" name="quantity" min={1} defaultValue={1} required className={floatingControlClass} />
+                      <input
+                        type="number"
+                        min={1}
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
+                        className={floatingControlClass}
+                      />
                     )}
                   </div>
                   {canBeUnlimited && (
@@ -369,42 +506,19 @@ export function PublishForm({
   );
 
   return (
-    <form
-      onSubmit={(e) => {
-        const priceRequired = showPrice && !noPrice;
-        const priceEmpty = priceRequired && !new FormData(e.currentTarget).get("price");
-        setPriceMissing(priceEmpty);
-        if (priceEmpty) {
-          setTab("info");
-          e.preventDefault();
-        }
-      }}
-      action={(formData) => {
-        if (submittingRef.current) return;
-        submittingRef.current = true;
-        setError(null);
-        startSubmitTransition(async () => {
-          try {
-            if (type === "GIFT") {
-              await sendGift(formData);
-              router.push("/my/gifts");
-            } else {
-              const { id } = await createListing(formData);
-              router.push(`/market/${id}`);
-            }
-          } catch (err) {
-            submittingRef.current = false;
-            setError(getErrorMessage(err));
-          }
-        });
-      }}
-      className="flex flex-col"
-    >
-      {recognitionEnabled ? (
+    <form onSubmit={(e) => e.preventDefault()} className="flex flex-col">
+      {preview ? (
+        // Vista previa: la ficha tal cual saldrá en el mercado.
+        <div className="p-4">
+          <p className="mb-2 text-xs text-ro-text-muted">{t("previewHint")}</p>
+          {previewCard}
+          {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+        </div>
+      ) : recognitionEnabled ? (
         // 2 columnas iguales (escáner · O · formulario), apiladas en móvil. Alto
         // fijo en desktop para que el modal no cambie de tamaño al aparecer/
         // desaparecer campos; el formulario hace scroll interno si algún caso se
-        // pasa, y el cuadro de escaneo rellena ese alto.
+        // pasa, y el cuadro de escaneo rellena ese alto (cuadrado).
         <div className="grid grid-cols-1 gap-3 p-3 sm:h-[28rem] sm:grid-cols-[1fr_auto_1fr] sm:gap-0">
           <div className="flex min-w-0 flex-col sm:p-2">
             <ScreenshotDropzone onScan={handleScreenshotScan} isScanning={isRecognizing} />
@@ -422,14 +536,28 @@ export function PublishForm({
         <div className="p-4">{formColumn}</div>
       )}
 
-      {/* Pie: Cancelar + Publicar (juntos a la derecha; Publicar rojo). */}
+      {/* Pie: en el formulario → Cancelar (cierra) + Publicar (a la preview);
+          en la preview → Cancelar (vuelve) + Confirmar (publica de verdad). */}
       <div className="flex shrink-0 justify-end gap-2 border-t border-ro-panel-border bg-ro-panel-header px-4 py-3">
-        <button type="button" onClick={onClose} className={buttonClass("secondary")}>
-          {tCommon("cancel")}
-        </button>
-        <button type="submit" disabled={!canSubmit || isSubmitting} className={buttonClass("primary")}>
-          {isSubmitting ? t("publishing") : t(`submitLabels.${type}`)}
-        </button>
+        {preview ? (
+          <>
+            <button type="button" onClick={() => setPreview(false)} className={buttonClass("secondary")}>
+              {tCommon("cancel")}
+            </button>
+            <button type="button" onClick={handleConfirm} disabled={isSubmitting} className={buttonClass("primary")}>
+              {isSubmitting ? t("publishing") : t("confirm")}
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="button" onClick={onClose} className={buttonClass("secondary")}>
+              {tCommon("cancel")}
+            </button>
+            <button type="button" onClick={handlePublish} disabled={!canSubmit} className={buttonClass("primary")}>
+              {t(`submitLabels.${type}`)}
+            </button>
+          </>
+        )}
       </div>
     </form>
   );

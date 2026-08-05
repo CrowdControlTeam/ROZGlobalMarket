@@ -497,6 +497,8 @@
       "typeLabel": "Listing type",
       "or": "OR",
       "notes": "Notes",
+      "confirm": "Confirm",
+      "previewHint": "This is how it will appear in the market.",
       "tabs": {
         "info": "Info"
       },
