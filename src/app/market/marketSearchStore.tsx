@@ -58,6 +58,11 @@ type MarketSearchContextValue = {
   switchTab: (id: string) => void;
   addTab: () => void;
   closeTab: (id: string) => void;
+  // Bottom-sheet de filtros en móvil: el disparador (icono "Filtros") vive en la
+  // cabecera de resultados (MarketResults) y el panel en MarketFilters, así que
+  // el estado abierto/cerrado se comparte aquí.
+  mobileFiltersOpen: boolean;
+  setMobileFiltersOpen: (open: boolean) => void;
 };
 
 const MarketSearchContext = createContext<MarketSearchContextValue | null>(null);
@@ -86,6 +91,7 @@ export function MarketSearchProvider({
     { id: INITIAL_TAB_ID, seq: 1, filters: pickFilters(initialFilters) },
   ]);
   const [activeId, setActiveId] = useState<string>(INITIAL_TAB_ID);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Última query que ESTE store empujó a la URL. Se inicializa a lo que ya hay
   // en la URL (initialFilters) para no re-empujar en el montaje. El valor del
@@ -178,6 +184,8 @@ export function MarketSearchProvider({
     switchTab,
     addTab,
     closeTab,
+    mobileFiltersOpen,
+    setMobileFiltersOpen,
   };
 
   return <MarketSearchContext.Provider value={value}>{children}</MarketSearchContext.Provider>;

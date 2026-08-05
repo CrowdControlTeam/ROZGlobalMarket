@@ -61,7 +61,7 @@ export function MarketFilters() {
   // El store es la fuente de verdad de los filtros de la pestaña activa; este
   // panel solo lee de `filters` y escribe con setFilter/setFilters. El store
   // serializa a la URL (con debounce) y la URL es lo que lee el servidor.
-  const { filters, setFilter, setFilters } = useMarketSearch();
+  const { filters, setFilter, setFilters, mobileFiltersOpen, setMobileFiltersOpen } = useMarketSearch();
 
   // Metadatos async (no son filtros): límite de refino y catálogo de options.
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
@@ -387,9 +387,9 @@ export function MarketFilters() {
   function toggleSection(id: string) {
     setOpenSections((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }));
   }
-  // Panel (desktop) colapsado a rail o abierto; bottom-sheet en móvil.
+  // Panel (desktop) colapsado a rail o abierto. El bottom-sheet móvil se controla
+  // desde el store (mobileFiltersOpen); el disparador vive en la cabecera.
   const [collapsed, setCollapsed] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Si el margen no da para el panel embebido (mismo umbral que el layout,
   // 1560px), arrancar en rail: si no, el panel flotaría sobre los resultados
@@ -512,19 +512,11 @@ export function MarketFilters() {
         )}
       </aside>
 
-      {/* Móvil: botón "Filtros (N)" + bottom-sheet. */}
-      <div className="mb-3 min-[1100px]:hidden">
-        <button type="button" onClick={() => setSheetOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-3 py-1.5 text-xs font-medium text-ro-text">
-          <SlidersHorizontal size={14} className="text-ro-accent" aria-hidden />
-          {t("filters.toggle")}
-          {totalCount > 0 && (
-            <span className="grid h-4 min-w-[16px] place-items-center rounded-full bg-ro-accent px-1 text-[10px] font-bold text-ro-accent-contrast">{totalCount}</span>
-          )}
-        </button>
-        <Drawer side="bottom" open={sheetOpen} onClose={() => setSheetOpen(false)} title={t("filters.toggle")}>
-          {panelBody}
-        </Drawer>
-      </div>
+      {/* Móvil: bottom-sheet de filtros. El disparador (icono "Filtros") está en
+          la cabecera de resultados; aquí solo vive el panel. */}
+      <Drawer side="bottom" open={mobileFiltersOpen} onClose={() => setMobileFiltersOpen(false)} title={t("filters.toggle")}>
+        {panelBody}
+      </Drawer>
     </>
   );
 }
