@@ -405,7 +405,7 @@ export function PublishForm({
         // fijo en desktop para que el modal no cambie de tamaño al aparecer/
         // desaparecer campos; el formulario hace scroll interno si algún caso se
         // pasa, y el cuadro de escaneo rellena ese alto.
-        <div className="grid grid-cols-1 gap-3 p-3 sm:h-[22rem] sm:grid-cols-[1fr_auto_1fr] sm:gap-0">
+        <div className="grid grid-cols-1 gap-3 p-3 sm:h-[28rem] sm:grid-cols-[1fr_auto_1fr] sm:gap-0">
           <div className="flex min-w-0 flex-col sm:p-2">
             <ScreenshotDropzone onScan={handleScreenshotScan} isScanning={isRecognizing} />
             {recognitionNote && <p className="mt-2 text-xs text-ro-text-muted">{recognitionNote}</p>}
