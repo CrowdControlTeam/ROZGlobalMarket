@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { X } from "lucide-react";
 import { searchItems } from "@/lib/listings";
 import { inputClass } from "@/lib/ui";
 import { categoryLabel, weaponTypeLabel } from "@/lib/market-labels";
@@ -62,34 +61,42 @@ export function ItemPicker({
     setResults([]);
   }
 
-  return (
-    <div>
-      <div className="relative">
-        <input
-          type="text"
-          value={selected ? selected.name : query}
-          onChange={(e) => handleChange(e.target.value)}
-          readOnly={!!selected}
-          placeholder={t("itemPicker.placeholder")}
-          className={`${inputClass} ${selected ? "cursor-default pr-8" : ""}`}
-        />
-        {selected && (
-          <button
-            type="button"
-            onClick={handleClear}
-            aria-label={t("itemPicker.removeSelected")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-ro-text-muted hover:text-ro-gold"
-          >
-            <X size={16} />
-          </button>
-        )}
+  // Con un item elegido se muestra como TARJETA (icono + nombre + pista +
+  // "Cambiar"); sin selección, el buscador con su desplegable de resultados.
+  if (selected) {
+    return (
+      <div className="flex h-12 items-center gap-2.5 rounded-lg border border-ro-accent bg-ro-accent/10 px-2">
+        <Image src={selected.iconUrl} alt="" width={32} height={32} className="h-8 w-8 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-ro-text">{selected.name}</p>
+          <p className="truncate text-xs text-ro-text-muted">{itemHint(t, selected)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleClear}
+          className="shrink-0 text-xs font-medium text-ro-accent hover:underline"
+        >
+          {t("itemPicker.change")}
+        </button>
       </div>
-      {!selected && isPending && (
-        <p className="mt-1 text-sm text-ro-text-muted">{tCommon("searching")}</p>
-      )}
-      {!selected && error && <p className="mt-1 text-sm text-red-700">{error}</p>}
-      {!selected && results.length > 0 && (
-        <ul className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto rounded-md border-2 border-ro-panel-border bg-ro-panel-alt p-1">
+    );
+  }
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => handleChange(e.target.value)}
+        placeholder={t("itemPicker.placeholder")}
+        className={`${inputClass} h-12`}
+      />
+      {isPending && <p className="mt-1 text-sm text-ro-text-muted">{tCommon("searching")}</p>}
+      {error && <p className="mt-1 text-sm text-red-700">{error}</p>}
+      {results.length > 0 && (
+        // Desplegable FLOTANTE (absoluto) para no empujar el contenido del modal
+        // ni generar scroll: se superpone sobre lo de debajo.
+        <ul className="absolute inset-x-0 top-full z-20 mt-1 flex max-h-64 flex-col gap-1 overflow-y-auto rounded-md border-2 border-ro-panel-border bg-ro-panel-alt p-1 shadow-xl">
           {results.map((item) => (
             <li key={item.id}>
               <button

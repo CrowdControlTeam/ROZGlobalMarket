@@ -101,7 +101,9 @@ export async function MarketPageContent({
           serializa a la URL, y la URL es lo que lee el servidor. */}
       <MarketNav />
       <MarketSearchProvider initialFilters={initialFilters}>
-        <div className="mb-3">
+        {/* Pestañas de "Mis búsquedas": función de power-user; solo en desktop
+            (en móvil quitan espacio vertical sin aportar lo suficiente). */}
+        <div className="mb-3 hidden sm:block">
           <SearchTabs />
         </div>
         {/* El selector de tipo queda DENTRO del contexto de la pestaña activa

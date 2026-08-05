@@ -17,10 +17,14 @@ export function MarketNav() {
   const t = useTranslations();
   const type = searchParams.get("type");
   const onMarket = pathname === "/market";
-  // Publicar preselecciona el tipo si el mercado está filtrado por Compra/
-  // Intercambio/Regalo (Venta es el valor por defecto del formulario).
-  const publishHref =
-    type === "BUY" || type === "TRADE" || type === "GIFT" ? `/market/new?type=${type}` : "/market/new";
+  // Publicar abre el modal interceptado (?publish=<tipo>) sobre el mercado,
+  // preservando los filtros actuales; preselecciona el tipo por el que se esté
+  // filtrando (Venta por defecto). El acceso directo /market/new sigue siendo la
+  // página completa de respaldo.
+  const publishParams = new URLSearchParams(searchParams.toString());
+  publishParams.set("publish", type || "SALE");
+  publishParams.delete("listing");
+  const publishHref = `/market?${publishParams.toString()}`;
 
   const items: NavItem[] = [
     { href: "/market", labelKey: "home.tiles.market.label", Icon: Store, active: onMarket && type !== "GIFT" },
@@ -31,23 +35,34 @@ export function MarketNav() {
 
   return (
     <nav className="mb-4 flex flex-wrap gap-2">
-      {items.map((it) => (
-        <Link
-          key={it.href}
-          href={it.href}
-          aria-current={it.active ? "page" : undefined}
-          className={`inline-flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold transition-colors ${
-            it.cta
-              ? "border-ro-red bg-ro-red text-white hover:opacity-90"
-              : it.active
-                ? "border-ro-accent bg-ro-accent/10 text-ro-text"
-                : "border-ro-panel-border bg-ro-panel text-ro-text hover:border-ro-accent"
-          }`}
-        >
-          <it.Icon size={18} className={it.cta ? "text-white" : "text-ro-accent"} aria-hidden />
-          {t(it.labelKey)}
-        </Link>
-      ))}
+      {items.map((it) => {
+        const label = t(it.labelKey);
+        return (
+          <Link
+            key={it.href}
+            href={it.href}
+            aria-current={it.active ? "page" : undefined}
+            // En móvil, solo icono salvo el botón ACTIVO, que muestra su texto a
+            // modo de "título de página"; en sm+ todos muestran el texto.
+            aria-label={label}
+            title={label}
+            className={`flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold transition-colors ${
+              it.active ? "flex-1 sm:flex-none" : ""
+            } ${
+              it.cta
+                ? "border-ro-red bg-ro-red text-white hover:opacity-90"
+                : it.active
+                  ? "border-ro-accent bg-ro-accent/10 text-ro-text"
+                  : "border-ro-panel-border bg-ro-panel text-ro-text hover:border-ro-accent"
+            }`}
+          >
+            <it.Icon size={18} className={it.cta ? "text-white" : "text-ro-accent"} aria-hidden />
+            {/* El activo muestra su texto (título de página); el resto solo icono
+                en móvil. En sm+ todos muestran texto. */}
+            <span className={it.active ? "" : "hidden sm:inline"}>{label}</span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }

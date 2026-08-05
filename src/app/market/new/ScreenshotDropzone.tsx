@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { useTranslations } from "next-intl";
+import { ImageUp } from "lucide-react";
 import { buttonClass } from "@/lib/ui";
 import { MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_MB } from "@/lib/screenshot-constants";
 
@@ -76,7 +77,7 @@ export function ScreenshotDropzone({
   }
 
   return (
-    <div>
+    <div className="flex h-full flex-col gap-2">
       <div
         role="button"
         tabIndex={0}
@@ -90,20 +91,20 @@ export function ScreenshotDropzone({
         }}
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
-        className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed px-4 py-6 text-center transition-colors focus:outline-none ${
-          isDragOver ? "border-ro-gold bg-ro-gold/10" : "border-ro-panel-border hover:border-ro-gold-dark"
+        className={`flex min-h-40 flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed p-4 text-center transition-colors focus:outline-none ${
+          isDragOver ? "border-ro-accent bg-ro-accent/15" : "border-ro-accent/60 bg-ro-accent/[0.06] hover:border-ro-accent"
         }`}
       >
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- preview de un blob: URL local, no una imagen remota optimizable
-          <img src={previewUrl} alt="Captura seleccionada" className="max-h-40 rounded-md" />
+          <img src={previewUrl} alt="Captura seleccionada" className="max-h-40 rounded-lg" />
         ) : (
           <>
-            <span aria-hidden className="text-xl">
-              ⬆
+            <span aria-hidden className="grid h-11 w-11 place-items-center rounded-lg bg-ro-accent/15 text-ro-accent">
+              <ImageUp size={22} />
             </span>
             <p className="text-sm font-semibold text-ro-text">{t("upload")}</p>
-            <p className="text-xs text-ro-text-muted">{t("hint")}</p>
+            <p className="max-w-[22ch] text-xs text-ro-text-muted">{t("hint")}</p>
           </>
         )}
       </div>

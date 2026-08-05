@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare } from "lucide-react";
+import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal } from "lucide-react";
 import { loadMoreListings } from "@/lib/market-actions";
 import type { MarketFilters } from "@/lib/market";
 import { buttonClass } from "@/lib/ui";
@@ -359,8 +359,13 @@ export function MarketResults({
   // por el store —estable, no se remonta al teclear— conserva el foco. Enter no
   // hace nada especial (ya aplica al escribir); se evita el submit por defecto
   // para no recargar la página.
-  const { filters: searchFilters, setFilter: setSearchFilter } = useMarketSearch();
+  const { filters: searchFilters, setFilter: setSearchFilter, setMobileFiltersOpen } = useMarketSearch();
   const q = searchFilters.q ?? "";
+  // Hay filtros de PANEL activos (excluye tipo/orden/búsqueda por nombre): pinta
+  // un punto en el icono de Filtros de la cabecera.
+  const hasPanelFilters = Object.entries(searchFilters).some(
+    ([k, v]) => v && k !== "q" && k !== "sort" && k !== "type",
+  );
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
   }
@@ -407,31 +412,54 @@ export function MarketResults({
 
   return (
     <div>
-      {/* Cabecera de resultados: buscador + contador "X de Y" + orden + vista. */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <form
-          onSubmit={submitSearch}
-          className="flex flex-1 items-center gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-3 py-1.5 sm:max-w-[240px]"
-        >
-          <Search size={14} className="shrink-0 text-ro-text-muted" aria-hidden />
-          <input
-            type="text"
-            value={q}
-            onChange={(e) => setSearchFilter("q", e.target.value)}
-            placeholder={t("filters.namePlaceholder")}
-            aria-label={t("filters.name")}
-            className="min-w-0 flex-1 bg-transparent text-xs text-ro-text placeholder:text-ro-text-muted focus:outline-none"
-          />
-        </form>
-        <span className="ml-auto shrink-0 text-xs text-ro-text-muted">
-          {t.rich("results.count", {
-            shown: displayed.length,
-            total,
-            b: (chunks) => <b className="font-bold text-ro-text">{chunks}</b>,
-          })}
-        </span>
-        <SortSelect />
-        <ViewToggle view={view} onChange={changeView} />
+      {/* Cabecera de resultados. Móvil: 2 filas — (Filtros icono + buscador) y
+          (resultados + orden). Desktop: 1 fila con el buscador a la izquierda y
+          resultados/orden/vista a la derecha. El toggle grid/lista es solo
+          desktop (en móvil siempre una columna). */}
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        {/* Fila A: Filtros (solo icono, < 1100px) + buscador por nombre. */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(true)}
+            aria-label={t("filters.toggle")}
+            title={t("filters.toggle")}
+            className="relative grid h-[34px] w-[34px] shrink-0 place-items-center rounded-lg border border-ro-panel-border bg-ro-panel-alt text-ro-accent min-[1100px]:hidden"
+          >
+            <SlidersHorizontal size={16} aria-hidden />
+            {hasPanelFilters && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-ro-accent" />}
+          </button>
+          <form
+            onSubmit={submitSearch}
+            // Móvil: a todo el ancho de su fila (flex-1). Desktop: ancho fijo de
+            // 300px (con flex-1 solo se ajustaba al contenido, ~212px).
+            className="flex flex-1 items-center gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-3 py-1.5 sm:w-[300px] sm:flex-none"
+          >
+            <Search size={14} className="shrink-0 text-ro-text-muted" aria-hidden />
+            <input
+              type="text"
+              value={q}
+              onChange={(e) => setSearchFilter("q", e.target.value)}
+              placeholder={t("filters.namePlaceholder")}
+              aria-label={t("filters.name")}
+              className="min-w-0 flex-1 bg-transparent text-xs text-ro-text placeholder:text-ro-text-muted focus:outline-none"
+            />
+          </form>
+        </div>
+        {/* Fila B: resultados + orden (+ vista solo en desktop). */}
+        <div className="flex w-full items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-normal">
+          <span className="shrink-0 text-xs text-ro-text-muted">
+            {t.rich("results.count", {
+              shown: displayed.length,
+              total,
+              b: (chunks) => <b className="font-bold text-ro-text">{chunks}</b>,
+            })}
+          </span>
+          <SortSelect />
+          <div className="hidden sm:block">
+            <ViewToggle view={view} onChange={changeView} />
+          </div>
+        </div>
       </div>
 
       {displayed.length === 0 ? (
