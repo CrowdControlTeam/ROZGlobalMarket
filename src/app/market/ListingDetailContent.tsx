@@ -265,7 +265,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
           <p className={labelClass}>{isPoster ? t("detail.offersReceived") : t("detail.yourOffers")}</p>
           <ul className="mt-2 flex flex-col gap-3">
             {(isPoster ? pendingOffers : myOffers).map((offer) => (
-              <li key={offer.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+              <li key={offer.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
                     {offer.offeredItem &&
@@ -322,7 +322,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
           </p>
           <ul className="mt-2 flex flex-col gap-3">
             {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
-              <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+              <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
                     x{deal.quantity}
@@ -375,7 +375,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
           </p>
           <ul className="mt-2 flex flex-col gap-3">
             {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
-              <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+              <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
                     x{deal.quantity}
@@ -422,7 +422,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
           </p>
           <ul className="mt-2 flex flex-col gap-3">
             {(isPoster ? pendingOffers : myOffers).map((deal) => (
-              <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+              <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">x{deal.quantity}</span>
                   {!isPoster && (
