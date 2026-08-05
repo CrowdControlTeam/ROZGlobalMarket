@@ -35,23 +35,34 @@ export function MarketNav() {
 
   return (
     <nav className="mb-4 flex flex-wrap gap-2">
-      {items.map((it) => (
-        <Link
-          key={it.href}
-          href={it.href}
-          aria-current={it.active ? "page" : undefined}
-          className={`inline-flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold transition-colors ${
-            it.cta
-              ? "border-ro-red bg-ro-red text-white hover:opacity-90"
-              : it.active
-                ? "border-ro-accent bg-ro-accent/10 text-ro-text"
-                : "border-ro-panel-border bg-ro-panel text-ro-text hover:border-ro-accent"
-          }`}
-        >
-          <it.Icon size={18} className={it.cta ? "text-white" : "text-ro-accent"} aria-hidden />
-          {t(it.labelKey)}
-        </Link>
-      ))}
+      {items.map((it) => {
+        const label = t(it.labelKey);
+        return (
+          <Link
+            key={it.href}
+            href={it.href}
+            aria-current={it.active ? "page" : undefined}
+            // En móvil, solo icono salvo el botón ACTIVO, que muestra su texto a
+            // modo de "título de página"; en sm+ todos muestran el texto.
+            aria-label={label}
+            title={label}
+            className={`flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold transition-colors ${
+              it.active ? "flex-1 sm:flex-none" : ""
+            } ${
+              it.cta
+                ? "border-ro-red bg-ro-red text-white hover:opacity-90"
+                : it.active
+                  ? "border-ro-accent bg-ro-accent/10 text-ro-text"
+                  : "border-ro-panel-border bg-ro-panel text-ro-text hover:border-ro-accent"
+            }`}
+          >
+            <it.Icon size={18} className={it.cta ? "text-white" : "text-ro-accent"} aria-hidden />
+            {/* El activo muestra su texto (título de página); el resto solo icono
+                en móvil. En sm+ todos muestran texto. */}
+            <span className={it.active ? "" : "hidden sm:inline"}>{label}</span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }
