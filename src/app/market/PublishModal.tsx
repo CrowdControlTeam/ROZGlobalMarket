@@ -41,7 +41,7 @@ export function PublishModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-y-auto p-0 sm:items-center sm:p-4">
-      <div onClick={close} aria-hidden className="fixed inset-0 bg-black/50" />
+      <div onClick={close} aria-hidden className="fixed inset-0 bg-black/50 motion-safe:animate-[ro-fade-in_150ms_ease-out]" />
       <div
         role="dialog"
         aria-modal="true"
@@ -49,7 +49,7 @@ export function PublishModal({
         // Ancho adaptativo: ancho para el layout de 2 columnas (escáner + form)
         // cuando el reconocimiento está disponible; estrecho para solo-formulario
         // cuando no lo está.
-        className={`relative z-10 flex max-h-full w-full flex-col overflow-hidden bg-ro-panel text-ro-text shadow-xl sm:rounded-2xl sm:border sm:border-ro-panel-border ${
+        className={`relative z-10 flex max-h-full w-full flex-col overflow-hidden bg-ro-panel text-ro-text shadow-xl motion-safe:animate-[ro-modal-in_180ms_ease-out] sm:rounded-2xl sm:border sm:border-ro-panel-border ${
           recognitionEnabled ? "sm:max-w-4xl" : "sm:max-w-md"
         }`}
       >

@@ -106,3 +106,27 @@ body {
   color: var(--ro-text);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Animaciones de entrada (modales/overlays). Solo CSS: se disparan al insertar
+   el elemento, sin depender de estado JS/hidratación. Usadas vía
+   `animate-[ro-modal-in_...]` / `animate-[ro-fade-in_...]` con la variante
+   motion-safe para respetar prefers-reduced-motion. */
+@keyframes ro-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ro-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
