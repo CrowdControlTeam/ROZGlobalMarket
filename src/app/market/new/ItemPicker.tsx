@@ -83,22 +83,20 @@ export function ItemPicker({
   }
 
   return (
-    <div>
-      <div className="relative">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => handleChange(e.target.value)}
-          placeholder={t("itemPicker.placeholder")}
-          className={`${inputClass} h-12`}
-        />
-      </div>
-      {isPending && (
-        <p className="mt-1 text-sm text-ro-text-muted">{tCommon("searching")}</p>
-      )}
-      {!selected && error && <p className="mt-1 text-sm text-red-700">{error}</p>}
-      {!selected && results.length > 0 && (
-        <ul className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto rounded-md border-2 border-ro-panel-border bg-ro-panel-alt p-1">
+    <div className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => handleChange(e.target.value)}
+        placeholder={t("itemPicker.placeholder")}
+        className={`${inputClass} h-12`}
+      />
+      {isPending && <p className="mt-1 text-sm text-ro-text-muted">{tCommon("searching")}</p>}
+      {error && <p className="mt-1 text-sm text-red-700">{error}</p>}
+      {results.length > 0 && (
+        // Desplegable FLOTANTE (absoluto) para no empujar el contenido del modal
+        // ni generar scroll: se superpone sobre lo de debajo.
+        <ul className="absolute inset-x-0 top-full z-20 mt-1 flex max-h-64 flex-col gap-1 overflow-y-auto rounded-md border-2 border-ro-panel-border bg-ro-panel-alt p-1 shadow-xl">
           {results.map((item) => (
             <li key={item.id}>
               <button
