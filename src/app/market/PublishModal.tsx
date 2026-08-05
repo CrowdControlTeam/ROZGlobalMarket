@@ -64,9 +64,8 @@ export function PublishModal({
             ✕
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <PublishForm recognitionEnabled={recognitionEnabled} initialType={initialType} onClose={close} />
-        </div>
+        {/* El propio form gestiona su scroll interno y su pie fijo (flex-1). */}
+        <PublishForm recognitionEnabled={recognitionEnabled} initialType={initialType} onClose={close} />
       </div>
     </div>
   );

@@ -329,10 +329,10 @@ export function PublishForm({
         })}
       </div>
 
-      {/* Pestañas SOLO si el ítem admite opciones (con un único "Info" no aporta
-          nada). Sin opciones, los campos de Info van directos, sin barra. */}
+      {/* Pestañas SOLO en desktop y si el ítem admite opciones. En móvil no hay
+          pestañas: Info y Opciones se apilan en una columna (ver más abajo). */}
       {hasOptionCatalog && (
-        <div className="flex gap-1 border-b border-ro-panel-border">
+        <div className="hidden gap-1 border-b border-ro-panel-border sm:flex">
           <TabButton active={tab === "info"} onClick={() => setTab("info")}>
             {t("tabs.info")}
           </TabButton>
@@ -347,8 +347,9 @@ export function PublishForm({
         </div>
       )}
 
-      {tab === "info" || !hasOptionCatalog ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {/* Info: en móvil siempre visible; en desktop solo si la pestaña activa es
+          Info (o el ítem no tiene opciones). */}
+      <div className={`flex min-h-0 flex-1 flex-col gap-3 ${hasOptionCatalog && tab === "options" ? "sm:hidden" : ""}`}>
           <div className="grid grid-cols-2 gap-3">
             {showPrice && (
               <FloatingField
@@ -451,10 +452,22 @@ export function PublishForm({
           <FloatingField label={t("notes")} className="min-h-[3.5rem] flex-1">
             <textarea className={`${floatingControlClass} h-full resize-none`} />
           </FloatingField>
-        </div>
-      ) : (
-        /* Pestaña Opciones: 3 filas fijas (desplegable + valor). */
-        <div className="flex flex-col gap-2">
+      </div>
+
+      {/* Opciones: solo si el ítem las admite. En móvil siempre visibles con un
+          encabezado (no hay pestañas); en desktop solo si la pestaña activa es
+          Opciones. */}
+      {hasOptionCatalog && (
+        <div className={tab === "info" ? "sm:hidden" : ""}>
+          <div className="mb-2 flex items-center gap-2 border-t border-ro-panel-border pt-3 text-[11px] font-medium uppercase tracking-wide text-ro-text-muted sm:hidden">
+            {type === "BUY" ? tField("minStats") : tField("options")}
+            {optionsCount > 0 && (
+              <span className="grid h-3.5 min-w-3.5 place-items-center rounded-full bg-ro-accent px-1 text-[8px] font-bold text-ro-accent-contrast">
+                {optionsCount}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
           {Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
             const index = slotIndex - 1;
             const selectEnabled = index === 0 || optionSelections[index - 1].defId !== "";
@@ -498,6 +511,7 @@ export function PublishForm({
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
@@ -506,7 +520,10 @@ export function PublishForm({
   );
 
   return (
-    <form onSubmit={(e) => e.preventDefault()} className="flex flex-col">
+    <form onSubmit={(e) => e.preventDefault()} className="flex min-h-0 flex-1 flex-col">
+      {/* Cuerpo scrolleable; el pie queda fijo abajo (clave en móvil a pantalla
+          completa, donde el contenido apilado puede pasar del alto). */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
       {preview ? (
         // Vista previa: la ficha tal cual saldrá en el mercado.
         <div className="p-4">
@@ -535,9 +552,10 @@ export function PublishForm({
       ) : (
         <div className="p-4">{formColumn}</div>
       )}
+      </div>
 
-      {/* Pie: en el formulario → Cancelar (cierra) + Publicar (a la preview);
-          en la preview → Cancelar (vuelve) + Confirmar (publica de verdad). */}
+      {/* Pie FIJO abajo: en el formulario → Cancelar (cierra) + Publicar (a la
+          preview); en la preview → Cancelar (vuelve) + Confirmar (publica). */}
       <div className="flex shrink-0 justify-end gap-2 border-t border-ro-panel-border bg-ro-panel-header px-4 py-3">
         {preview ? (
           <>
