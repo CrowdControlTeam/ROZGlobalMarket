@@ -431,7 +431,9 @@ export function MarketResults({
           </button>
           <form
             onSubmit={submitSearch}
-            className="flex flex-1 items-center gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-3 py-1.5 sm:max-w-[300px]"
+            // Móvil: a todo el ancho de su fila (flex-1). Desktop: ancho fijo de
+            // 300px (con flex-1 solo se ajustaba al contenido, ~212px).
+            className="flex flex-1 items-center gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-3 py-1.5 sm:w-[300px] sm:flex-none"
           >
             <Search size={14} className="shrink-0 text-ro-text-muted" aria-hidden />
             <input
