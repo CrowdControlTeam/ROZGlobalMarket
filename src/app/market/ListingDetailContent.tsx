@@ -31,6 +31,13 @@ function fmtQty(n: number | null): string {
   return n === null ? "∞" : String(n);
 }
 
+// Precio con formato de miles y color por tramo (ver priceColorClass). Se usa
+// en las líneas secundarias de las ofertas/reservas para que, aunque el texto
+// que las rodea sea muted, el importe conserve su color de tramo.
+function Price({ value }: { value: number }) {
+  return <span className={priceColorClass(value)}>{formatPrice(value)}</span>;
+}
+
 // Fila clave→valor de la ficha (etiqueta a la izquierda, valor a la derecha).
 function KvRow({ label, value, last }: { label: string; value: React.ReactNode; last?: boolean }) {
   return (
@@ -253,7 +260,12 @@ export async function ListingDetailContent({ id }: { id: string }) {
                   ),
                 })}
                 {(accepted.offeredQuantity ?? 1) > 1 && ` x${accepted.offeredQuantity}`}
-                {accepted.zenyOffered > 0 && ` + ${formatPrice(accepted.zenyOffered)}`}
+                {accepted.zenyOffered > 0 && (
+                  <>
+                    {" + "}
+                    <Price value={accepted.zenyOffered} />
+                  </>
+                )}
               </>
             );
           })()}
@@ -296,7 +308,9 @@ export async function ListingDetailContent({ id }: { id: string }) {
                   </p>
                 )}
                 {offer.zenyOffered > 0 && (
-                  <p className="mt-1 text-ro-text-muted">+ {formatPrice(offer.zenyOffered)}</p>
+                  <p className="mt-1 text-ro-text-muted">
+                    + <Price value={offer.zenyOffered} />
+                  </p>
                 )}
                 {offer.status === "PENDING" && (
                   <div className="mt-2">
@@ -327,11 +341,18 @@ export async function ListingDetailContent({ id }: { id: string }) {
                   <span className="font-semibold">
                     x{deal.quantity}
                     <span className="ml-1 font-normal text-ro-text-muted">
-                      {isCompetitive
-                        ? ` · ${formatPrice(deal.unitPrice ?? 0)}${t("detail.perUnit")} (${formatPrice(
-                            deal.quantity * (deal.unitPrice ?? 0),
-                          )})`
-                        : ` · ${formatPrice(deal.quantity * (deal.unitPrice ?? 0))}`}
+                      {isCompetitive ? (
+                        <>
+                          {" · "}
+                          <Price value={deal.unitPrice ?? 0} />
+                          {t("detail.perUnit")} (<Price value={deal.quantity * (deal.unitPrice ?? 0)} />)
+                        </>
+                      ) : (
+                        <>
+                          {" · "}
+                          <Price value={deal.quantity * (deal.unitPrice ?? 0)} />
+                        </>
+                      )}
                     </span>
                   </span>
                   {!isPoster && (
@@ -380,11 +401,18 @@ export async function ListingDetailContent({ id }: { id: string }) {
                   <span className="font-semibold">
                     x{deal.quantity}
                     <span className="ml-1 font-normal text-ro-text-muted">
-                      {isCompetitive
-                        ? ` · ${formatPrice(deal.unitPrice ?? 0)}${t("detail.perUnit")} (${formatPrice(
-                            deal.quantity * (deal.unitPrice ?? 0),
-                          )})`
-                        : ` · ${formatPrice(deal.quantity * (deal.unitPrice ?? 0))}`}
+                      {isCompetitive ? (
+                        <>
+                          {" · "}
+                          <Price value={deal.unitPrice ?? 0} />
+                          {t("detail.perUnit")} (<Price value={deal.quantity * (deal.unitPrice ?? 0)} />)
+                        </>
+                      ) : (
+                        <>
+                          {" · "}
+                          <Price value={deal.quantity * (deal.unitPrice ?? 0)} />
+                        </>
+                      )}
                     </span>
                   </span>
                   {!isPoster && (

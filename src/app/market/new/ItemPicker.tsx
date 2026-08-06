@@ -105,7 +105,7 @@ export function ItemPicker({
                   onSelect(item);
                   setResults([]);
                 }}
-                className="flex w-full items-center gap-2 rounded-md p-2 text-left text-ro-text hover:bg-ro-gold/20"
+                className="flex w-full items-center gap-2 rounded-md p-2 text-left text-ro-text hover:bg-ro-accent/15"
               >
                 <Image src={item.iconUrl} alt={item.name} width={24} height={24} />
                 <span className="flex-1">
