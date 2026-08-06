@@ -44,6 +44,7 @@ function RankingTable({
   }
 
   return (
+    <div className="overflow-x-auto">
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-ro-panel-border/30 text-left text-ro-text-muted">
@@ -62,6 +63,7 @@ function RankingTable({
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -100,6 +102,7 @@ export default async function AdminStatsPage({
       </Panel>
 
       <Panel title={t("listingsByType.heading")} className="mb-6">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-ro-panel-border/30 text-left text-ro-text-muted">
@@ -124,6 +127,7 @@ export default async function AdminStatsPage({
             ))}
           </tbody>
         </table>
+        </div>
       </Panel>
 
       <Panel title={t("tradeOffers.heading")} className="mb-6">
