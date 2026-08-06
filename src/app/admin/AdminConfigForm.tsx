@@ -32,6 +32,9 @@ export function AdminConfigForm({ config }: { config: Config }) {
       }}
       className="flex flex-col gap-6"
     >
+      {/* Secciones en 2 columnas balanceadas en PC (multicol) para aprovechar
+          el ancho y acortar el scroll; cada sección no se parte entre columnas. */}
+      <div className="gap-x-8 md:columns-2 [&>fieldset]:mb-6 [&>fieldset]:break-inside-avoid">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("general.legend")}</legend>
         <div>
@@ -220,6 +223,7 @@ export function AdminConfigForm({ config }: { config: Config }) {
           />
         </div>
       </fieldset>
+      </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
       {saved && !error && <p className="text-sm text-green-700">{tStatus("saved")}</p>}

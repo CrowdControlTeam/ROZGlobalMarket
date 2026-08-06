@@ -14,7 +14,7 @@ export default async function AdminPage() {
   // Admin y Estadísticas son ya pantallas separadas (cada una tiene su acceso
   // desde el hub), así que la cabecera de config no enlaza a stats.
   return (
-    <main className="mx-auto max-w-lg px-6 py-8">
+    <main className="mx-auto max-w-4xl px-6 py-8">
       <BackLink href="/market" label={tNav("backToMarket")} />
       <Panel title={t("title")}>
         <AdminConfigForm config={config} />
