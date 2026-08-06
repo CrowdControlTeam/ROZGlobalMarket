@@ -33,11 +33,13 @@ export function AdminConfigForm({ config }: { config: Config }) {
       }}
       className="flex flex-col gap-6"
     >
-      {/* Secciones en 2 columnas balanceadas en PC (multicol) para aprovechar
-          el ancho y acortar el scroll; cada sección no se parte entre columnas.
-          column-rule = línea vertical decorativa de 1px entre columnas (solo en
-          PC; en móvil, al ser 1 columna, no aparece). */}
-      <div className="gap-x-8 md:columns-2 md:[column-rule:1px_solid_var(--ro-panel-border)] [&>fieldset]:mb-6 [&>fieldset]:break-inside-avoid">
+      {/* Dos columnas en PC con el contenido agrupado a mano: izquierda =
+          configuración general; derecha = funcionalidades. La línea vertical
+          (border-l del grupo derecho) hace de separador decorativo; en móvil
+          los dos grupos se apilan. */}
+      <div className="grid gap-6 md:grid-cols-2 md:gap-0">
+      {/* Grupo IZQUIERDO — configuración general. */}
+      <div className="flex flex-col gap-6 md:pr-8">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("general.legend")}</legend>
         <div>
@@ -128,6 +130,20 @@ export function AdminConfigForm({ config }: { config: Config }) {
         )}
       </fieldset>
 
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold text-ro-text">{t("market.maxRefineLabel")}</legend>
+        <input
+          type="number"
+          name="maxRefineLevel"
+          min={0}
+          defaultValue={config.maxRefineLevel}
+          className={inputClass}
+        />
+      </fieldset>
+      </div>
+
+      {/* Grupo DERECHO — funcionalidades. */}
+      <div className="flex flex-col gap-6 md:border-l md:border-ro-panel-border md:pl-8">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("webhook.legend")}</legend>
         <ToggleSwitch
@@ -233,17 +249,8 @@ export function AdminConfigForm({ config }: { config: Config }) {
           defaultChecked={config.maintenanceModeEnabled}
           label={t("market.maintenanceToggleLabel")}
         />
-        <div>
-          <label className={labelClass}>{t("market.maxRefineLabel")}</label>
-          <input
-            type="number"
-            name="maxRefineLevel"
-            min={0}
-            defaultValue={config.maxRefineLevel}
-            className={inputClass}
-          />
-        </div>
       </fieldset>
+      </div>
       </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
