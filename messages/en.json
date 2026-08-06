@@ -52,8 +52,10 @@
       "market": { "label": "Market", "desc": "Browse and filter everything for sale, purchase and trade." },
       "activity": { "label": "My activity", "desc": "Your listings, requests and gifts." },
       "publish": { "label": "Create listing", "desc": "Put an item up for sale, purchase or trade." },
-      "gifts": { "label": "Gifts", "desc": "Items given away to the community." },
-      "stats": { "label": "Statistics", "desc": "Market rankings and activity." }
+      "stats": { "label": "Statistics", "desc": "Market rankings and activity." },
+      "settings": { "label": "Settings", "desc": "Market configuration." },
+      "bis": { "label": "BiSes", "desc": "List of the best items per slot." },
+      "comingSoon": "Coming soon"
     }
   },
   "maintenancePage": {
