@@ -308,6 +308,13 @@ model MarketConfig {
   // (DISCORD_BOT_TOKEN, nunca en base de datos), o como entrada manual si no.
   adminRoleIds String[] @default([])
 
+  // Rol de Discord requerido para ACCEDER a la app (distinto del panel). Si
+  // está puesto, en el login no basta con pertenecer al guild: hay que tener
+  // además este rol. Los admins están exentos (para no auto-bloquearse). Null
+  // = sin restricción, acceso solo por pertenencia como hasta ahora. Ver
+  // el callback signIn de src/auth.ts.
+  accessRoleId String?
+
   // Nombre de la app mostrado en la cabecera (enlaza a /market) y como
   // <title> de la pestaña — cada guild pone el suyo. Null hasta
   // configurarse la primera vez: el placeholder/fallback "ROZ Global

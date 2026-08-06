@@ -185,7 +185,15 @@
       "hint": "Anyone with the \"Administrator\" permission on the Discord server can already always get in. These roles are ADDED as an extra way in, not a replacement.",
       "rolesFetchError": "Couldn't list the server's roles by name ({message}).",
       "roleIdsPlaceholder": "One role ID per line (or comma-separated)",
-      "roleIdsHint": "Without a configured bot (DISCORD_BOT_TOKEN) role names can't be shown — copy each role's ID from Discord (Server Settings → Roles → right-click → Copy ID, with developer mode enabled)."
+      "roleIdsHint": "Without a configured bot (DISCORD_BOT_TOKEN) role names can't be shown — copy each role's ID from Discord (Server Settings → Roles → right-click → Copy ID, with developer mode enabled).",
+      "noneSelected": "No roles selected",
+      "noRoles": "No roles"
+    },
+    "appAccess": {
+      "legend": "App access",
+      "hint": "Role required to sign in. If you pick one, getting in requires being in the server AND having that role; admins get in regardless. No role = access by membership only, as before.",
+      "none": "No restriction (membership only)",
+      "roleIdPlaceholder": "Access role ID (empty = no restriction)"
     },
     "webhook": {
       "legend": "Discord notifications",

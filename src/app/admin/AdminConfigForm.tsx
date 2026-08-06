@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { updateMarketConfig, type getMarketConfig } from "@/lib/admin-config";
 import { buttonClass, inputClass, labelClass, selectClass } from "@/lib/ui";
 import { ToggleSwitch } from "@/components/ToggleSwitch";
+import { RoleMultiSelect } from "@/components/RoleMultiSelect";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { MAX_LOGO_BYTES, MAX_HOME_IMAGE_BYTES } from "@/lib/branding-constants";
 import { getErrorMessage } from "@/lib/errors";
@@ -76,20 +77,11 @@ export function AdminConfigForm({ config }: { config: Config }) {
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("access.legend")}</legend>
         <p className="text-xs text-ro-text-muted">{t("access.hint")}</p>
         {config.guildRolesResult.status === "ok" ? (
-          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border border-ro-panel-border bg-ro-panel-alt p-2">
-            {config.guildRolesResult.roles.map((role) => (
-              <label key={role.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="adminRoleIds"
-                  value={role.id}
-                  defaultChecked={config.adminRoleIds.includes(role.id)}
-                  className="accent-ro-accent"
-                />
-                {role.name}
-              </label>
-            ))}
-          </div>
+          <RoleMultiSelect
+            name="adminRoleIds"
+            roles={config.guildRolesResult.roles}
+            defaultSelected={config.adminRoleIds}
+          />
         ) : (
           <div>
             {config.guildRolesResult.status === "error" && (
@@ -106,6 +98,33 @@ export function AdminConfigForm({ config }: { config: Config }) {
             />
             <p className="mt-1 text-xs text-ro-text-muted">{t("access.roleIdsHint")}</p>
           </div>
+        )}
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold text-ro-text">{t("appAccess.legend")}</legend>
+        <p className="text-xs text-ro-text-muted">{t("appAccess.hint")}</p>
+        {config.guildRolesResult.status === "ok" ? (
+          <select
+            name="accessRoleId"
+            defaultValue={config.accessRoleId ?? ""}
+            className={`${selectClass} w-full`}
+          >
+            <option value="">{t("appAccess.none")}</option>
+            {config.guildRolesResult.roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type="text"
+            name="accessRoleId"
+            defaultValue={config.accessRoleId ?? ""}
+            placeholder={t("appAccess.roleIdPlaceholder")}
+            className={inputClass}
+          />
         )}
       </fieldset>
 

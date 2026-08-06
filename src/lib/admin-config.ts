@@ -60,6 +60,7 @@ export async function getMarketConfig() {
     optionsEnabled: config.optionsEnabled,
     optionsCatalogCount,
     adminRoleIds: config.adminRoleIds,
+    accessRoleId: config.accessRoleId,
     guildRolesResult,
     // Se devuelven completos (admin-only): el formulario los reenvía tal cual
     // si no se cambian (así "sin tocar" = conservar; vacío = borrar).
@@ -130,6 +131,13 @@ export async function updateMarketConfig(formData: FormData) {
   }
   const adminRoleIds = parseAdminRoleIds(formData);
 
+  // Rol de acceso a la app: un único snowflake, o vacío = sin restricción (null).
+  const accessRoleRaw = formData.get("accessRoleId");
+  const accessRoleId =
+    typeof accessRoleRaw === "string" && SNOWFLAKE.test(accessRoleRaw.trim())
+      ? accessRoleRaw.trim()
+      : null;
+
   // Imágenes de marca (logo + imagen del hub): data-URI base64 o vacío = borrar
   // (null). Se validan formato y peso. El formulario reenvía el valor completo
   // (no enmascarado), así que "sin tocar" ya trae el data-URI existente.
@@ -163,6 +171,7 @@ export async function updateMarketConfig(formData: FormData) {
       optionsEnabled: parsed.data.optionsEnabled,
       webhookUrl: parsed.data.webhookUrl ?? null,
       adminRoleIds,
+      accessRoleId,
       siteName: parsed.data.siteName ?? null,
       logoUrl: images.logoUrl,
       homeImageUrl: images.homeImageUrl,
@@ -177,6 +186,7 @@ export async function updateMarketConfig(formData: FormData) {
       optionsEnabled: parsed.data.optionsEnabled,
       ...(parsed.data.webhookUrl ? { webhookUrl: parsed.data.webhookUrl } : {}),
       adminRoleIds,
+      accessRoleId,
       siteName: parsed.data.siteName ?? null,
       logoUrl: images.logoUrl,
       homeImageUrl: images.homeImageUrl,

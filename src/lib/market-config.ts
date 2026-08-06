@@ -25,6 +25,7 @@ export type MarketConfigValues = {
   maintenanceModeEnabled: boolean;
   optionsEnabled: boolean;
   adminRoleIds: string[];
+  accessRoleId: string | null;
   siteName: string;
   logoUrl: string | null;
   homeImageUrl: string | null;
@@ -51,6 +52,7 @@ export const loadMarketConfig = cache(async (): Promise<MarketConfigValues> => {
     maintenanceModeEnabled: config?.maintenanceModeEnabled ?? false,
     optionsEnabled: config?.optionsEnabled ?? true,
     adminRoleIds: config?.adminRoleIds ?? [],
+    accessRoleId: config?.accessRoleId ?? null,
     siteName: config?.siteName?.trim() || DEFAULT_SITE_NAME,
     logoUrl: config?.logoUrl ?? null,
     homeImageUrl: config?.homeImageUrl ?? null,

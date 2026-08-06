@@ -185,7 +185,15 @@
       "hint": "Quien tenga el permiso \"Administrator\" del servidor de Discord ya entra siempre. Estos roles se SUMAN como vía adicional, no lo sustituyen.",
       "rolesFetchError": "No se pudo listar los roles del servidor con nombre ({message}).",
       "roleIdsPlaceholder": "Un ID de rol por línea (o separados por comas)",
-      "roleIdsHint": "Sin bot configurado (DISCORD_BOT_TOKEN) no se pueden mostrar los nombres de los roles — copia el ID de cada rol desde Discord (Ajustes del servidor → Roles → clic derecho → Copiar ID, con el modo desarrollador activado)."
+      "roleIdsHint": "Sin bot configurado (DISCORD_BOT_TOKEN) no se pueden mostrar los nombres de los roles — copia el ID de cada rol desde Discord (Ajustes del servidor → Roles → clic derecho → Copiar ID, con el modo desarrollador activado).",
+      "noneSelected": "Sin roles seleccionados",
+      "noRoles": "No hay roles"
+    },
+    "appAccess": {
+      "legend": "Acceso a la aplicación",
+      "hint": "Rol necesario para entrar. Si eliges uno, para acceder hará falta pertenecer al servidor Y tener ese rol; los administradores entran igualmente. Sin rol = acceso solo por pertenencia, como hasta ahora.",
+      "none": "Sin restricción (solo pertenencia)",
+      "roleIdPlaceholder": "ID del rol de acceso (vacío = sin restricción)"
     },
     "webhook": {
       "legend": "Notificaciones a Discord",
