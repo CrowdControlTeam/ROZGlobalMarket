@@ -28,7 +28,7 @@ export default async function MyListingsPage() {
           <li key={listing.id}>
             <Link
               href={`/market/${listing.id}`}
-              className="flex items-center gap-4 rounded-lg border-2 border-ro-panel-border bg-ro-panel p-4 text-ro-text transition-colors hover:border-ro-gold"
+              className="flex items-center gap-4 rounded-lg border-2 border-ro-panel-border bg-ro-panel p-4 text-ro-text transition-colors hover:border-ro-accent"
             >
               <Image src={listing.item.iconUrl} alt={listing.item.name} width={40} height={40} />
               <div className="flex-1">

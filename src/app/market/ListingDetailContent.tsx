@@ -9,7 +9,6 @@ import {
   offerStatusLabel,
   listingTypeLabel,
   LISTING_TYPE_BADGE_CLASS,
-  posterLabel,
   listingStatusLabel,
   formatOptionAmount,
 } from "@/lib/market-labels";
@@ -30,6 +29,25 @@ import { TradeOfferActions } from "./[id]/TradeOfferActions";
 // Cantidad para mostrar: ∞ cuando es ilimitada (null, "los que tengas").
 function fmtQty(n: number | null): string {
   return n === null ? "∞" : String(n);
+}
+
+// Precio con formato de miles y color por tramo (ver priceColorClass). Se usa
+// en las líneas secundarias de las ofertas/reservas para que, aunque el texto
+// que las rodea sea muted, el importe conserve su color de tramo.
+function Price({ value }: { value: number }) {
+  return <span className={priceColorClass(value)}>{formatPrice(value)}</span>;
+}
+
+// Fila clave→valor de la ficha (etiqueta a la izquierda, valor a la derecha).
+function KvRow({ label, value, last }: { label: string; value: React.ReactNode; last?: boolean }) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-4 py-1.5 ${last ? "" : "border-b border-ro-panel-border/60"}`}
+    >
+      <dt className="text-ro-text-muted">{label}</dt>
+      <dd className="text-right font-medium text-ro-text">{value}</dd>
+    </div>
+  );
 }
 
 // Ficha de un listing — compartida entre la página completa
@@ -100,115 +118,85 @@ export async function ListingDetailContent({ id }: { id: string }) {
 
   return (
     <>
+      {/* Hero: icono grande + nombre + badge · vendedor. */}
       <div className="flex items-center gap-3">
-        <Image
-          src={listing.item.iconUrl}
-          alt={listing.item.name}
-          width={44}
-          height={44}
-        />
-        <div className="min-w-0">
-          {/* Badge en su propia línea arriba del nombre — con el badge
-              inline, nombres un poco largos empujaban el badge o se
-              descuadraban. */}
-          <span
-            className={`inline-block rounded border px-1.5 py-0.5 text-xs font-normal ${LISTING_TYPE_BADGE_CLASS[listing.type]}`}
-          >
-            {listingTypeLabel(t, listing.type)}
-          </span>
-          <h1 className="mt-1 font-heading text-sm text-ro-text">
+        <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl border border-ro-panel-border bg-ro-panel-alt">
+          <Image src={listing.item.iconUrl} alt={listing.item.name} width={44} height={44} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-base font-extrabold text-ro-text">
             {formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots)}
           </h1>
-          <p className="mt-1 text-sm text-ro-text-muted">
-            {listingStatusLabel(t, listing.status, listing.type)}
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-ro-text-muted">
+            <span
+              className={`shrink-0 rounded px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide ${LISTING_TYPE_BADGE_CLASS[listing.type]}`}
+            >
+              {listingTypeLabel(t, listing.type)}
+            </span>
+            <span>
+              ·{" "}
+              <UserMention
+                userId={listing.posterId}
+                username={listing.poster.username}
+                viewerId={session.user.discordId}
+                capitalize
+                item={listing.item}
+                listingId={listing.id}
+                dmAvailable={dmAvailable}
+              />
+            </span>
           </p>
         </div>
       </div>
 
-      {/* Grid de 2 columnas en vez de filas apiladas con borde propio —
-          reduce bastante el alto total, sobre todo en el panel móvil. */}
-      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <div>
-          <dt className="text-xs text-ro-text-muted">{isBuy ? t("field.quantity") : t("detail.available")}</dt>
-          <dd>{fmtQty(isBuy ? listing.quantity : isSale || isGift ? available : remaining)}</dd>
-        </div>
-        {!isTrade && listing.price !== null && (
-          <div>
-            <dt className="text-xs text-ro-text-muted">{isBuy ? t("field.payUpTo") : t("detail.unitPrice")}</dt>
-            <dd className={`font-bold ${priceColorClass(listing.price)}`}>
-              {formatPrice(listing.price)}
-            </dd>
-          </div>
+      {/* Precio grande (color por tramo/tipo). */}
+      <div className="mt-3 text-xl font-extrabold">
+        {isTrade ? (
+          <span className="text-ro-type-trade">{listingTypeLabel(t, "TRADE")}</span>
+        ) : isGift ? (
+          <span className="text-ro-type-buy">{t("results.free")}</span>
+        ) : isCompetitive ? (
+          <span className="text-base font-bold text-ro-text-muted">
+            {isBuy ? t("field.bestPrice") : t("field.bestOffer")}
+          </span>
+        ) : (
+          <span className={priceColorClass(listing.price ?? 0)}>
+            {formatPrice(listing.price ?? 0)}
+            {isBuy && <span className="ml-1 text-xs font-normal text-ro-text-muted">{t("detail.perUnit")}</span>}
+          </span>
         )}
-        {isCompetitive && (
-          <div>
-            <dt className="text-xs text-ro-text-muted">{isBuy ? t("field.payUpTo") : t("detail.unitPrice")}</dt>
-            <dd className="font-bold text-ro-text-muted">
-              {isBuy ? t("field.bestPrice") : t("field.bestOffer")}
-            </dd>
-          </div>
-        )}
-        <div>
-          <dt className="text-xs text-ro-text-muted">{posterLabel(t, listing.type)}</dt>
-          <dd>
-            <UserMention
-              userId={listing.posterId}
-              username={listing.poster.username}
-              viewerId={session.user.discordId}
-              capitalize
-              item={listing.item}
-              listingId={listing.id}
-              dmAvailable={dmAvailable}
-            />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-ro-text-muted">{t("detail.posted")}</dt>
-          <dd>{listing.createdAt.toLocaleString()}</dd>
-        </div>
-        {/* Con 1 sola unidad, "Vendidos: 0 de 1" no aporta nada que
-            "Disponibles" ya no diga. quantitySold no se usa en BUY. */}
+      </div>
+      {listing.status !== "ACTIVE" && (
+        <p className="mt-1 text-sm text-ro-text-muted">{listingStatusLabel(t, listing.status, listing.type)}</p>
+      )}
+
+      {/* Datos clave, en filas clave→valor. */}
+      <dl className="mt-3 flex flex-col text-sm">
+        <KvRow
+          label={isBuy ? t("field.quantity") : t("detail.available")}
+          value={fmtQty(isBuy ? listing.quantity : isSale || isGift ? available : remaining)}
+        />
+        {/* Refino y slots no se listan aquí: ya salen en el nombre del item
+            (formatItemDisplayName → "+9 Nombre [2]"), sería redundante. */}
+        {/* Con 1 sola unidad, "Vendidos: 0 de 1" no aporta nada. No aplica a BUY. */}
         {!isBuy && (listing.quantity === null || listing.quantity > 1) && (
-          <div>
-            <dt className="text-xs text-ro-text-muted">
-              {isGift ? t("detail.given") : t("detail.sold")}
-            </dt>
-            {/* Ilimitado (quantity null): "0 de ∞" no aporta —el tope no existe—,
-                así que se muestra solo lo vendido. */}
-            <dd>
-              {listing.quantity === null
-                ? sold
-                : `${sold} ${t("detail.of")} ${listing.quantity}`}
-            </dd>
-          </div>
+          <KvRow
+            label={isGift ? t("detail.given") : t("detail.sold")}
+            value={listing.quantity === null ? String(sold) : `${sold} ${t("detail.of")} ${listing.quantity}`}
+          />
         )}
-        {isSale && reserved > 0 && (
-          <div>
-            <dt className="text-xs text-ro-text-muted">{t("detail.reserved")}</dt>
-            <dd>{reserved}</dd>
-          </div>
-        )}
+        {isSale && reserved > 0 && <KvRow label={t("detail.reserved")} value={String(reserved)} />}
+        <KvRow label={t("detail.posted")} value={listing.createdAt.toLocaleString()} last />
       </dl>
 
       {listing.options.length > 0 && (
-        <div className="mt-2">
+        <div className="mt-3">
           <p className={labelClass}>{isBuy ? t("field.minStats") : t("field.options")}</p>
-          {/* Texto plano en móvil (cabe en la mitad de columna sin
-              apretarse); badge como en las cards del mercado a partir de
-              sm, donde ya sobra sitio. */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:hidden">
-            {listing.options.map((o) => (
-              <div key={o.slotIndex} className="flex justify-between gap-2">
-                <span className="text-ro-text-muted">{o.def.label}</span>
-                <span className="font-semibold">{formatOptionAmount(o.value, isBuy)}</span>
-              </div>
-            ))}
-          </div>
-          <div className="hidden flex-wrap gap-1 sm:flex">
+          <div className="mt-1 flex flex-wrap gap-1">
             {listing.options.map((o) => (
               <span
                 key={o.slotIndex}
-                className="rounded border border-ro-gold-dark/50 bg-ro-gold/10 px-1.5 py-0.5 text-xs text-ro-text-muted"
+                className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-xs text-ro-accent"
               >
                 {o.def.label} {formatOptionAmount(o.value, isBuy)}
               </span>
@@ -272,7 +260,12 @@ export async function ListingDetailContent({ id }: { id: string }) {
                   ),
                 })}
                 {(accepted.offeredQuantity ?? 1) > 1 && ` x${accepted.offeredQuantity}`}
-                {accepted.zenyOffered > 0 && ` + ${formatPrice(accepted.zenyOffered)}`}
+                {accepted.zenyOffered > 0 && (
+                  <>
+                    {" + "}
+                    <Price value={accepted.zenyOffered} />
+                  </>
+                )}
               </>
             );
           })()}
@@ -284,7 +277,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
           <p className={labelClass}>{isPoster ? t("detail.offersReceived") : t("detail.yourOffers")}</p>
           <ul className="mt-2 flex flex-col gap-3">
             {(isPoster ? pendingOffers : myOffers).map((offer) => (
-              <li key={offer.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+              <li key={offer.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
                     {offer.offeredItem &&
@@ -315,7 +308,9 @@ export async function ListingDetailContent({ id }: { id: string }) {
                   </p>
                 )}
                 {offer.zenyOffered > 0 && (
-                  <p className="mt-1 text-ro-text-muted">+ {formatPrice(offer.zenyOffered)}</p>
+                  <p className="mt-1 text-ro-text-muted">
+                    + <Price value={offer.zenyOffered} />
+                  </p>
                 )}
                 {offer.status === "PENDING" && (
                   <div className="mt-2">
@@ -341,16 +336,23 @@ export async function ListingDetailContent({ id }: { id: string }) {
           </p>
           <ul className="mt-2 flex flex-col gap-3">
             {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
-              <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+              <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
                     x{deal.quantity}
                     <span className="ml-1 font-normal text-ro-text-muted">
-                      {isCompetitive
-                        ? ` · ${formatPrice(deal.unitPrice ?? 0)}${t("detail.perUnit")} (${formatPrice(
-                            deal.quantity * (deal.unitPrice ?? 0),
-                          )})`
-                        : ` · ${formatPrice(deal.quantity * (deal.unitPrice ?? 0))}`}
+                      {isCompetitive ? (
+                        <>
+                          {" · "}
+                          <Price value={deal.unitPrice ?? 0} />
+                          {t("detail.perUnit")} (<Price value={deal.quantity * (deal.unitPrice ?? 0)} />)
+                        </>
+                      ) : (
+                        <>
+                          {" · "}
+                          <Price value={deal.quantity * (deal.unitPrice ?? 0)} />
+                        </>
+                      )}
                     </span>
                   </span>
                   {!isPoster && (
@@ -394,16 +396,23 @@ export async function ListingDetailContent({ id }: { id: string }) {
           </p>
           <ul className="mt-2 flex flex-col gap-3">
             {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
-              <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+              <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
                     x{deal.quantity}
                     <span className="ml-1 font-normal text-ro-text-muted">
-                      {isCompetitive
-                        ? ` · ${formatPrice(deal.unitPrice ?? 0)}${t("detail.perUnit")} (${formatPrice(
-                            deal.quantity * (deal.unitPrice ?? 0),
-                          )})`
-                        : ` · ${formatPrice(deal.quantity * (deal.unitPrice ?? 0))}`}
+                      {isCompetitive ? (
+                        <>
+                          {" · "}
+                          <Price value={deal.unitPrice ?? 0} />
+                          {t("detail.perUnit")} (<Price value={deal.quantity * (deal.unitPrice ?? 0)} />)
+                        </>
+                      ) : (
+                        <>
+                          {" · "}
+                          <Price value={deal.quantity * (deal.unitPrice ?? 0)} />
+                        </>
+                      )}
                     </span>
                   </span>
                   {!isPoster && (
@@ -441,7 +450,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
           </p>
           <ul className="mt-2 flex flex-col gap-3">
             {(isPoster ? pendingOffers : myOffers).map((deal) => (
-              <li key={deal.id} className="rounded-md border-2 border-ro-panel-border/30 p-3 text-sm">
+              <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">x{deal.quantity}</span>
                   {!isPoster && (

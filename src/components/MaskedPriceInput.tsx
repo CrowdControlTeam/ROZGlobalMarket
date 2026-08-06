@@ -1,6 +1,6 @@
 "use client";
 
-import { formatNumber, priceColorClass } from "@/lib/price";
+import { formatNumber, priceColorClass, MAX_INT } from "@/lib/price";
 import { inputClass } from "@/lib/ui";
 
 // Input de texto controlado para cualquier campo de moneda/precio/coste:
@@ -26,7 +26,9 @@ export function MaskedPriceInput({
 }) {
   function handleChange(raw: string) {
     const digits = raw.replace(/\D/g, "");
-    onChange(digits === "" ? "" : Number(digits));
+    // Se recorta al máximo de un INT: así el campo nunca deja escribir un
+    // valor que la base rechazaría por overflow (ver MAX_INT).
+    onChange(digits === "" ? "" : Math.min(Number(digits), MAX_INT));
   }
 
   return (

@@ -64,7 +64,7 @@ export function UserMention({
           if (onContactClick) onContactClick();
           else setOpen(true);
         }}
-        className="underline decoration-dotted underline-offset-2 hover:text-ro-gold"
+        className="underline decoration-dotted underline-offset-2 hover:text-ro-accent"
       >
         {label}
       </button>

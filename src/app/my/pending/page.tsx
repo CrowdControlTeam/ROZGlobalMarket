@@ -86,7 +86,7 @@ export default async function MyPendingPage() {
               >
                 <Image src={deal.listing.item.iconUrl} alt={deal.listing.item.name} width={40} height={40} />
                 <div className="min-w-0 flex-1">
-                  <Link href={`/market/${deal.listingId}`} className="flex items-center gap-2 font-semibold hover:text-ro-gold">
+                  <Link href={`/market/${deal.listingId}`} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
                     {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots)}
                     <span className={`rounded border px-1.5 py-0.5 text-xs font-normal ${LISTING_TYPE_BADGE_CLASS[deal.listing.type]}`}>
                       {listingTypeLabel(t, deal.listing.type)}
@@ -114,7 +114,7 @@ export default async function MyPendingPage() {
               >
                 <Image src={deal.listing.item.iconUrl} alt={deal.listing.item.name} width={40} height={40} />
                 <div className="min-w-0 flex-1">
-                  <Link href={`/market/${deal.listingId}`} className="flex items-center gap-2 font-semibold hover:text-ro-gold">
+                  <Link href={`/market/${deal.listingId}`} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
                     {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots)}
                     <span className={`rounded border px-1.5 py-0.5 text-xs font-normal ${LISTING_TYPE_BADGE_CLASS[deal.listing.type]}`}>
                       {listingTypeLabel(t, deal.listing.type)}

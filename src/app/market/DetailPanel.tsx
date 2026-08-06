@@ -75,7 +75,7 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className={`fixed left-0 right-0 bottom-0 z-40 flex h-auto max-h-[60vh] w-full flex-col overflow-hidden rounded-t-2xl border-t-4 border-ro-panel-border bg-ro-panel text-ro-text shadow-xl transition-transform duration-200 md:left-auto md:top-0 md:h-full md:max-h-none md:w-[420px] md:max-w-[85vw] md:rounded-none md:rounded-l-2xl md:border-l-4 md:border-t-0 ${
+      className={`fixed left-0 right-0 bottom-0 z-40 flex h-auto max-h-[60vh] w-full flex-col overflow-hidden rounded-t-2xl border-t border-ro-panel-border bg-ro-panel text-ro-text shadow-2xl transition-transform duration-200 md:left-auto md:top-0 md:h-full md:max-h-none md:w-[420px] md:max-w-[85vw] md:rounded-none md:rounded-l-2xl md:border-l md:border-t-0 ${
         mounted ? "translate-y-0 md:translate-x-0" : "translate-y-full md:translate-x-full"
       }`}
       style={
@@ -93,17 +93,19 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
       >
         <span className="h-1.5 w-10 rounded-full bg-ro-panel-border" />
       </div>
-      <div className="flex shrink-0 items-center justify-end border-b-4 border-ro-panel-border bg-ro-panel-header px-4 py-2 md:border-t-0">
+      {/* Cerrar: ✕ arriba a la izquierda (primer elemento del panel, como el
+          diseño), sin barra de cabecera. */}
+      <div className="flex shrink-0 justify-start px-4 pb-2 pt-3">
         <button
           type="button"
           onClick={close}
           aria-label={t("close")}
-          className="text-lg leading-none text-ro-text-muted hover:text-ro-text"
+          className="grid h-7 w-7 place-items-center rounded-md leading-none text-ro-text-muted transition-colors hover:bg-ro-panel-alt hover:text-ro-text"
         >
           ✕
         </button>
       </div>
-      <div className="overflow-y-auto p-3">{children}</div>
+      <div className="overflow-y-auto px-4 pb-4">{children}</div>
     </div>
   );
 }

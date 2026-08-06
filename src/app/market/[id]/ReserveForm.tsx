@@ -6,6 +6,7 @@ import { reserveListing } from "@/lib/listings";
 import { useListingSync } from "../listingStore";
 import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
+import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { getErrorMessage } from "@/lib/errors";
 
 // Comprador sobre una venta:
@@ -28,7 +29,7 @@ export function ReserveForm({
   // Por defecto se compra todo lo disponible (1 si es ilimitado) y, en
   // competitivo, se puja la mejor oferta actual (1 si aún no hay ninguna).
   const [quantity, setQuantity] = useState(available ?? 1);
-  const [bid, setBid] = useState(suggestedBid ?? 1);
+  const [bid, setBid] = useState<number | "">(suggestedBid ?? 1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market.detail.reserve");
@@ -37,7 +38,7 @@ export function ReserveForm({
   const submittingRef = useRef(false);
 
   const competitive = unitPrice === null;
-  const effectiveUnit = competitive ? bid : unitPrice;
+  const effectiveUnit = competitive ? (bid === "" ? 0 : bid) : unitPrice;
 
   return (
     <form
@@ -82,14 +83,10 @@ export function ReserveForm({
       {competitive && (
         <div>
           <label className={labelClass}>{t("bidLabel")}</label>
-          <input
-            type="number"
-            name="price"
-            min={1}
-            value={bid}
-            onChange={(e) => setBid(Number(e.target.value))}
-            className={inputClass}
-          />
+          {/* Máscara de miles + color por tramo mientras se escribe (ver
+              MaskedPriceInput); el valor crudo viaja por el input oculto. */}
+          <MaskedPriceInput value={bid} onChange={setBid} />
+          <input type="hidden" name="price" value={bid} />
         </div>
       )}
 
