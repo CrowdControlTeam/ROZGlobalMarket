@@ -6,6 +6,7 @@ import { offerToFulfill } from "@/lib/listings";
 import { useListingSync } from "../listingStore";
 import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
+import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { getErrorMessage } from "@/lib/errors";
 
 // Vendedor que se ofrece a cumplir una petición de compra (BUY):
@@ -28,14 +29,14 @@ export function OfferToFulfillForm({
   // Por defecto se vende todo lo pedido (1 si es ilimitado) y, en competitivo,
   // se pide la mejor oferta actual (1 si aún no hay ninguna).
   const [quantity, setQuantity] = useState(available ?? 1);
-  const [ask, setAsk] = useState(suggestedAsk ?? 1);
+  const [ask, setAsk] = useState<number | "">(suggestedAsk ?? 1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market.detail.fulfillForm");
   const submittingRef = useRef(false);
 
   const competitive = unitPrice === null;
-  const effectiveUnit = competitive ? ask : unitPrice;
+  const effectiveUnit = competitive ? (ask === "" ? 0 : ask) : unitPrice;
 
   return (
     <form
@@ -80,14 +81,10 @@ export function OfferToFulfillForm({
       {competitive && (
         <div>
           <label className={labelClass}>{t("askLabel")}</label>
-          <input
-            type="number"
-            name="price"
-            min={1}
-            value={ask}
-            onChange={(e) => setAsk(Number(e.target.value))}
-            className={inputClass}
-          />
+          {/* Máscara de miles + color por tramo (ver MaskedPriceInput); el
+              valor crudo viaja por el input oculto. */}
+          <MaskedPriceInput value={ask} onChange={setAsk} />
+          <input type="hidden" name="price" value={ask} />
         </div>
       )}
 

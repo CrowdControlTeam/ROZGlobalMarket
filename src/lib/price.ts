@@ -3,6 +3,12 @@
 // que no hace falta separador de decimales (maximumFractionDigits: 0).
 const PRICE_LOCALE = "es-ES";
 
+// Tope de cualquier campo de dinero/cantidad: el máximo de un INT de Postgres
+// (columnas Listing.price, Deal.unitPrice, Deal.zenyOffered… son Int, 4 bytes
+// con signo). Los inputs se recortan a este valor para que nunca se envíe algo
+// que la base rechace con un error de overflow. 2^31 - 1.
+export const MAX_INT = 2_147_483_647;
+
 export function formatNumber(value: number): string {
   return new Intl.NumberFormat(PRICE_LOCALE, { maximumFractionDigits: 0 }).format(value);
 }

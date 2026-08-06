@@ -9,6 +9,7 @@ import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { getErrorMessage } from "@/lib/errors";
+import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { ItemPicker, type ItemResult } from "../new/ItemPicker";
 
 export function TradeOfferForm({ listingId }: { listingId: string }) {
@@ -16,6 +17,7 @@ export function TradeOfferForm({ listingId }: { listingId: string }) {
   const [selectedItem, setSelectedItem] = useState<ItemResult | null>(null);
   const [refineLevel, setRefineLevel] = useState(0);
   const [cardSlots, setCardSlots] = useState(0);
+  const [zeny, setZeny] = useState<number | "">("");
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -107,7 +109,9 @@ export function TradeOfferForm({ listingId }: { listingId: string }) {
 
       <div>
         <label className={labelClass}>{t("zeny")}</label>
-        <input type="number" name="zenyOffered" min={0} defaultValue={0} className={inputClass} />
+        {/* Máscara de miles + color por tramo (ver MaskedPriceInput); vacío = 0. */}
+        <MaskedPriceInput value={zeny} onChange={setZeny} placeholder="0" />
+        <input type="hidden" name="zenyOffered" value={zeny === "" ? 0 : zeny} />
       </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
