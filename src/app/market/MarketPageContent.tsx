@@ -99,7 +99,7 @@ export async function MarketPageContent({
           tipo, filtros y resultados— vive DENTRO del store de búsqueda: cada
           pestaña tiene su propio objeto de filtros (fuente de verdad) que se
           serializa a la URL, y la URL es lo que lee el servidor. */}
-      <MarketNav />
+      <MarketNav isAdmin={session.user.isAdmin} />
       <MarketSearchProvider initialFilters={initialFilters}>
         {/* Pestañas de "Mis búsquedas": función de power-user; solo en desktop
             (en móvil quitan espacio vertical sin aportar lo suficiente). */}
