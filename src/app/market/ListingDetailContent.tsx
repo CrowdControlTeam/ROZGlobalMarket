@@ -117,7 +117,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
           <Image src={listing.item.iconUrl} alt={listing.item.name} width={44} height={44} />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate font-heading text-base text-ro-text">
+          <h1 className="truncate text-base font-extrabold text-ro-text">
             {formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots)}
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-ro-text-muted">
@@ -169,8 +169,8 @@ export async function ListingDetailContent({ id }: { id: string }) {
           label={isBuy ? t("field.quantity") : t("detail.available")}
           value={fmtQty(isBuy ? listing.quantity : isSale || isGift ? available : remaining)}
         />
-        {listing.refineLevel > 0 && <KvRow label={t("field.refine")} value={`+${listing.refineLevel}`} />}
-        {listing.cardSlots > 0 && <KvRow label={t("field.cardSlots")} value={String(listing.cardSlots)} />}
+        {/* Refino y slots no se listan aquí: ya salen en el nombre del item
+            (formatItemDisplayName → "+9 Nombre [2]"), sería redundante. */}
         {/* Con 1 sola unidad, "Vendidos: 0 de 1" no aporta nada. No aplica a BUY. */}
         {!isBuy && (listing.quantity === null || listing.quantity > 1) && (
           <KvRow

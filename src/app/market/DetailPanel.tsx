@@ -93,9 +93,9 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
       >
         <span className="h-1.5 w-10 rounded-full bg-ro-panel-border" />
       </div>
-      {/* Cerrar: ✕ flotante arriba a la derecha, sin barra de cabecera (como el
-          diseño). */}
-      <div className="flex shrink-0 justify-end px-3 pt-2">
+      {/* Cerrar: ✕ arriba a la izquierda (primer elemento del panel, como el
+          diseño), sin barra de cabecera. */}
+      <div className="flex shrink-0 justify-start px-4 pb-2 pt-3">
         <button
           type="button"
           onClick={close}
