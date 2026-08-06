@@ -66,7 +66,7 @@ export async function Hub({
           <img
             src={homeImageUrl}
             alt=""
-            className="mx-auto mt-5 max-h-56 w-auto max-w-full rounded-xl border border-ro-panel-border object-contain"
+            className="mx-auto mt-5 max-h-56 w-auto max-w-full object-contain"
           />
         )}
         <p className="mt-4 text-ro-text-muted">{t("whereTo")}</p>
