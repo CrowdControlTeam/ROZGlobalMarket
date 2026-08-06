@@ -24,7 +24,7 @@ export function MyActivityTabs() {
             href={tab.href}
             className={`-mb-0.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
               active
-                ? "border-ro-red text-ro-text"
+                ? "border-ro-accent text-ro-text"
                 : "border-transparent text-ro-text-muted hover:text-ro-text"
             }`}
           >

@@ -32,6 +32,11 @@
   "myActivity": {
     "title": "Mi actividad",
     "listingsEmpty": "Todavía no has publicado nada.",
+    "listingsNoneMatch": "No hay publicaciones con ese filtro.",
+    "statusFilter": {
+      "active": "Activos",
+      "inactive": "No activos"
+    },
     "pendingEmpty": "No tienes nada pendiente.",
     "pendingIncoming": "Por confirmar",
     "pendingOutgoing": "Mis solicitudes",

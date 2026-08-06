@@ -32,6 +32,11 @@
   "myActivity": {
     "title": "My activity",
     "listingsEmpty": "You haven't posted anything yet.",
+    "listingsNoneMatch": "No listings match the filter.",
+    "statusFilter": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
     "pendingEmpty": "Nothing pending.",
     "pendingIncoming": "To confirm",
     "pendingOutgoing": "My requests",
