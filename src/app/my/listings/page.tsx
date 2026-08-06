@@ -77,7 +77,7 @@ export default async function MyListingsPage({
                     {listing.options.map((o) => (
                       <span
                         key={o.slotIndex}
-                        className="rounded border border-ro-gold-dark/50 bg-ro-gold/10 px-1.5 py-0.5 text-xs text-ro-text-muted"
+                        className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-xs text-ro-accent"
                       >
                         {o.def.label} {formatOptionAmount(o.value, isBuy)}
                       </span>

@@ -35,7 +35,7 @@ export default function GlobalError({
           <button
             type="button"
             onClick={() => unstable_retry()}
-            className="mt-4 rounded-md border-2 border-ro-gold-dark bg-ro-gold px-4 py-2 text-sm font-semibold text-ro-panel hover:bg-ro-gold-dark"
+            className="mt-4 rounded-md border border-ro-red bg-ro-red px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
           >
             Reintentar
           </button>
