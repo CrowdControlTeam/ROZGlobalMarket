@@ -13,10 +13,10 @@ export function Panel({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-lg border-4 border-ro-panel-border bg-ro-panel shadow-lg ${className ?? ""}`}
+      className={`overflow-hidden rounded-xl border border-ro-panel-border bg-ro-panel shadow-lg ${className ?? ""}`}
     >
       {title && (
-        <div className="flex items-center justify-between gap-3 border-b-4 border-ro-panel-border bg-ro-panel-header px-4 py-2">
+        <div className="flex items-center justify-between gap-3 border-b border-ro-panel-border bg-ro-panel-header px-4 py-2.5">
           <h2 className="font-heading text-xs tracking-wide text-ro-text">
             {title}
           </h2>

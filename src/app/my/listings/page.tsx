@@ -10,9 +10,14 @@ import {
   LISTING_TYPE_BADGE_CLASS,
   formatOptionAmount,
 } from "@/lib/market-labels";
+import { ListingStatusFilter } from "@/components/ListingStatusFilter";
 
-export default async function MyListingsPage() {
-  const listings = await getMyListings();
+export default async function MyListingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ active?: string; inactive?: string }>;
+}) {
+  const [listings, params] = await Promise.all([getMyListings(), searchParams]);
   const t = await getTranslations("market");
   const tMine = await getTranslations("myActivity");
 
@@ -20,9 +25,22 @@ export default async function MyListingsPage() {
     return <p className="text-ro-text-light/70">{tMine("listingsEmpty")}</p>;
   }
 
+  // Filtro por estado: "activo" = ACTIVE; "no activo" = el resto (cerrada,
+  // cancelada, expirada). Sin parámetro = ambos visibles (se muestran todos).
+  const showActive = params.active !== "0";
+  const showInactive = params.inactive !== "0";
+  const filtered = listings.filter((l) =>
+    l.status === "ACTIVE" ? showActive : showInactive,
+  );
+
   return (
-    <ul className="flex flex-col gap-3">
-      {listings.map((listing) => {
+    <>
+      <ListingStatusFilter />
+      {filtered.length === 0 ? (
+        <p className="text-ro-text-light/70">{tMine("listingsNoneMatch")}</p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {filtered.map((listing) => {
         const isBuy = listing.type === "BUY";
         return (
           <li key={listing.id}>
@@ -77,8 +95,10 @@ export default async function MyListingsPage() {
               </span>
             </Link>
           </li>
-        );
-      })}
-    </ul>
+            );
+          })}
+        </ul>
+      )}
+    </>
   );
 }

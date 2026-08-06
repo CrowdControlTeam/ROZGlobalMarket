@@ -24,7 +24,16 @@ export default async function Home({
   // Con sesión: hub de inicio (accesos directos a las secciones). Cuenta,
   // admin, tema e idioma viven en el menú de usuario de la cabecera.
   if (session?.user) {
-    return <Hub username={session.user.username} isAdmin={session.user.isAdmin} />;
+    // loadMarketConfig va cacheada por request, así que reusarla aquí no
+    // añade otra query aunque el guard de arriba ya la haya pedido.
+    const { homeImageUrl } = await loadMarketConfig();
+    return (
+      <Hub
+        username={session.user.username}
+        isAdmin={session.user.isAdmin}
+        homeImageUrl={homeImageUrl}
+      />
+    );
   }
 
   // Sin sesión: login con Discord. returnTo = a dónde volver tras entrar (lo

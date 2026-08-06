@@ -48,7 +48,7 @@ export async function SiteHeader({
   user: SessionUser | null;
   theme: "light" | "dark";
 }) {
-  const [fullUser, { siteName }, rawLocale] = await Promise.all([
+  const [fullUser, { siteName, logoUrl }, rawLocale] = await Promise.all([
     user ? prisma.user.findUnique({ where: { id: user.discordId } }) : null,
     loadMarketConfig(),
     getLocale(),
@@ -67,8 +67,14 @@ export async function SiteHeader({
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
         <Link
           href="/"
-          className="font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy"
+          className="flex items-center gap-2.5 font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy"
         >
+          {/* Logo opcional junto al título, solo en PC (sm+). Data-URI en la
+              config; por eso <img> y no next/image. */}
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- data-URI configurable, no procede next/image
+            <img src={logoUrl} alt="" className="hidden h-7 w-auto sm:block" />
+          )}
           {siteName}
         </Link>
 

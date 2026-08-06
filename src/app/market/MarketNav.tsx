@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Store, User, Gift, Plus } from "lucide-react";
+import { Store, User, BarChart3, Plus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 // Barra de navegación superior del mercado (el "hub" del diseño): accesos a las
@@ -11,7 +11,7 @@ import type { LucideIcon } from "lucide-react";
 // destacada (rojo). Sustituye al antiguo <h1> "Mercado".
 type NavItem = { href: string; labelKey: string; Icon: LucideIcon; active: boolean; cta?: boolean };
 
-export function MarketNav() {
+export function MarketNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations();
@@ -27,9 +27,21 @@ export function MarketNav() {
   const publishHref = `/market?${publishParams.toString()}`;
 
   const items: NavItem[] = [
-    { href: "/market", labelKey: "home.tiles.market.label", Icon: Store, active: onMarket && type !== "GIFT" },
+    { href: "/market", labelKey: "home.tiles.market.label", Icon: Store, active: onMarket },
     { href: "/my/listings", labelKey: "nav.account.myActivity", Icon: User, active: pathname.startsWith("/my") },
-    { href: "/market?type=GIFT", labelKey: "home.tiles.gifts.label", Icon: Gift, active: onMarket && type === "GIFT" },
+    // Estadísticas solo para admins (la ruta /admin/stats ya está protegida con
+    // requireAdmin). Sustituye al antiguo botón de Regalos (Regalo es un tipo
+    // del selector del mercado, no una sección aparte).
+    ...(isAdmin
+      ? [
+          {
+            href: "/admin/stats",
+            labelKey: "home.tiles.stats.label",
+            Icon: BarChart3,
+            active: pathname.startsWith("/admin/stats"),
+          } as NavItem,
+        ]
+      : []),
     { href: publishHref, labelKey: "home.tiles.publish.label", Icon: Plus, active: false, cta: true },
   ];
 

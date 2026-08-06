@@ -5,6 +5,9 @@ import { useTranslations } from "next-intl";
 import { updateMarketConfig, type getMarketConfig } from "@/lib/admin-config";
 import { buttonClass, inputClass, labelClass, selectClass } from "@/lib/ui";
 import { ToggleSwitch } from "@/components/ToggleSwitch";
+import { RoleMultiSelect } from "@/components/RoleMultiSelect";
+import { ImageUploadField } from "@/components/ImageUploadField";
+import { MAX_LOGO_BYTES, MAX_HOME_IMAGE_BYTES } from "@/lib/branding-constants";
 import { getErrorMessage } from "@/lib/errors";
 
 type Config = Awaited<ReturnType<typeof getMarketConfig>>;
@@ -30,6 +33,13 @@ export function AdminConfigForm({ config }: { config: Config }) {
       }}
       className="flex flex-col gap-6"
     >
+      {/* Dos columnas en PC con el contenido agrupado a mano: izquierda =
+          configuración general; derecha = funcionalidades. La línea vertical
+          (border-l del grupo derecho) hace de separador decorativo; en móvil
+          los dos grupos se apilan. */}
+      <div className="grid gap-6 md:grid-cols-2 md:gap-0">
+      {/* Grupo IZQUIERDO — configuración general. */}
+      <div className="flex flex-col gap-6 md:pr-8">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("general.legend")}</legend>
         <div>
@@ -47,24 +57,33 @@ export function AdminConfigForm({ config }: { config: Config }) {
         </div>
       </fieldset>
 
+      <fieldset className="flex flex-col gap-4">
+        <legend className="mb-1 text-sm font-semibold text-ro-text">{t("appearance.legend")}</legend>
+        <ImageUploadField
+          name="logoUrl"
+          label={t("appearance.logoLabel")}
+          hint={t("appearance.logoHint")}
+          maxBytes={MAX_LOGO_BYTES}
+          defaultValue={config.logoUrl}
+        />
+        <ImageUploadField
+          name="homeImageUrl"
+          label={t("appearance.homeImageLabel")}
+          hint={t("appearance.homeImageHint")}
+          maxBytes={MAX_HOME_IMAGE_BYTES}
+          defaultValue={config.homeImageUrl}
+        />
+      </fieldset>
+
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("access.legend")}</legend>
         <p className="text-xs text-ro-text-muted">{t("access.hint")}</p>
         {config.guildRolesResult.status === "ok" ? (
-          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border-2 border-ro-panel-border bg-ro-panel-alt p-2">
-            {config.guildRolesResult.roles.map((role) => (
-              <label key={role.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="adminRoleIds"
-                  value={role.id}
-                  defaultChecked={config.adminRoleIds.includes(role.id)}
-                  className="accent-emerald-600"
-                />
-                {role.name}
-              </label>
-            ))}
-          </div>
+          <RoleMultiSelect
+            name="adminRoleIds"
+            roles={config.guildRolesResult.roles}
+            defaultSelected={config.adminRoleIds}
+          />
         ) : (
           <div>
             {config.guildRolesResult.status === "error" && (
@@ -84,6 +103,47 @@ export function AdminConfigForm({ config }: { config: Config }) {
         )}
       </fieldset>
 
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold text-ro-text">{t("appAccess.legend")}</legend>
+        <p className="text-xs text-ro-text-muted">{t("appAccess.hint")}</p>
+        {config.guildRolesResult.status === "ok" ? (
+          <select
+            name="accessRoleId"
+            defaultValue={config.accessRoleId ?? ""}
+            className={`${selectClass} w-full`}
+          >
+            <option value="">{t("appAccess.none")}</option>
+            {config.guildRolesResult.roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type="text"
+            name="accessRoleId"
+            defaultValue={config.accessRoleId ?? ""}
+            placeholder={t("appAccess.roleIdPlaceholder")}
+            className={inputClass}
+          />
+        )}
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold text-ro-text">{t("market.maxRefineLabel")}</legend>
+        <input
+          type="number"
+          name="maxRefineLevel"
+          min={0}
+          defaultValue={config.maxRefineLevel}
+          className={inputClass}
+        />
+      </fieldset>
+      </div>
+
+      {/* Grupo DERECHO — funcionalidades. */}
+      <div className="flex flex-col gap-6 md:border-l md:border-ro-panel-border md:pl-8">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("webhook.legend")}</legend>
         <ToggleSwitch
@@ -189,17 +249,9 @@ export function AdminConfigForm({ config }: { config: Config }) {
           defaultChecked={config.maintenanceModeEnabled}
           label={t("market.maintenanceToggleLabel")}
         />
-        <div>
-          <label className={labelClass}>{t("market.maxRefineLabel")}</label>
-          <input
-            type="number"
-            name="maxRefineLevel"
-            min={0}
-            defaultValue={config.maxRefineLevel}
-            className={inputClass}
-          />
-        </div>
       </fieldset>
+      </div>
+      </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
       {saved && !error && <p className="text-sm text-green-700">{tStatus("saved")}</p>}

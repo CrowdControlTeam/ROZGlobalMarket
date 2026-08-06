@@ -32,6 +32,11 @@
   "myActivity": {
     "title": "Mi actividad",
     "listingsEmpty": "Todavía no has publicado nada.",
+    "listingsNoneMatch": "No hay publicaciones con ese filtro.",
+    "statusFilter": {
+      "active": "Activos",
+      "inactive": "No activos"
+    },
     "pendingEmpty": "No tienes nada pendiente.",
     "pendingIncoming": "Por confirmar",
     "pendingOutgoing": "Mis solicitudes",
@@ -52,8 +57,10 @@
       "market": { "label": "Mercado", "desc": "Explora y filtra todo lo que hay a la venta, compra e intercambio." },
       "activity": { "label": "Mi actividad", "desc": "Tus publicaciones, solicitudes y regalos." },
       "publish": { "label": "Publicar", "desc": "Pon un objeto a la venta, compra o intercambio." },
-      "gifts": { "label": "Regalos", "desc": "Objetos que se regalan a la comunidad." },
-      "stats": { "label": "Estadísticas", "desc": "Rankings y actividad del mercado." }
+      "stats": { "label": "Estadísticas", "desc": "Rankings y actividad del mercado." },
+      "settings": { "label": "Ajustes", "desc": "Configuración del mercado." },
+      "bis": { "label": "BiSes", "desc": "Listado de los mejores items por slot." },
+      "comingSoon": "Próximamente"
     }
   },
   "maintenancePage": {
@@ -77,6 +84,8 @@
       "message": "Esta página no existe o el elemento que buscas ya no está disponible."
     },
     "invalidData": "Datos inválidos",
+    "invalidImage": "La imagen no es válida (formato no admitido).",
+    "imageTooLarge": "La imagen supera el tamaño máximo permitido.",
     "selectItem": "Selecciona un item",
     "selectRecipient": "Selecciona un destinatario",
     "positiveQuantity": "La cantidad debe ser mayor que 0",
@@ -165,12 +174,31 @@
       "siteNameLabel": "Nombre de la aplicación",
       "siteNameHint": "Se muestra en la cabecera y en la pestaña del navegador. Vacío = usar \"{placeholder}\" por defecto."
     },
+    "appearance": {
+      "legend": "Apariencia",
+      "logoLabel": "Logo de la cabecera",
+      "logoHint": "Se muestra junto al título, solo en PC. Máx. 150 KB (admite GIF).",
+      "homeImageLabel": "Imagen de inicio",
+      "homeImageHint": "Se muestra en el inicio, entre el saludo y los accesos. Máx. 512 KB.",
+      "choose": "Seleccionar archivo",
+      "change": "Cambiar",
+      "remove": "Quitar",
+      "tooLarge": "El archivo supera el máximo de {kb} KB."
+    },
     "access": {
       "legend": "Acceso al panel",
       "hint": "Quien tenga el permiso \"Administrator\" del servidor de Discord ya entra siempre. Estos roles se SUMAN como vía adicional, no lo sustituyen.",
       "rolesFetchError": "No se pudo listar los roles del servidor con nombre ({message}).",
       "roleIdsPlaceholder": "Un ID de rol por línea (o separados por comas)",
-      "roleIdsHint": "Sin bot configurado (DISCORD_BOT_TOKEN) no se pueden mostrar los nombres de los roles — copia el ID de cada rol desde Discord (Ajustes del servidor → Roles → clic derecho → Copiar ID, con el modo desarrollador activado)."
+      "roleIdsHint": "Sin bot configurado (DISCORD_BOT_TOKEN) no se pueden mostrar los nombres de los roles — copia el ID de cada rol desde Discord (Ajustes del servidor → Roles → clic derecho → Copiar ID, con el modo desarrollador activado).",
+      "noneSelected": "Sin roles seleccionados",
+      "noRoles": "No hay roles"
+    },
+    "appAccess": {
+      "legend": "Acceso a la aplicación",
+      "hint": "Rol necesario para entrar. Si eliges uno, para acceder hará falta pertenecer al servidor Y tener ese rol; los administradores entran igualmente. Sin rol = acceso solo por pertenencia, como hasta ahora.",
+      "none": "Sin restricción (solo pertenencia)",
+      "roleIdPlaceholder": "ID del rol de acceso (vacío = sin restricción)"
     },
     "webhook": {
       "legend": "Notificaciones a Discord",
