@@ -175,6 +175,8 @@
       "logoHint": "Shown next to the title, desktop only. Max 150 KB (GIF allowed).",
       "homeImageLabel": "Home image",
       "homeImageHint": "Shown on the home page, between the greeting and the shortcuts. Max 512 KB.",
+      "choose": "Choose file",
+      "change": "Change",
       "remove": "Remove",
       "tooLarge": "The file exceeds the {kb} KB limit."
     },

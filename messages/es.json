@@ -175,6 +175,8 @@
       "logoHint": "Se muestra junto al título, solo en PC. Máx. 150 KB (admite GIF).",
       "homeImageLabel": "Imagen de inicio",
       "homeImageHint": "Se muestra en el inicio, entre el saludo y los accesos. Máx. 512 KB.",
+      "choose": "Seleccionar archivo",
+      "change": "Cambiar",
       "remove": "Quitar",
       "tooLarge": "El archivo supera el máximo de {kb} KB."
     },

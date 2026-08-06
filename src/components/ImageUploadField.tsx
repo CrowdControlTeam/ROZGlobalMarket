@@ -64,21 +64,26 @@ export function ImageUploadField({
             <ImageIcon size={18} aria-hidden />
           </span>
         )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          onChange={(e) => handleFile(e.target.files?.[0])}
-          className="min-w-0 flex-1 text-sm text-ro-text-muted file:mr-3 file:rounded-md file:border file:border-ro-panel-border file:bg-ro-panel-alt file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ro-text hover:file:bg-ro-panel-border/30"
-        />
+        {/* El input nativo va oculto (su texto "ningún archivo" no se encoge y
+            empujaba fuera la ✕): se dispara desde este botón-label. */}
+        <label className="shrink-0 cursor-pointer rounded-md border border-ro-panel-border bg-ro-panel-alt px-3 py-1.5 text-sm font-medium text-ro-text transition-colors hover:bg-ro-panel-border/30">
+          {value ? t("change") : t("choose")}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFile(e.target.files?.[0])}
+            className="sr-only"
+          />
+        </label>
         {value && (
           <button
             type="button"
             onClick={clear}
-            aria-label={t("remove")}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-ro-text-muted transition-colors hover:bg-ro-panel-alt hover:text-ro-text"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-ro-panel-border px-2.5 py-1.5 text-sm font-medium text-ro-text-muted transition-colors hover:border-ro-red/50 hover:text-ro-red"
           >
-            <X size={16} />
+            <X size={15} />
+            {t("remove")}
           </button>
         )}
       </div>
