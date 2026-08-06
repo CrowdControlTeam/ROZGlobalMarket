@@ -51,7 +51,7 @@ export function AdminConfigForm({ config }: { config: Config }) {
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("access.legend")}</legend>
         <p className="text-xs text-ro-text-muted">{t("access.hint")}</p>
         {config.guildRolesResult.status === "ok" ? (
-          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border-2 border-ro-panel-border bg-ro-panel-alt p-2">
+          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border border-ro-panel-border bg-ro-panel-alt p-2">
             {config.guildRolesResult.roles.map((role) => (
               <label key={role.id} className="flex items-center gap-2 text-sm">
                 <input
@@ -59,7 +59,7 @@ export function AdminConfigForm({ config }: { config: Config }) {
                   name="adminRoleIds"
                   value={role.id}
                   defaultChecked={config.adminRoleIds.includes(role.id)}
-                  className="accent-emerald-600"
+                  className="accent-ro-accent"
                 />
                 {role.name}
               </label>

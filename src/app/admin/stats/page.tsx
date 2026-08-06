@@ -13,6 +13,17 @@ const LISTING_STATUSES = ["ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"] as cons
 const TYPES = Object.values(ListingType);
 const OFFER_STATUSES = Object.values(DealStatus);
 
+// Tile de métrica (totales, ofertas por estado): tarjeta con borde fino, al
+// estilo del rediseño, en vez de texto suelto.
+function StatTile({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-ro-panel-border/60 bg-ro-panel-alt p-3">
+      <dt className="text-xs text-ro-text-muted">{label}</dt>
+      <dd className="mt-0.5 text-lg font-bold text-ro-text">{value}</dd>
+    </div>
+  );
+}
+
 function RankingTable({
   rows,
   valueLabel,
@@ -77,25 +88,14 @@ export default async function AdminStatsPage({
       </div>
 
       <Panel title={t("totals.heading")} className="mb-6">
-        <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-          <div>
-            <dt className="text-ro-text-muted">{t("totals.zenyMoved")}</dt>
-            <dd className={`text-lg font-bold ${priceColorClass(stats.totals.zenyMoved)}`}>
-              {formatPrice(stats.totals.zenyMoved)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-ro-text-muted">{t("totals.postersCount")}</dt>
-            <dd className="text-lg font-bold">{stats.totals.postersCount}</dd>
-          </div>
-          <div>
-            <dt className="text-ro-text-muted">{t("totals.totalUsers")}</dt>
-            <dd className="text-lg font-bold">{stats.totals.totalUsers}</dd>
-          </div>
-          <div>
-            <dt className="text-ro-text-muted">{t("totals.giftsSent")}</dt>
-            <dd className="text-lg font-bold">{stats.totals.giftsSent}</dd>
-          </div>
+        <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+          <StatTile
+            label={t("totals.zenyMoved")}
+            value={<span className={priceColorClass(stats.totals.zenyMoved)}>{formatPrice(stats.totals.zenyMoved)}</span>}
+          />
+          <StatTile label={t("totals.postersCount")} value={stats.totals.postersCount} />
+          <StatTile label={t("totals.totalUsers")} value={stats.totals.totalUsers} />
+          <StatTile label={t("totals.giftsSent")} value={stats.totals.giftsSent} />
         </dl>
       </Panel>
 
@@ -127,12 +127,13 @@ export default async function AdminStatsPage({
       </Panel>
 
       <Panel title={t("tradeOffers.heading")} className="mb-6">
-        <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
           {OFFER_STATUSES.map((status) => (
-            <div key={status}>
-              <dt className="text-ro-text-muted">{offerStatusLabel(tMarket, status)}</dt>
-              <dd className="text-lg font-bold">{stats.totals.tradeOffersByStatus[status]}</dd>
-            </div>
+            <StatTile
+              key={status}
+              label={offerStatusLabel(tMarket, status)}
+              value={stats.totals.tradeOffersByStatus[status]}
+            />
           ))}
         </dl>
       </Panel>

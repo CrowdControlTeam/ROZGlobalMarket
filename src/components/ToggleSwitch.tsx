@@ -15,7 +15,9 @@ export function ToggleSwitch({
     <label className="flex cursor-pointer items-center gap-3 text-sm text-ro-text">
       <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
         <input type="checkbox" name={name} defaultChecked={defaultChecked} className="peer sr-only" />
-        <span className="absolute inset-0 rounded-full bg-ro-panel-border transition-colors peer-checked:bg-emerald-600" />
+        {/* Estado activo = acento (no verde), coherente con el rediseño; foco de
+            teclado visible en el track porque el checkbox real va sr-only. */}
+        <span className="absolute inset-0 rounded-full bg-ro-panel-border transition-colors peer-checked:bg-ro-accent peer-focus-visible:ring-2 peer-focus-visible:ring-ro-accent peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-ro-panel" />
         <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
       </span>
       {label}
