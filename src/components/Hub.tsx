@@ -66,10 +66,10 @@ export async function Hub({
           <img
             src={homeImageUrl}
             alt=""
-            className="mx-auto mt-5 max-h-56 w-auto max-w-full object-contain"
+            className="mx-auto mt-2 max-h-56 w-auto max-w-full object-contain"
           />
         )}
-        <p className="mt-4 text-ro-text-muted">{t("whereTo")}</p>
+        <p className="mt-1 text-ro-text-muted">{t("whereTo")}</p>
       </header>
 
       <nav className="grid grid-cols-1 gap-3 sm:grid-cols-2">
