@@ -83,7 +83,7 @@ export default async function AdminStatsPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <BackLink href="/admin" label={t("backToConfig")} />
+      <BackLink href="/market" label={tMarket("nav.backToMarket")} />
       <div className="mb-4 flex items-center justify-between">
         <h1 className="font-heading text-lg text-ro-text">{t("title")}</h1>
         <AdminStatsPeriodSelect />
