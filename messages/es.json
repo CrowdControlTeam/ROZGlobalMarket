@@ -79,6 +79,8 @@
       "message": "Esta página no existe o el elemento que buscas ya no está disponible."
     },
     "invalidData": "Datos inválidos",
+    "invalidImage": "La imagen no es válida (formato no admitido).",
+    "imageTooLarge": "La imagen supera el tamaño máximo permitido.",
     "selectItem": "Selecciona un item",
     "selectRecipient": "Selecciona un destinatario",
     "positiveQuantity": "La cantidad debe ser mayor que 0",
@@ -166,6 +168,15 @@
       "legend": "General",
       "siteNameLabel": "Nombre de la aplicación",
       "siteNameHint": "Se muestra en la cabecera y en la pestaña del navegador. Vacío = usar \"{placeholder}\" por defecto."
+    },
+    "appearance": {
+      "legend": "Apariencia",
+      "logoLabel": "Logo de la cabecera",
+      "logoHint": "Se muestra junto al título, solo en PC. Máx. 150 KB (admite GIF).",
+      "homeImageLabel": "Imagen de inicio",
+      "homeImageHint": "Se muestra en el inicio, entre el saludo y los accesos. Máx. 512 KB.",
+      "remove": "Quitar",
+      "tooLarge": "El archivo supera el máximo de {kb} KB."
     },
     "access": {
       "legend": "Acceso al panel",

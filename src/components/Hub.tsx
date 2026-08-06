@@ -41,9 +41,11 @@ function TileText({ label, desc }: { label: string; desc: string }) {
 export async function Hub({
   username,
   isAdmin,
+  homeImageUrl,
 }: {
   username: string;
   isAdmin: boolean;
+  homeImageUrl?: string | null;
 }) {
   const t = await getTranslations("home");
 
@@ -57,7 +59,17 @@ export async function Hub({
             strong: (chunks) => <strong className="font-semibold text-ro-accent">{chunks}</strong>,
           })}
         </h1>
-        <p className="mt-2 text-ro-text-muted">{t("whereTo")}</p>
+        {/* Imagen de inicio opcional (configurable en /admin), entre el saludo
+            y la pregunta. Data-URI en la config; por eso <img> y no next/image. */}
+        {homeImageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- data-URI configurable, no procede next/image
+          <img
+            src={homeImageUrl}
+            alt=""
+            className="mx-auto mt-5 max-h-56 w-auto max-w-full rounded-xl border border-ro-panel-border object-contain"
+          />
+        )}
+        <p className="mt-4 text-ro-text-muted">{t("whereTo")}</p>
       </header>
 
       <nav className="grid grid-cols-1 gap-3 sm:grid-cols-2">

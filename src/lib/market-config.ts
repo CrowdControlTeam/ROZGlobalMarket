@@ -26,6 +26,8 @@ export type MarketConfigValues = {
   optionsEnabled: boolean;
   adminRoleIds: string[];
   siteName: string;
+  logoUrl: string | null;
+  homeImageUrl: string | null;
 };
 
 // Si la fila (id=1) todavía no existe, se cae a los valores conservadores
@@ -50,5 +52,7 @@ export const loadMarketConfig = cache(async (): Promise<MarketConfigValues> => {
     optionsEnabled: config?.optionsEnabled ?? true,
     adminRoleIds: config?.adminRoleIds ?? [],
     siteName: config?.siteName?.trim() || DEFAULT_SITE_NAME,
+    logoUrl: config?.logoUrl ?? null,
+    homeImageUrl: config?.homeImageUrl ?? null,
   };
 });

@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { updateMarketConfig, type getMarketConfig } from "@/lib/admin-config";
 import { buttonClass, inputClass, labelClass, selectClass } from "@/lib/ui";
 import { ToggleSwitch } from "@/components/ToggleSwitch";
+import { ImageUploadField } from "@/components/ImageUploadField";
+import { MAX_LOGO_BYTES, MAX_HOME_IMAGE_BYTES } from "@/lib/branding-constants";
 import { getErrorMessage } from "@/lib/errors";
 
 type Config = Awaited<ReturnType<typeof getMarketConfig>>;
@@ -45,6 +47,24 @@ export function AdminConfigForm({ config }: { config: Config }) {
             {t("general.siteNameHint", { placeholder: config.siteNamePlaceholder })}
           </p>
         </div>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-4">
+        <legend className="mb-1 text-sm font-semibold text-ro-text">{t("appearance.legend")}</legend>
+        <ImageUploadField
+          name="logoUrl"
+          label={t("appearance.logoLabel")}
+          hint={t("appearance.logoHint")}
+          maxBytes={MAX_LOGO_BYTES}
+          defaultValue={config.logoUrl}
+        />
+        <ImageUploadField
+          name="homeImageUrl"
+          label={t("appearance.homeImageLabel")}
+          hint={t("appearance.homeImageHint")}
+          maxBytes={MAX_HOME_IMAGE_BYTES}
+          defaultValue={config.homeImageUrl}
+        />
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">

@@ -315,6 +315,14 @@ model MarketConfig {
   // no aquí, para no confundir "sin configurar" con "configurado
   // literalmente a ROZ Global Market".
   siteName String?
+
+  // Imágenes de marca subidas desde /admin, guardadas como data-URI base64
+  // (no hay object storage; ver AdminConfigForm / branding-constants.ts).
+  // logoUrl se muestra junto al título en la cabecera (solo PC); homeImageUrl
+  // en el hub de inicio, entre el saludo y "¿A dónde vamos?". Null = sin
+  // configurar (no se muestran).
+  logoUrl      String?
+  homeImageUrl String?
 }
 
 // Qué WeaponType cuentan como "arma mágica" (pool WEAPON_MAGICAL) en vez de

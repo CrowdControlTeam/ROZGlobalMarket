@@ -10,6 +10,12 @@ import { getOptionsCatalogCount } from "@/lib/item-options";
 import { fetchGuildRoles, getBotStatus } from "@/lib/discord-bot";
 import { GEMINI_MODEL_VALUES, isGeminiModel } from "@/lib/gemini-model-constants";
 import { isDiscordWebhookUrl } from "@/lib/discord-webhook-constants";
+import {
+  MAX_LOGO_BYTES,
+  MAX_HOME_IMAGE_BYTES,
+  isImageDataUrl,
+  dataUrlByteSize,
+} from "@/lib/branding-constants";
 
 // El valor real de un secreto nunca sale del servidor una vez guardado —
 // esto es lo único que llega al cliente para representarlo en el formulario.
@@ -55,6 +61,10 @@ export async function getMarketConfig() {
     optionsCatalogCount,
     adminRoleIds: config.adminRoleIds,
     guildRolesResult,
+    // Se devuelven completos (admin-only): el formulario los reenvía tal cual
+    // si no se cambian (así "sin tocar" = conservar; vacío = borrar).
+    logoUrl: config.logoUrl,
+    homeImageUrl: config.homeImageUrl,
   };
 }
 
@@ -120,6 +130,26 @@ export async function updateMarketConfig(formData: FormData) {
   }
   const adminRoleIds = parseAdminRoleIds(formData);
 
+  // Imágenes de marca (logo + imagen del hub): data-URI base64 o vacío = borrar
+  // (null). Se validan formato y peso. El formulario reenvía el valor completo
+  // (no enmascarado), así que "sin tocar" ya trae el data-URI existente.
+  const images: { logoUrl: string | null; homeImageUrl: string | null } = {
+    logoUrl: null,
+    homeImageUrl: null,
+  };
+  for (const [field, maxBytes] of [
+    ["logoUrl", MAX_LOGO_BYTES],
+    ["homeImageUrl", MAX_HOME_IMAGE_BYTES],
+  ] as const) {
+    const raw = formData.get(field);
+    if (typeof raw === "string" && raw.trim() !== "") {
+      const value = raw.trim();
+      if (!isImageDataUrl(value)) throw new Error(t("invalidImage"));
+      if (dataUrlByteSize(value) > maxBytes) throw new Error(t("imageTooLarge"));
+      images[field] = value;
+    }
+  }
+
   await prisma.marketConfig.upsert({
     where: { id: 1 },
     create: {
@@ -134,6 +164,8 @@ export async function updateMarketConfig(formData: FormData) {
       webhookUrl: parsed.data.webhookUrl ?? null,
       adminRoleIds,
       siteName: parsed.data.siteName ?? null,
+      logoUrl: images.logoUrl,
+      homeImageUrl: images.homeImageUrl,
     },
     update: {
       maxRefineLevel: parsed.data.maxRefineLevel,
@@ -146,6 +178,8 @@ export async function updateMarketConfig(formData: FormData) {
       ...(parsed.data.webhookUrl ? { webhookUrl: parsed.data.webhookUrl } : {}),
       adminRoleIds,
       siteName: parsed.data.siteName ?? null,
+      logoUrl: images.logoUrl,
+      homeImageUrl: images.homeImageUrl,
     },
   });
 

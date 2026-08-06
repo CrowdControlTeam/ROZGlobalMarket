@@ -79,6 +79,8 @@
       "message": "This page doesn't exist, or the item you're looking for is no longer available."
     },
     "invalidData": "Invalid data",
+    "invalidImage": "The image is not valid (unsupported format).",
+    "imageTooLarge": "The image exceeds the maximum allowed size.",
     "selectItem": "Select an item",
     "selectRecipient": "Select a recipient",
     "positiveQuantity": "Quantity must be greater than 0",
@@ -166,6 +168,15 @@
       "legend": "General",
       "siteNameLabel": "App name",
       "siteNameHint": "Shown in the header and browser tab. Empty = use \"{placeholder}\" by default."
+    },
+    "appearance": {
+      "legend": "Appearance",
+      "logoLabel": "Header logo",
+      "logoHint": "Shown next to the title, desktop only. Max 150 KB (GIF allowed).",
+      "homeImageLabel": "Home image",
+      "homeImageHint": "Shown on the home page, between the greeting and the shortcuts. Max 512 KB.",
+      "remove": "Remove",
+      "tooLarge": "The file exceeds the {kb} KB limit."
     },
     "access": {
       "legend": "Panel access",
