@@ -28,13 +28,13 @@ function tabPaths(bodyW: number) {
   const w = bodyW + 2 * FLARE; // ancho total del SVG (cuerpo + los dos flares)
   const outline =
     `M0 ${TAB_H}` +
-    `A${FLARE} ${FLARE} 0 0 1 ${FLARE} ${TAB_H - FLARE}` + // flare cóncavo izq
+    `A${FLARE} ${FLARE} 0 0 0 ${FLARE} ${TAB_H - FLARE}` + // flare cóncavo izq
     `L${FLARE} ${TOP_R}` + // lado izquierdo
     `A${TOP_R} ${TOP_R} 0 0 1 ${FLARE + TOP_R} 0` + // esquina sup-izq
     `L${w - FLARE - TOP_R} 0` + // borde superior
     `A${TOP_R} ${TOP_R} 0 0 1 ${w - FLARE} ${TOP_R}` + // esquina sup-der
     `L${w - FLARE} ${TAB_H - FLARE}` + // lado derecho
-    `A${FLARE} ${FLARE} 0 0 1 ${w} ${TAB_H}`; // flare cóncavo der
+    `A${FLARE} ${FLARE} 0 0 0 ${w} ${TAB_H}`; // flare cóncavo der
   // El relleno cierra por la base (borde inferior); el trazo NO incluye la base
   // (la pestaña queda abierta hacia el contenido, como una pestaña de navegador).
   return { w, fill: `${outline} L0 ${TAB_H} Z`, outline };
