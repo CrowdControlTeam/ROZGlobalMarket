@@ -10,7 +10,7 @@ export default async function AuthErrorPage() {
       <Panel title={t("title")} className="text-center">
         <div className="flex flex-col items-center gap-4">
           <p>{t("message")}</p>
-          <Link href="/" className="text-ro-gold-dark underline hover:text-ro-gold">
+          <Link href="/" className="text-ro-accent underline hover:text-ro-accent/80">
             {t("backHome")}
           </Link>
         </div>

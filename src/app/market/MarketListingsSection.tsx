@@ -27,7 +27,7 @@ export async function MarketListingsSection({
   return (
     <>
       {maintenanceModeEnabled && (
-        <p className="mb-4 rounded-md border-2 border-ro-gold-dark bg-ro-gold/10 px-4 py-2 text-sm text-ro-text">
+        <p className="mb-4 rounded-md border border-ro-accent/40 bg-ro-accent/10 px-4 py-2 text-sm text-ro-text">
           {isAdmin ? t("maintenance.admin") : t("maintenance.user")}
         </p>
       )}
