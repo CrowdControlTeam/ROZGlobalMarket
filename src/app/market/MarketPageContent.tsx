@@ -12,11 +12,30 @@ import { FILTER_KEYS, type Filters } from "./marketFilterKeys";
 import { MarketListingsSection } from "./MarketListingsSection";
 import { MarketResultsSkeleton } from "./MarketResultsSkeleton";
 
+// Filtro multi-valor codificado como CSV en la URL (p. ej. "WEAPON,ARMOR").
+// Se parsea a array validado contra el enum (descartando valores inválidos);
+// undefined si viene vacío o sin nada válido. Así un valor basura en la URL se
+// ignora en vez de romper el filtro.
+function csvEnum<T extends Record<string, string>>(enumObj: T) {
+  const valid = new Set<string>(Object.values(enumObj));
+  return z
+    .string()
+    .optional()
+    .transform((v): T[keyof T][] | undefined => {
+      if (!v) return undefined;
+      const arr = v
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => valid.has(s)) as T[keyof T][];
+      return arr.length > 0 ? arr : undefined;
+    });
+}
+
 const searchParamsSchema = z.object({
   q: z.string().trim().min(1).optional(),
-  category: z.enum(ItemCategory).optional(),
-  slot: z.enum(EquipSlot).optional(),
-  weaponType: z.enum(WeaponType).optional(),
+  category: csvEnum(ItemCategory),
+  slot: csvEnum(EquipSlot),
+  weaponType: csvEnum(WeaponType),
   // El tipo (Venta/Compra/Interc./Regalo) es un filtro más, fijado desde la
   // query string por el SegmentedTypeSelector — ya no hay rutas por tipo.
   type: z.enum(ListingType).optional(),

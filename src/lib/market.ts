@@ -15,9 +15,12 @@ export type { MarketSort };
 
 export type MarketFilters = {
   q?: string;
-  category?: ItemCategory;
-  slot?: EquipSlot;
-  weaponType?: WeaponType;
+  // Filtros multi-valor: se combinan con `{ in: [...] }` (categoría X o Y). En
+  // la URL viajan como CSV (category=WEAPON,ARMOR) y el servidor los parsea a
+  // array validado (ver searchParamsSchema en MarketPageContent).
+  category?: ItemCategory[];
+  slot?: EquipSlot[];
+  weaponType?: WeaponType[];
   type?: ListingType;
   // Filtro por quien publica (poster) — resuelto a un id concreto en
   // cliente vía UserPicker, no un "contiene" de texto libre, para no
@@ -192,15 +195,20 @@ function optionSlotWhere(
 export async function getListings(filters: MarketFilters) {
   const cursor = decodeCursor(filters.cursor);
 
+  // Gating "guiado no destructivo": slot solo se aplica si hay slots elegidos y
+  // alguna categoría elegida es equipo/carta (o no hay categoría); tipo de arma
+  // solo si hay arma (o ninguna). Un valor fuera de contexto se conserva en la
+  // URL pero NO se aplica — así al volver la categoría reaparece sin haberlo
+  // borrado. Con categoría múltiple basta que ALGUNA case (`some`).
+  const hasCategory = (filters.category?.length ?? 0) > 0;
   const needsSlotFilter =
-    filters.slot &&
-    (filters.category === ItemCategory.ARMOR ||
-      filters.category === ItemCategory.CARD ||
-      !filters.category);
+    (filters.slot?.length ?? 0) > 0 &&
+    (!hasCategory ||
+      filters.category!.some((c) => c === ItemCategory.ARMOR || c === ItemCategory.CARD));
 
   const needsWeaponTypeFilter =
-    filters.weaponType &&
-    (filters.category === ItemCategory.WEAPON || !filters.category);
+    (filters.weaponType?.length ?? 0) > 0 &&
+    (!hasCategory || filters.category!.some((c) => c === ItemCategory.WEAPON));
 
   const optionConditions = [
     optionSlotWhere(1, filters.option1Stat, filters.option1Min, filters.option1Max),
@@ -246,9 +254,9 @@ export async function getListings(filters: MarketFilters) {
       : {}),
     item: {
       ...(filters.q ? { name: { contains: filters.q, mode: "insensitive" } } : {}),
-      ...(filters.category ? { category: filters.category } : {}),
-      ...(needsSlotFilter ? { slot: filters.slot } : {}),
-      ...(needsWeaponTypeFilter ? { weaponType: filters.weaponType } : {}),
+      ...(hasCategory ? { category: { in: filters.category } } : {}),
+      ...(needsSlotFilter ? { slot: { in: filters.slot } } : {}),
+      ...(needsWeaponTypeFilter ? { weaponType: { in: filters.weaponType } } : {}),
     },
   };
 
