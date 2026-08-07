@@ -74,6 +74,10 @@ function applyPatches(
 function ListingCard({
   listing,
   href,
+  // replace = ya hay un detalle abierto (?listing en la URL): al abrir otro
+  // listing se REEMPLAZA en el historial en vez de apilar, para que la ✕
+  // (router.back) cierre al mercado y no al detalle anterior.
+  replace,
   showBadge,
   currentUserId,
   dmAvailable,
@@ -82,6 +86,7 @@ function ListingCard({
 }: {
   listing: Listing;
   href: string;
+  replace: boolean;
   showBadge: boolean;
   currentUserId: string;
   dmAvailable: boolean;
@@ -170,7 +175,7 @@ function ListingCard({
     ...(canEdit
       ? [{ label: t("card.edit"), icon: <Pencil size={14} aria-hidden />, onSelect: () => {} }]
       : []),
-    { label: t("card.viewDetail"), icon: <Eye size={14} aria-hidden />, onSelect: () => router.push(href) },
+    { label: t("card.viewDetail"), icon: <Eye size={14} aria-hidden />, onSelect: () => (replace ? router.replace(href) : router.push(href)) },
     {
       label: t("card.share"),
       icon: <Share2 size={14} aria-hidden />,
@@ -219,6 +224,7 @@ function ListingCard({
       <div className={`relative h-full ${className ?? ""}`}>
         <Link
           href={href}
+          replace={replace}
           scroll={false}
           className="flex h-full items-center gap-3 rounded-xl border border-ro-panel-border bg-ro-panel p-3 pr-10 transition-colors hover:border-ro-accent"
         >
@@ -243,6 +249,7 @@ function ListingCard({
     <div className={`relative h-full ${className ?? ""}`}>
       <Link
         href={href}
+        replace={replace}
         scroll={false}
         className="flex h-full flex-col rounded-xl border border-ro-panel-border bg-ro-panel p-3 transition-colors hover:border-ro-accent"
       >
@@ -402,9 +409,14 @@ export function MarketResults({
   // El badge de tipo se muestra siempre (también con un tipo filtrado), como
   // referencia visual constante.
   const showBadge = true;
+  // Si ya hay un detalle abierto (?listing en la URL), abrir otro listing debe
+  // REEMPLAZAR esa entrada del historial, no apilar otra — así la ✕ cierra al
+  // mercado y no va saltando por los detalles vistos.
+  const detailOpen = !!searchParams.get("listing");
   const cardProps = (listing: Listing) => ({
     listing,
     href: listingHref(listing.id),
+    replace: detailOpen,
     showBadge,
     currentUserId,
     dmAvailable,
