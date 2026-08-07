@@ -122,11 +122,13 @@ export function SearchTabs() {
               {paths && (
                 <svg
                   aria-hidden
-                  // overflow-visible: si no, el viewBox recorta la mitad exterior
-                  // del trazo en los bordes (el top se veía a ~1px en vez de 2px).
-                  className="absolute bottom-0 -z-10 overflow-visible"
-                  style={{ left: -FLARE, width: paths.w, height: TAB_H }}
-                  viewBox={`0 0 ${paths.w} ${TAB_H}`}
+                  // El viewBox se extiende 2px por ARRIBA (y el SVG crece 2px)
+                  // para que el trazo del borde superior salga completo (si no,
+                  // se recortaba a ~1px). Abajo se mantiene el recorte por
+                  // defecto, así los flares NO sobresalen bajo la línea base.
+                  className="absolute bottom-0 -z-10"
+                  style={{ left: -FLARE, width: paths.w, height: TAB_H + 2 }}
+                  viewBox={`0 -2 ${paths.w} ${TAB_H + 2}`}
                 >
                   <path d={paths.fill} fill="var(--ro-panel)" />
                   <path
