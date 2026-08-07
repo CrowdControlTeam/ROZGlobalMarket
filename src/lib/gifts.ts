@@ -91,10 +91,10 @@ export async function sendGift(formData: FormData) {
   // ListingOption en schema.prisma).
   const defsById = await validateOptions(rawOptions, optionGroup);
 
-  // Un regalo con random options es una instancia única (mismo criterio
-  // que una venta option-eligible en listings.ts) — se fuerza aquí también
-  // porque no hay que confiar en lo que mande el cliente.
-  const quantity = optionGroup !== null ? 1 : parsed.data.quantity;
+  // Ya NO se fuerza a 1 un regalo con options: se deja la cantidad que ponga el
+  // usuario (mismo criterio de flexibilidad que SALE en listings.ts). Un GIFT
+  // nunca es ilimitado (el parseo exige entero positivo más arriba).
+  const quantity = parsed.data.quantity;
 
   const refineEligible = isRefineEligible(item);
   let refineLevel = 0;

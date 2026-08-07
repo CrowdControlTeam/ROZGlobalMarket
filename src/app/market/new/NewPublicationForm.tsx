@@ -69,12 +69,12 @@ export function NewPublicationForm({
   // Un trade tampoco admite cantidad > 1 (ver nota en listings.ts). Un
   // regalo tiene el mismo criterio que una venta: si el item es
   // option-eligible representa una instancia real única, no varias copias
-  // idénticas. BUY se queda fuera: ahí las options son un mínimo deseado,
-  // no el roll de un ejemplar concreto, así que no ata la cantidad.
-  const quantityLocked = type === "TRADE" || ((type === "SALE" || type === "GIFT") && optionGroup !== null);
-  // "Sin tope" solo tiene sentido en materiales de venta/compra: un TRADE cierra
-  // el listing entero y un GIFT siempre reparte una cantidad concreta.
-  const canBeUnlimited = !quantityLocked && (type === "SALE" || type === "BUY");
+  // Solo TRADE fuerza cantidad 1 (aceptar cierra el listing entero). SALE/GIFT
+  // con options ya no se bloquean: el usuario pone la cantidad bajo su riesgo.
+  const quantityLocked = type === "TRADE";
+  // Ilimitado se mantiene igual: BUY, o SALE sin options (no ilimitado para
+  // items con options aleatorias). Ver listings.ts/gifts.ts (servidor).
+  const canBeUnlimited = type === "BUY" || (type === "SALE" && optionGroup === null);
 
   // El reset de optionSelections se dispara desde el evento de selección de
   // item (handleItemSelect más abajo), no aquí: sincronizar dos piezas de

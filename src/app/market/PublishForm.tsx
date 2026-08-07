@@ -85,8 +85,12 @@ export function PublishForm({
   const optionGroup = selectedItem?.optionGroup ?? null;
   const refineEligible = selectedItem !== null && isRefineEligible(selectedItem);
   const maxCardSlots = selectedItem !== null ? getMaxCardSlots(selectedItem) : 0;
-  const quantityLocked = type === "TRADE" || ((type === "SALE" || type === "GIFT") && optionGroup !== null);
-  const canBeUnlimited = !quantityLocked && (type === "SALE" || type === "BUY");
+  // Solo TRADE fuerza cantidad 1 (aceptar cierra el listing entero). SALE/GIFT
+  // con options ya no se bloquean: el usuario pone la cantidad. Ilimitado se
+  // mantiene igual: BUY, o SALE sin options (no ilimitado para items con
+  // options). Ver decisión con el usuario y listings.ts/gifts.ts (servidor).
+  const quantityLocked = type === "TRADE";
+  const canBeUnlimited = type === "BUY" || (type === "SALE" && optionGroup === null);
   const showPrice = type === "SALE" || type === "BUY";
 
   useEffect(() => {
