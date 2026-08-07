@@ -210,29 +210,19 @@ export async function createListing(formData: FormData) {
   // los dos casos. defsById también se reutiliza para el webhook más abajo.
   const defsById = await validateOptions(rawOptions, optionGroup);
 
-  // Un item con random options es una instancia única (el roll de options
-  // no es igual entre copias) — no tiene sentido apilar cantidad > 1. Solo
-  // aplica a SALE (representa un ejemplar real); en BUY no describe una
-  // instancia, así que un item option-eligible no fuerza nada ahí. Se
-  // fuerza aquí también (no solo ocultando el campo en el form) porque no
-  // hay que confiar en lo que mande el cliente. El refine, en cambio, sí
-  // admite varias copias al mismo nivel (ver decisión con el usuario).
-  // Un trade tampoco admite cantidad > 1: TradeOffer no lleva cuánto del
-  // listing original se lleva a cambio, aceptar una oferta cierra el
-  // listing entero.
-  const forcesQuantityOne =
-    parsed.data.type === "TRADE" || (parsed.data.type === "SALE" && optionGroup !== null);
-
-  // Cantidad. Ilimitado ("los que tengas" → null) solo tiene sentido en
-  // SALE/BUY de materiales; TRADE cierra el listing entero y un item con
-  // options es un ejemplar único, así que ahí siempre hay tope. La señal de
-  // ilimitado es el checkbox `unlimited` del form, no un campo vacío (no se
-  // confía en lo que mande el cliente: si no se permite, se ignora).
+  // Cantidad libre para todos los tipos: ya no se fuerza 1 en ningún caso (se
+  // deja bajo cuenta y riesgo del usuario — p. ej. vender/regalar equipo con
+  // options, o tradear un lote de 500). En TRADE el intercambio sigue siendo
+  // por el LOTE COMPLETO, no parcial: aceptar una oferta cierra el listing
+  // entero (ver acceptTradeOffer en trade-offers.ts). Ilimitado ("los que
+  // tengas" → null) se mantiene como estaba: solo BUY, o SALE de un item SIN
+  // options (infinitas copias de un ejemplar con options aleatorias no tiene
+  // sentido). La señal de ilimitado es el checkbox `unlimited` del form, no un
+  // campo vacío (no se confía en lo que mande el cliente: si no se permite, se
+  // ignora).
   let quantity: number | null;
-  if (forcesQuantityOne) {
-    quantity = 1;
-  } else if (
-    (parsed.data.type === "SALE" || parsed.data.type === "BUY") &&
+  if (
+    (parsed.data.type === "BUY" || (parsed.data.type === "SALE" && optionGroup === null)) &&
     formData.get("unlimited") === "on"
   ) {
     quantity = null;

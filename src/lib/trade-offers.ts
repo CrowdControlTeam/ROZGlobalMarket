@@ -84,13 +84,17 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
     }
   }
 
-  // quantity del Deal = unidades del listing (en un trade siempre 1); la
-  // cantidad del item ofrecido va en offeredQuantity.
+  // quantity del Deal = unidades del listing que se llevan a cambio. El trade es
+  // por el LOTE COMPLETO (no parcial), así que se toma la cantidad entera del
+  // listing (aceptar cierra el listing entero — ver acceptTradeOffer); así el
+  // "vendido" queda correcto (p. ej. 500 de 500, no 1 de 500). La cantidad del
+  // item OFRECIDO va aparte en offeredQuantity. TRADE nunca es ilimitado, así
+  // que listing.quantity no es null (el ?? 1 es solo por seguridad de tipos).
   await prisma.deal.create({
     data: {
       listingId,
       userId: session.user.discordId,
-      quantity: 1,
+      quantity: listing.quantity ?? 1,
       offeredItemId: parsed.data.itemId,
       offeredQuantity: parsed.data.quantity,
       offeredRefine: refineLevel,

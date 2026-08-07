@@ -69,12 +69,11 @@ export function NewPublicationForm({
   // Un trade tampoco admite cantidad > 1 (ver nota en listings.ts). Un
   // regalo tiene el mismo criterio que una venta: si el item es
   // option-eligible representa una instancia real única, no varias copias
-  // idénticas. BUY se queda fuera: ahí las options son un mínimo deseado,
-  // no el roll de un ejemplar concreto, así que no ata la cantidad.
-  const quantityLocked = type === "TRADE" || ((type === "SALE" || type === "GIFT") && optionGroup !== null);
-  // "Sin tope" solo tiene sentido en materiales de venta/compra: un TRADE cierra
-  // el listing entero y un GIFT siempre reparte una cantidad concreta.
-  const canBeUnlimited = !quantityLocked && (type === "SALE" || type === "BUY");
+  // Ya no se fuerza cantidad 1 en ningún tipo: el usuario la pone libremente
+  // (TRADE incluido — el intercambio es por el lote completo, ver trade-offers).
+  // Ilimitado sigue igual: BUY, o SALE sin options (no ilimitado para items con
+  // options aleatorias). Ver listings.ts/gifts.ts (servidor).
+  const canBeUnlimited = type === "BUY" || (type === "SALE" && optionGroup === null);
 
   // El reset de optionSelections se dispara desde el evento de selección de
   // item (handleItemSelect más abajo), no aquí: sincronizar dos piezas de
@@ -251,35 +250,28 @@ export function NewPublicationForm({
 
       <div>
         <label className={labelClass}>{tField("quantity")}</label>
-        {quantityLocked ? (
-          <>
-            <p className="text-sm text-ro-text-muted">1</p>
-            <input type="hidden" name="quantity" value={1} />
-          </>
-        ) : (
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              name="quantity"
-              min={1}
-              defaultValue={1}
-              required={!unlimited}
-              disabled={canBeUnlimited && unlimited}
-              className={`${inputClass} min-w-0 flex-1`}
-            />
-            {canBeUnlimited && (
-              <label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-ro-text-muted">
-                <input
-                  type="checkbox"
-                  name="unlimited"
-                  checked={unlimited}
-                  onChange={(e) => setUnlimited(e.target.checked)}
-                />
-                {t("unlimitedLabel")}
-              </label>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            name="quantity"
+            min={1}
+            defaultValue={1}
+            required={!unlimited}
+            disabled={canBeUnlimited && unlimited}
+            className={`${inputClass} min-w-0 flex-1`}
+          />
+          {canBeUnlimited && (
+            <label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-ro-text-muted">
+              <input
+                type="checkbox"
+                name="unlimited"
+                checked={unlimited}
+                onChange={(e) => setUnlimited(e.target.checked)}
+              />
+              {t("unlimitedLabel")}
+            </label>
+          )}
+        </div>
       </div>
 
       {refineEligible && (

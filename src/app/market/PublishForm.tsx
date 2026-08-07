@@ -85,8 +85,11 @@ export function PublishForm({
   const optionGroup = selectedItem?.optionGroup ?? null;
   const refineEligible = selectedItem !== null && isRefineEligible(selectedItem);
   const maxCardSlots = selectedItem !== null ? getMaxCardSlots(selectedItem) : 0;
-  const quantityLocked = type === "TRADE" || ((type === "SALE" || type === "GIFT") && optionGroup !== null);
-  const canBeUnlimited = !quantityLocked && (type === "SALE" || type === "BUY");
+  // Ya no se fuerza cantidad 1 en ningún tipo: el usuario la pone libremente
+  // (TRADE incluido — el intercambio es por el lote completo, ver trade-offers).
+  // Ilimitado sigue igual: BUY, o SALE sin options (no ilimitado para items con
+  // options). Ver listings.ts/gifts.ts (servidor autoritativo).
+  const canBeUnlimited = type === "BUY" || (type === "SALE" && optionGroup === null);
   const showPrice = type === "SALE" || type === "BUY";
 
   useEffect(() => {
@@ -183,8 +186,7 @@ export function PublishForm({
     const fd = new FormData();
     fd.set("type", type);
     fd.set("itemId", selectedItem?.id ?? "");
-    if (quantityLocked) fd.set("quantity", "1");
-    else if (unlimited) fd.set("unlimited", "on");
+    if (unlimited) fd.set("unlimited", "on");
     else fd.set("quantity", String(quantity || 1));
     if (refineEligible) fd.set("refineLevel", String(refineLevel));
     if (maxCardSlots > 0) fd.set("cardSlots", String(cardSlots));
@@ -212,7 +214,7 @@ export function PublishForm({
       return;
     }
     setPriceMissing(false);
-    if (!quantityLocked && !unlimited && (quantity === "" || quantity < 1)) {
+    if (!unlimited && (quantity === "" || quantity < 1)) {
       setTab("info");
       return;
     }
@@ -379,34 +381,27 @@ export function PublishForm({
             )}
 
             <FloatingField label={tField("quantity")}>
-              {quantityLocked ? (
-                <>
-                  <span className="text-sm text-ro-text">1</span>
-                  <input type="hidden" name="quantity" value={1} />
-                </>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <div className="min-w-0 flex-1">
-                    {unlimited ? (
-                      <span className="text-sm text-ro-text-muted">{t("unlimitedLabel")}</span>
-                    ) : (
-                      <input
-                        type="number"
-                        min={1}
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
-                        className={floatingControlClass}
-                      />
-                    )}
-                  </div>
-                  {canBeUnlimited && (
-                    <AffixToggle active={unlimited} onToggle={() => setUnlimited(!unlimited)} label={t("unlimitedLabel")}>
-                      <InfinityIcon size={15} />
-                    </AffixToggle>
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1">
+                  {unlimited ? (
+                    <span className="text-sm text-ro-text-muted">{t("unlimitedLabel")}</span>
+                  ) : (
+                    <input
+                      type="number"
+                      min={1}
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
+                      className={floatingControlClass}
+                    />
                   )}
-                  {unlimited && <input type="hidden" name="unlimited" value="on" />}
                 </div>
-              )}
+                {canBeUnlimited && (
+                  <AffixToggle active={unlimited} onToggle={() => setUnlimited(!unlimited)} label={t("unlimitedLabel")}>
+                    <InfinityIcon size={15} />
+                  </AffixToggle>
+                )}
+                {unlimited && <input type="hidden" name="unlimited" value="on" />}
+              </div>
             </FloatingField>
 
             {refineEligible && (
