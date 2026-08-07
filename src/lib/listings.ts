@@ -203,7 +203,10 @@ export async function createListing(formData: FormData) {
   ]);
   const optionGroup = optionsAvailable ? getItemOptionGroup(item, magicalTypes) : null;
 
-  const rawOptions = await parseOptionsFromFormData(formData);
+  // En BUY las options son "mínimos deseados": se permiten huecos (pedir un
+  // requisito en un slot concreto sin llenar los demás). SALE/TRADE describen
+  // una instancia real → sin huecos.
+  const rawOptions = await parseOptionsFromFormData(formData, parsed.data.type === "BUY");
   // En SALE/TRADE es el roll exacto de una instancia real; en BUY es el
   // mínimo que el comprador pide (ver comentario de ListingOption en
   // schema.prisma) — el rango válido [minValue, maxValue] es el mismo en

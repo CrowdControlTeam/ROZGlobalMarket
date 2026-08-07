@@ -145,15 +145,19 @@ export function NewPublicationForm({
     });
   }
 
-  // Elegir un option real en `index` habilita su input y desbloquea la
-  // siguiente fila. Volver al placeholder limpia esa fila y todas las
-  // siguientes: las options siempre ocupan las posiciones desde 1 sin
-  // huecos, así que no puede quedar la 2 rellena sin la 1.
+  // Elegir un option real en `index` habilita su input. Volver al placeholder
+  // limpia esa fila. En SALE/TRADE/GIFT (instancia real, sin huecos) limpiar una
+  // fila limpia también todas las siguientes; en BUY (huecos permitidos) solo
+  // limpia la suya.
   function handleSelectChange(index: number, defId: string) {
     setOptionSelections((prev) => {
       const next = [...prev];
       if (!defId) {
-        for (let i = index; i < next.length; i++) next[i] = { defId: "", value: "" };
+        if (type === "BUY") {
+          next[index] = { defId: "", value: "" };
+        } else {
+          for (let i = index; i < next.length; i++) next[i] = { defId: "", value: "" };
+        }
         return next;
       }
       // Sin valor por defecto: el input arranca vacío (el rango se ve en el
@@ -344,7 +348,10 @@ export function NewPublicationForm({
           <div className="flex flex-col gap-2">
             {Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
               const index = slotIndex - 1;
-              const selectEnabled = index === 0 || optionSelections[index - 1].defId !== "";
+              // En BUY (mínimo deseado) cada slot es independiente: se puede
+              // pedir "slot 2 = flee" sin llenar el 1. En el resto, secuencial
+              // (instancia real, sin huecos).
+              const selectEnabled = type === "BUY" || index === 0 || optionSelections[index - 1].defId !== "";
               const selection = optionSelections[index];
               const defsForSlot = optionDefs.filter((d) => d.slotIndex === slotIndex);
               const selectedDef = defsForSlot.find((d) => d.id === selection.defId);

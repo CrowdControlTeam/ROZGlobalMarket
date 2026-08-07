@@ -156,11 +156,18 @@ export function PublishForm({
     });
   }
 
+  // En SALE/TRADE/GIFT (instancia real, sin huecos) limpiar una fila limpia
+  // también las siguientes; en BUY (mínimo deseado, huecos permitidos) solo la
+  // suya. Ver NewPublicationForm y parseOptionsFromFormData (servidor).
   function handleSelectChange(index: number, defId: string) {
     setOptionSelections((prev) => {
       const next = [...prev];
       if (!defId) {
-        for (let i = index; i < next.length; i++) next[i] = { defId: "", value: "" };
+        if (type === "BUY") {
+          next[index] = { defId: "", value: "" };
+        } else {
+          for (let i = index; i < next.length; i++) next[i] = { defId: "", value: "" };
+        }
         return next;
       }
       next[index] = { defId, value: "" };
@@ -465,7 +472,9 @@ export function PublishForm({
           <div className="flex flex-col gap-2">
           {Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
             const index = slotIndex - 1;
-            const selectEnabled = index === 0 || optionSelections[index - 1].defId !== "";
+            // BUY: cada slot independiente (mínimo deseado, huecos permitidos);
+            // resto: secuencial (instancia real).
+            const selectEnabled = type === "BUY" || index === 0 || optionSelections[index - 1].defId !== "";
             const selection = optionSelections[index];
             const defsForSlot = optionDefs.filter((d) => d.slotIndex === slotIndex);
             const selectedDef = defsForSlot.find((d) => d.id === selection.defId);
