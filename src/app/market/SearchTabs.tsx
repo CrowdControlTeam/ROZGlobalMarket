@@ -122,7 +122,9 @@ export function SearchTabs() {
               {paths && (
                 <svg
                   aria-hidden
-                  className="absolute bottom-0 -z-10"
+                  // overflow-visible: si no, el viewBox recorta la mitad exterior
+                  // del trazo en los bordes (el top se veía a ~1px en vez de 2px).
+                  className="absolute bottom-0 -z-10 overflow-visible"
                   style={{ left: -FLARE, width: paths.w, height: TAB_H }}
                   viewBox={`0 0 ${paths.w} ${TAB_H}`}
                 >
