@@ -203,6 +203,11 @@ model Listing {
   // nombre, nunca en 0.
   cardSlots Int @default(0)
 
+  // Notas libres opcionales que escribe quien publica (cualquier tipo): detalles
+  // del trato, horario de conexión, condiciones, etc. Se muestran en el detalle.
+  // Longitud acotada en las acciones (ver MAX_LISTING_NOTES_LENGTH).
+  notes String?
+
   options ListingOption[]
   deals   Deal[]
 

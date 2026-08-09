@@ -20,6 +20,7 @@ import {
 } from "@/lib/item-options";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
+import { MAX_LISTING_NOTES_LENGTH, parseListingNotes } from "@/lib/listing-notes-constants";
 import { loadMarketConfig } from "@/lib/market-config";
 import { searchCatalog } from "@/lib/item-catalog";
 import { listingStatusOnClose, availableFrom, isSoldOut } from "@/lib/deals";
@@ -268,6 +269,11 @@ export async function createListing(formData: FormData) {
     }
   }
 
+  const notes = parseListingNotes(formData.get("notes"));
+  if (notes && notes.length > MAX_LISTING_NOTES_LENGTH) {
+    throw new Error(t("notesTooLong", { max: MAX_LISTING_NOTES_LENGTH }));
+  }
+
   const listing = await prisma.listing.create({
     data: {
       posterId: session.user.discordId,
@@ -277,6 +283,7 @@ export async function createListing(formData: FormData) {
       price,
       refineLevel,
       cardSlots,
+      notes,
       options:
         rawOptions.length > 0
           ? {

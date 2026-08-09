@@ -11,6 +11,7 @@ import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
+import { MAX_LISTING_NOTES_LENGTH, parseListingNotes } from "@/lib/listing-notes-constants";
 import { formatOptionAmount } from "@/lib/market-labels";
 import {
   getItemOptionGroup,
@@ -123,6 +124,11 @@ export async function sendGift(formData: FormData) {
     }
   }
 
+  const notes = parseListingNotes(formData.get("notes"));
+  if (notes && notes.length > MAX_LISTING_NOTES_LENGTH) {
+    throw new Error(t("notesTooLong", { max: MAX_LISTING_NOTES_LENGTH }));
+  }
+
   // Con destinatario = envío directo instantáneo: Listing(GIFT) ya cerrado
   // (COMPLETED) + un Deal ACCEPTED para el destinatario. SIN destinatario =
   // regalo RECLAMABLE: Listing(GIFT) ACTIVE que cualquiera puede reclamar
@@ -138,6 +144,7 @@ export async function sendGift(formData: FormData) {
         status: recipientId ? "COMPLETED" : "ACTIVE",
         refineLevel,
         cardSlots,
+        notes,
         options:
           rawOptions.length > 0
             ? {

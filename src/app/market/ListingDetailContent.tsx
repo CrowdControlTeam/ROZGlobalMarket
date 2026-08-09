@@ -205,6 +205,15 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
+      {listing.notes && (
+        <div className="mt-3">
+          <p className={labelClass}>{t("field.notes")}</p>
+          {/* whitespace-pre-wrap: conserva los saltos de línea que escribió el
+              poster; break-words evita que un texto largo sin espacios desborde. */}
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ro-text">{listing.notes}</p>
+        </div>
+      )}
+
       {listing.status === "ACTIVE" && (
         <div className="mt-3">
           {isPoster ? (

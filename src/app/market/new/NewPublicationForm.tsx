@@ -17,6 +17,7 @@ import {
 } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { getMaxCardSlots } from "@/lib/card-slots-constants";
+import { MAX_LISTING_NOTES_LENGTH } from "@/lib/listing-notes-constants";
 import { getErrorMessage, rethrowFrameworkErrors } from "@/lib/errors";
 import { ItemPicker, type ItemResult } from "./ItemPicker";
 import { ScreenshotDropzone } from "./ScreenshotDropzone";
@@ -409,6 +410,17 @@ export function NewPublicationForm({
           </div>
         </div>
       )}
+
+      <div>
+        <label className={labelClass}>{tField("notes")}</label>
+        <textarea
+          name="notes"
+          rows={3}
+          maxLength={MAX_LISTING_NOTES_LENGTH}
+          placeholder={t("notesPlaceholder")}
+          className={`w-full resize-y ${inputBaseClass}`}
+        />
+      </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
 
