@@ -397,6 +397,10 @@ export function MarketFilters() {
   // Panel (desktop) colapsado a rail o abierto. El bottom-sheet móvil se controla
   // desde el store (mobileFiltersOpen); el disparador vive en la cabecera.
   const [collapsed, setCollapsed] = useState(false);
+  // El panel expandido FLOTA sobre los resultados en anchos medios (≥1100px y
+  // <1560px); a ≥1560px cabe embebido en el margen (sidebar permanente). Solo el
+  // flotante se autocierra al clicar fuera (ver efecto más abajo).
+  const [panelFloats, setPanelFloats] = useState(false);
 
   // Si el margen no da para el panel embebido (mismo umbral que el layout,
   // 1560px), arrancar en rail: si no, el panel flotaría sobre los resultados
@@ -406,6 +410,18 @@ export function MarketFilters() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCollapsed(true);
     }
+  }, []);
+
+  // Rango en el que el panel flota (desktop sin caber embebido). Se sigue en
+  // vivo para (des)activar el autocierre al redimensionar.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1100px) and (max-width: 1559.98px)");
+    function sync() {
+      setPanelFloats(mq.matches);
+    }
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
   }, []);
 
   // El panel es `fixed`, así que al llegar al fondo se solaparía con el footer.
@@ -432,6 +448,20 @@ export function MarketFilters() {
       window.removeEventListener("resize", update);
     };
   }, []);
+
+  // Autocerrar el panel flotante al clicar fuera, para no tener que colapsarlo a
+  // mano. Solo cuando FLOTA y está abierto; el embebido (cabe en pantalla) se
+  // mantiene. En móvil el bottom-sheet ya cierra por su propio backdrop.
+  useEffect(() => {
+    if (collapsed || !panelFloats) return;
+    function onDown(e: MouseEvent) {
+      if (asideRef.current && !asideRef.current.contains(e.target as Node)) {
+        setCollapsed(true);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [collapsed, panelFloats]);
 
   // Al pulsar un icono del rail: abrir el panel y expandir esa sección.
   function openFromRail(id: string) {
