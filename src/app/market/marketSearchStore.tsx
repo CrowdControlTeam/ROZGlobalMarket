@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { FILTER_KEYS, type Filters } from "./marketFilterKeys";
 
@@ -45,6 +45,30 @@ function serialize(filters: Filters): string {
     if (v) p.set(k, v);
   }
   return p.toString();
+}
+
+// Filtros "discretos": se fijan con un clic/selección, no escribiendo. Aplican
+// al instante (así el skeleton sale desde el primer momento). El resto —texto
+// libre: buscador `q`, precio, refino, slots, valores de opción— va con debounce
+// para no navegar en cada tecla. `posterName` acompaña a `posterId` (mismo gesto
+// del UserPicker).
+const DISCRETE_KEYS = new Set<string>([
+  "type",
+  "sort",
+  "category",
+  "slot",
+  "weaponType",
+  "posterId",
+  "posterName",
+]);
+
+// Claves cuyo valor difiere entre dos conjuntos de filtros.
+function changedKeys(a: Filters, b: Filters): string[] {
+  const out: string[] = [];
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (a[k] !== b[k]) out.push(k);
+  }
+  return out;
 }
 
 type MarketSearchContextValue = {
@@ -97,26 +121,37 @@ export function MarketSearchProvider({
   // en la URL (initialFilters) para no re-empujar en el montaje. El valor del
   // inicializador de useRef es determinista (mismo en servidor y cliente).
   const lastPushedRef = useRef<string>(serialize(pickFilters(initialFilters)));
+  // Objeto (no solo string) de lo último empujado, para saber QUÉ claves
+  // cambiaron y decidir inmediato vs debounce.
+  const lastPushedFiltersRef = useRef<Filters>(pickFilters(initialFilters));
   // Id activo por ref para closures estables (setFilter desde manejadores).
   const activeIdRef = useRef<string>(activeId);
   useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
 
-  const activeFilters = tabs.find((t) => t.id === activeId)?.filters ?? {};
+  const activeFilters = useMemo(
+    () => tabs.find((t) => t.id === activeId)?.filters ?? {},
+    [tabs, activeId],
+  );
   const activeStr = serialize(activeFilters);
 
-  // Estado → URL (con debounce, `replace` para no ensuciar el historial). Solo
-  // empuja si la query de la pestaña activa difiere de lo último empujado (en el
-  // montaje coinciden, así que no hay push inicial).
+  // Estado → URL (`replace` para no ensuciar el historial). Solo empuja si la
+  // query de la pestaña activa difiere de lo último empujado (en el montaje
+  // coinciden, así que no hay push inicial). Filtros DISCRETOS (clic/selección)
+  // → inmediato, para que el skeleton salga desde el primer momento; campos de
+  // TEXTO (q, precio, refino, slots…) → debounce, para no navegar en cada tecla.
   useEffect(() => {
     if (activeStr === lastPushedRef.current) return;
+    const changed = changedKeys(lastPushedFiltersRef.current, activeFilters);
+    const allDiscrete = changed.length > 0 && changed.every((k) => DISCRETE_KEYS.has(k));
     const handle = setTimeout(() => {
       lastPushedRef.current = activeStr;
+      lastPushedFiltersRef.current = activeFilters;
       router.replace(activeStr ? `${pathname}?${activeStr}` : pathname);
-    }, 400);
+    }, allDiscrete ? 0 : 400);
     return () => clearTimeout(handle);
-  }, [activeStr, pathname, router]);
+  }, [activeStr, activeFilters, pathname, router]);
 
   function applyPatch(filters: Filters, patch: Record<string, string>): Filters {
     const next = { ...filters };
@@ -138,6 +173,7 @@ export function MarketSearchProvider({
   function pushImmediate(filters: Filters) {
     const str = serialize(filters);
     lastPushedRef.current = str;
+    lastPushedFiltersRef.current = filters;
     router.replace(str ? `${pathname}?${str}` : pathname);
   }
 
