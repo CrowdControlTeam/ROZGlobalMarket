@@ -31,6 +31,7 @@ import { inputBaseClass, selectClass } from "@/lib/ui";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { UserPicker, type UserResult } from "@/components/UserPicker";
 import { Drawer } from "@/components/Drawer";
+import { MultiSelectFilter } from "./MultiSelectFilter";
 import { useMarketSearch } from "./marketSearchStore";
 
 type OptionFilterSelection = { statCode: string; min: number | ""; max: number | "" };
@@ -85,9 +86,12 @@ export function MarketFilters() {
     filters.posterId && filters.posterName
       ? { id: filters.posterId, username: filters.posterName, avatarUrl: null }
       : null;
-  const category = filters.category ?? "";
-  const slot = filters.slot ?? "";
-  const weaponType = filters.weaponType ?? "";
+  // Multi-valor: en el store viajan como CSV (category=WEAPON,ARMOR); aquí se
+  // leen como arrays. El componente MultiSelectFilter devuelve el array ya en
+  // orden canónico (el de los Object.values del enum), así que la CSV es estable.
+  const categories = parseCsv(filters.category);
+  const slots = parseCsv(filters.slot);
+  const weaponTypes = parseCsv(filters.weaponType);
   const minPrice = toNumberOrEmpty(filters.minPrice);
   const maxPrice = toNumberOrEmpty(filters.maxPrice);
   const refineMin = filters.refineMin ?? "";
@@ -111,22 +115,32 @@ export function MarketFilters() {
     return bySlot;
   }, [allOptionDefs]);
 
+  // Gating "guiado no destructivo": slot y tipo de arma solo se muestran/aplican
+  // cuando ALGUNA categoría elegida los admite (o no hay categoría). Si dejan de
+  // aplicar NO se borran del store —quedan en la URL y reaparecen al volver la
+  // categoría—; el backend ya los ignora fuera de contexto (ver getListings).
   const isBuyFilter = type === "BUY";
-  const showSlot = category === ItemCategory.ARMOR || category === ItemCategory.CARD || category === "";
-  const showWeaponType = category === ItemCategory.WEAPON || category === "";
-  const refineFilterEnabled =
-    category === "" ||
-    category === ItemCategory.WEAPON ||
-    (category === ItemCategory.ARMOR &&
-      (slot === "" || isRefineEligible({ category: ItemCategory.ARMOR, slot: slot as EquipSlot })));
-  const cardSlotsFilterEnabled =
-    category === "" ||
-    category === ItemCategory.WEAPON ||
-    (category === ItemCategory.ARMOR &&
-      (slot === "" || getMaxCardSlots({ category: ItemCategory.ARMOR, slot: slot as EquipSlot }) > 0));
+  const noCategory = categories.length === 0;
+  const hasArmor = categories.includes(ItemCategory.ARMOR);
+  const hasCard = categories.includes(ItemCategory.CARD);
+  const hasWeapon = categories.includes(ItemCategory.WEAPON);
+  const showSlot = noCategory || hasArmor || hasCard;
+  const showWeaponType = noCategory || hasWeapon;
+  // Refino/slots de carta: el backend NO los acota por categoría (los aplica sin
+  // más), así que aquí sí se limpian al quedar fuera de contexto (ver el efecto
+  // de normalización) para no devolver 0 resultados; su enabled se deriva de si
+  // hay arma, o armadura con algún slot elegido compatible (o sin slot).
+  const armorRefineEligible =
+    hasArmor &&
+    (slots.length === 0 || slots.some((s) => isRefineEligible({ category: ItemCategory.ARMOR, slot: s as EquipSlot })));
+  const refineFilterEnabled = noCategory || hasWeapon || armorRefineEligible;
+  const armorCardSlotsEligible =
+    hasArmor &&
+    (slots.length === 0 || slots.some((s) => getMaxCardSlots({ category: ItemCategory.ARMOR, slot: s as EquipSlot }) > 0));
+  const cardSlotsFilterEnabled = noCategory || hasWeapon || armorCardSlotsEligible;
   const cardSlotsFilterMax =
-    category === ItemCategory.ARMOR && slot
-      ? getMaxCardSlots({ category: ItemCategory.ARMOR, slot: slot as EquipSlot })
+    !noCategory && hasArmor && !hasWeapon && slots.length > 0
+      ? Math.max(1, ...slots.map((s) => getMaxCardSlots({ category: ItemCategory.ARMOR, slot: s as EquipSlot })))
       : MAX_WEAPON_CARD_SLOTS;
 
   // Normalización: al cambiar categoría/slot/tipo, limpia del store los filtros
@@ -150,11 +164,10 @@ export function MarketFilters() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refineFilterEnabled, cardSlotsFilterEnabled, isBuyFilter, filters]);
 
-  function handleCategoryChange(value: string) {
-    const patch: Record<string, string> = { category: value };
-    if (value !== ItemCategory.ARMOR && value !== ItemCategory.CARD) patch.slot = "";
-    if (value !== ItemCategory.WEAPON) patch.weaponType = "";
-    setFilters(patch);
+  // Multi-valor → CSV en el store. Array vacío ⇒ "" ⇒ el store elimina la clave
+  // (y con ella el parámetro de la URL). El array llega ya en orden canónico.
+  function setCsvFilter(key: string, values: string[]) {
+    setFilter(key, values.join(","));
   }
   function handleOptionSelectChange(index: number, statCode: string) {
     const n = index + 1;
@@ -228,55 +241,49 @@ export function MarketFilters() {
       id: "category",
       Icon: Boxes,
       label: t("filters.category"),
-      count: category ? 1 : 0,
-      clear: () => setFilters({ category: "", slot: "", weaponType: "" }),
+      count: categories.length,
+      // No destructivo: limpiar categoría no toca slot/tipo de arma (el backend
+      // los ignora fuera de contexto y reaparecen al volver la categoría).
+      clear: () => setFilter("category", ""),
       content: (
-        <select
-          value={category}
-          onChange={(e) => handleCategoryChange(e.target.value)}
-          className={`w-full ${selectClass}`}
-        >
-          <option value="">{t("filters.all")}</option>
-          {Object.values(ItemCategory).map((c) => (
-            <option key={c} value={c}>
-              {categoryLabel(t, c)}
-            </option>
-          ))}
-        </select>
+        <MultiSelectFilter
+          options={Object.values(ItemCategory).map((c) => ({ value: c, label: categoryLabel(t, c) }))}
+          selected={categories}
+          onChange={(next) => setCsvFilter("category", next)}
+          placeholder={t("filters.all")}
+        />
       ),
     },
     {
       id: "slot",
       Icon: Shield,
       label: t("filters.slot"),
-      count: slot ? 1 : 0,
+      count: slots.length,
       clear: () => setFilter("slot", ""),
       content: (
-        <select value={slot} disabled={!showSlot} onChange={(e) => setFilter("slot", e.target.value)} className={`w-full ${selectClass}`}>
-          <option value="">{t("filters.any")}</option>
-          {Object.values(EquipSlot).map((s) => (
-            <option key={s} value={s}>
-              {slotLabel(t, s)}
-            </option>
-          ))}
-        </select>
+        <MultiSelectFilter
+          options={Object.values(EquipSlot).map((s) => ({ value: s, label: slotLabel(t, s) }))}
+          selected={slots}
+          onChange={(next) => setCsvFilter("slot", next)}
+          disabled={!showSlot}
+          placeholder={t("filters.any")}
+        />
       ),
     },
     {
       id: "weaponType",
       Icon: Sword,
       label: t("filters.weaponType"),
-      count: weaponType ? 1 : 0,
+      count: weaponTypes.length,
       clear: () => setFilter("weaponType", ""),
       content: (
-        <select value={weaponType} disabled={!showWeaponType} onChange={(e) => setFilter("weaponType", e.target.value)} className={`w-full ${selectClass}`}>
-          <option value="">{t("filters.any")}</option>
-          {Object.values(WeaponType).map((w) => (
-            <option key={w} value={w}>
-              {weaponTypeLabel(t, w)}
-            </option>
-          ))}
-        </select>
+        <MultiSelectFilter
+          options={Object.values(WeaponType).map((w) => ({ value: w, label: weaponTypeLabel(t, w) }))}
+          selected={weaponTypes}
+          onChange={(next) => setCsvFilter("weaponType", next)}
+          disabled={!showWeaponType}
+          placeholder={t("filters.any")}
+        />
       ),
     },
     {
@@ -569,6 +576,10 @@ function MinMaxRow({ children }: { children: ReactNode }) {
       <div className="flex-1">{maxEl}</div>
     </div>
   );
+}
+
+function parseCsv(value: string | null | undefined): string[] {
+  return value ? value.split(",").filter(Boolean) : [];
 }
 
 function toNumberOrEmpty(value: string | null | undefined): number | "" {
