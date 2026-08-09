@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Search, Plus, X } from "lucide-react";
+import { ItemCategory, ListingType } from "@prisma/client";
+import { categoryLabel, listingTypeLabel } from "@/lib/market-labels";
 import { useMarketSearch, type MarketTab } from "./marketSearchStore";
 import { countFilters } from "./marketFilterKeys";
 
@@ -60,11 +62,18 @@ export function SearchTabs() {
 
   // Nombre corto derivado de los filtros de la pestaña: término → categoría →
   // tipo; si no hay ninguno (pestaña limpia), "Búsqueda N" por su nº de creación.
+  // La categoría (y slot/tipo de arma) es MULTI-VALOR: en el store viaja como
+  // CSV, así que se parsea y se etiqueta la primera con "+N" si hay más (usando
+  // los helpers oficiales, no una clave a mano — con CSV daría clave cruda).
   function labelOf(tab: MarketTab): string {
     const f = tab.filters ?? {};
     if (f.q) return f.q;
-    if (f.category) return t(`catalog.category.${f.category}`);
-    if (f.type) return t(`listing.type.${f.type}`);
+    const cats = f.category ? f.category.split(",").filter(Boolean) : [];
+    if (cats.length > 0) {
+      const first = categoryLabel(t, cats[0] as ItemCategory);
+      return cats.length > 1 ? `${first} +${cats.length - 1}` : first;
+    }
+    if (f.type) return listingTypeLabel(t, f.type as ListingType);
     return t("searchTabs.untitled", { n: tab.seq });
   }
 

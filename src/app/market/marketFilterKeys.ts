@@ -31,21 +31,28 @@ export const FILTER_KEYS: string[] = [
 
 export type Filters = Record<string, string>;
 
-// Nº de filtros ACTIVOS de una búsqueda (para el contador de la pestaña). Se
-// cuenta por dimensión: los pares mín/máx (precio, refino, slots) cuentan como
-// 1, cada slot de opción con stat cuenta 1, y `poster` cuenta 1. El orden
-// (`sort`) NO cuenta: es ordenación, no un filtro.
+// Nº de filtros ACTIVOS de una búsqueda (para el contador de la pestaña). Los
+// pares mín/máx (precio, refino, slots) cuentan como 1, cada slot de opción con
+// stat cuenta 1, y `poster` cuenta 1. Los filtros MULTI-VALOR (categoría, slot,
+// tipo de arma) cuentan CADA valor elegido (CSV), para cuadrar con el contador
+// del panel (p. ej. 3 categorías = 3). El orden (`sort`) NO cuenta: es
+// ordenación, no un filtro.
 export function countFilters(f: Filters): number {
   let n = 0;
   if (f.type) n++;
   if (f.q) n++;
-  if (f.category) n++;
-  if (f.slot) n++;
-  if (f.weaponType) n++;
+  n += csvCount(f.category);
+  n += csvCount(f.slot);
+  n += csvCount(f.weaponType);
   if (f.posterId) n++;
   if (f.minPrice || f.maxPrice) n++;
   if (f.refineMin || f.refineMax) n++;
   if (f.cardSlotsMin || f.cardSlotsMax) n++;
   for (let i = 1; i <= MAX_OPTION_SLOTS; i++) if (f[`option${i}Stat`]) n++;
   return n;
+}
+
+// Nº de valores en una clave CSV (multi-valor). "" / undefined => 0.
+function csvCount(value: string | undefined): number {
+  return value ? value.split(",").filter(Boolean).length : 0;
 }
