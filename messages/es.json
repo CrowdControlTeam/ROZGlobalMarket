@@ -333,7 +333,8 @@
       "edit": "Editar",
       "viewDetail": "Ver detalle",
       "share": "Compartir",
-      "contact": "Contactar"
+      "contact": "Contactar",
+      "hasNotes": "Tiene notas"
     },
     "sort": {
       "label": "Orden",

@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, MessageSquareText, SlidersHorizontal } from "lucide-react";
 import { loadMoreListings } from "@/lib/market-actions";
 import type { MarketFilters } from "@/lib/market";
 import { buttonClass } from "@/lib/ui";
@@ -32,6 +32,7 @@ type Listing = {
   price: number | null;
   refineLevel: number;
   cardSlots: number;
+  notes: string | null;
   item: Item;
   poster: Poster;
   options: ListingOption[];
@@ -152,6 +153,11 @@ function ListingCard({
   const meta = (
     <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ro-text-muted">
       {badge}
+      {listing.notes && (
+        <span title={t("card.hasNotes")} className="inline-flex shrink-0 text-ro-accent" aria-label={t("card.hasNotes")}>
+          <MessageSquareText size={12} aria-hidden />
+        </span>
+      )}
       <span>
         · <UserMention userId={listing.poster.id} username={listing.poster.username} viewerId={currentUserId} capitalize item={listing.item} listingId={listing.id} dmAvailable={dmAvailable} onContactClick={canContact ? () => setContactOpen(true) : undefined} />
       </span>
