@@ -292,6 +292,8 @@
       "category": "Category",
       "slot": "Equipment slot",
       "any": "Any",
+      "addMore": "Add…",
+      "removeValue": "Remove {value}",
       "weaponType": "Weapon type",
       "refineMin": "Refine min.",
       "refineMax": "Refine max.",

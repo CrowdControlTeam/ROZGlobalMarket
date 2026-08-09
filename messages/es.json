@@ -292,6 +292,8 @@
       "category": "Categoría",
       "slot": "Slot de equipo",
       "any": "Cualquiera",
+      "addMore": "Añadir…",
+      "removeValue": "Quitar {value}",
       "weaponType": "Tipo de arma",
       "refineMin": "Refine mín.",
       "refineMax": "Refine máx.",
