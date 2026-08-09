@@ -153,11 +153,6 @@ function ListingCard({
   const meta = (
     <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ro-text-muted">
       {badge}
-      {listing.notes && (
-        <span title={t("card.hasNotes")} className="inline-flex shrink-0 text-ro-accent" aria-label={t("card.hasNotes")}>
-          <MessageSquareText size={12} aria-hidden />
-        </span>
-      )}
       <span>
         · <UserMention userId={listing.poster.id} username={listing.poster.username} viewerId={currentUserId} capitalize item={listing.item} listingId={listing.id} dmAvailable={dmAvailable} onContactClick={canContact ? () => setContactOpen(true) : undefined} />
       </span>
@@ -205,9 +200,23 @@ function ListingCard({
       : []),
   ];
 
-  const kebab = (
-    <div className="absolute right-1.5 top-1.5">
+  // Columna de acciones en la esquina superior derecha: kebab arriba y, debajo,
+  // el indicador de notas (bocadillo, solo si hay). Aquí irá también el botón de
+  // favorito más adelante. Va sobre la tarjeta (fuera del <Link>) para no anidar
+  // controles dentro del <a>. Es de un icono de ancho (igual que el kebab), así
+  // que no interfiere con el nombre por muy largo que sea.
+  const cornerActions = (
+    <div className="absolute right-1.5 top-1.5 flex flex-col items-center gap-1">
       <KebabMenu label={t("card.menu")} items={kebabItems} />
+      {listing.notes && (
+        <span
+          title={t("card.hasNotes")}
+          aria-label={t("card.hasNotes")}
+          className="grid h-6 w-6 place-items-center text-ro-accent"
+        >
+          <MessageSquareText size={15} aria-hidden />
+        </span>
+      )}
     </div>
   );
 
@@ -245,7 +254,7 @@ function ListingCard({
             <div className="mt-0.5 text-xs text-ro-text-muted">{countLabel}</div>
           </div>
         </Link>
-        {kebab}
+        {cornerActions}
         {contactModal}
       </div>
     );
@@ -261,8 +270,10 @@ function ListingCard({
       >
         <div className="flex gap-2.5">
           {iconBox}
-          <div className="min-w-0 flex-1">
-            <p className="truncate pr-5 text-sm font-bold text-ro-text">{name}</p>
+          {/* pr-5 en el contenedor (no solo en el nombre) para que también el
+              meta libre la columna de acciones de la esquina. */}
+          <div className="min-w-0 flex-1 pr-5">
+            <p className="truncate text-sm font-bold text-ro-text">{name}</p>
             {meta}
           </div>
         </div>
@@ -274,7 +285,7 @@ function ListingCard({
           <span className="text-sm">{priceLine}</span>
         </div>
       </Link>
-      {kebab}
+      {cornerActions}
       {contactModal}
     </div>
   );
