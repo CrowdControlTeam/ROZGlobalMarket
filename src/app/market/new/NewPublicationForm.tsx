@@ -211,8 +211,11 @@ export function NewPublicationForm({
               await sendGift(formData);
               router.push("/my/gifts");
             } else {
-              const { id } = await createListing(formData);
-              router.push(`/market/${id}`);
+              // Ya hay una preview antes de confirmar, así que tras publicar
+              // volvemos al mercado (donde aparece el listing recién creado,
+              // revalidado en createListing) en vez de abrir su detalle.
+              await createListing(formData);
+              router.push("/market");
             }
           } catch (err) {
             submittingRef.current = false;
