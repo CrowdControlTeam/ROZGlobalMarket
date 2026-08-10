@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { ItemOptionGroup } from "@prisma/client";
+import { ItemOptionGroup, type Item } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
@@ -144,44 +144,20 @@ export async function getAllOptionChoices() {
   });
 }
 
-export async function createListing(formData: FormData) {
-  const session = await requireSession();
-  const t = await getTranslations("errors");
-
-  const { maintenanceModeEnabled } = await loadMarketConfig();
-  if (maintenanceModeEnabled && !session.user.isAdmin) {
-    throw new Error(t("maintenanceMode"));
-  }
-
-  // Los mensajes de zod se resuelven aquí dentro (no como const a nivel de
-  // módulo) porque necesitan el traductor, que solo existe dentro de la
-  // request — reconstruir el schema en cada llamada no tiene coste real.
-  const createListingSchema = z.object({
-    itemId: z.string().min(1, t("selectItem")),
-    // Acción única para TODOS los tipos, incluido GIFT (antes en sendGift). El
-    // único caso con lógica propia es el regalo CON destinatario (entrega
-    // directa, más abajo); el reclamable es una publicación normal más.
-    type: z.enum(["SALE", "BUY", "TRADE", "GIFT"]).default("SALE"),
-  });
-
-  const parsed = createListingSchema.safeParse({
-    itemId: formData.get("itemId"),
-    type: formData.get("type") || "SALE",
-  });
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
-  }
-
-  // El precio no aplica a un trade (se intercambia por otro item, nunca
-  // por zeny fijo — ver TradeOffer.zenyOffered para la compensación
-  // opcional en la oferta). En SALE es el precio de venta; en BUY el mismo
-  // campo significa "precio máximo que pagaría" — mismo campo, doble
-  // sentido según `type` (ver comentario en schema.prisma).
-  // price null en SALE/BUY = "sin precio" (competitivo): no se fija precio y la
-  // contraparte puja/oferta el suyo; el poster elige la mejor (ver reserveListing
-  // / offerToFulfill y su rama competitiva). La señal es el checkbox `noPrice`.
+// Parseo + validación de los campos COMUNES de un listing (precio, cantidad,
+// refino, slots, opciones y notas), compartido por createListing y
+// updateListing. `type` e `item` ya vienen resueltos/validados por el caller;
+// `t` es el traductor de "errors". Lanza con el mensaje i18n al primer fallo.
+async function parseListingFields(
+  formData: FormData,
+  type: "SALE" | "BUY" | "TRADE" | "GIFT",
+  item: Item,
+  t: Awaited<ReturnType<typeof getTranslations>>,
+) {
+  // Precio: solo SALE/BUY. null = "sin precio" (competitivo, señal `noPrice`) o
+  // no aplica (TRADE/GIFT). Ver el doble sentido de `price` en schema.prisma.
   let price: number | null = null;
-  if (parsed.data.type === "SALE" || parsed.data.type === "BUY") {
+  if (type === "SALE" || type === "BUY") {
     const noPrice = formData.get("noPrice") === "on";
     if (!noPrice) {
       const pricedParsed = z.coerce
@@ -196,54 +172,22 @@ export async function createListing(formData: FormData) {
     }
   }
 
-  const item = await prisma.item.findUnique({
-    where: { id: parsed.data.itemId },
-  });
-  if (!item) throw new Error(t("itemNotFound"));
-
-  // Regalo CON destinatario = entrega directa (ver más abajo). Sin destinatario,
-  // el GIFT es RECLAMABLE: una publicación normal más. Solo se lee/valida el
-  // destinatario en GIFT; en el resto de tipos se ignora aunque venga en el form.
-  const recipientId =
-    parsed.data.type === "GIFT"
-      ? ((formData.get("recipientId") as string) || "").trim() || undefined
-      : undefined;
-  if (recipientId) {
-    if (recipientId === session.user.discordId) throw new Error(t("cannotGiftSelf"));
-    const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
-    if (!recipient) throw new Error(t("recipientNotFound"));
-  }
-  const isDirectGift = parsed.data.type === "GIFT" && !!recipientId;
-
   const [magicalTypes, optionsAvailable] = await Promise.all([
     loadMagicalWeaponTypes(),
     isOptionsFeatureAvailable(),
   ]);
   const optionGroup = optionsAvailable ? getItemOptionGroup(item, magicalTypes) : null;
 
-  // En BUY las options son "mínimos deseados": se permiten huecos (pedir un
-  // requisito en un slot concreto sin llenar los demás). SALE/TRADE describen
-  // una instancia real → sin huecos.
-  const rawOptions = await parseOptionsFromFormData(formData, parsed.data.type === "BUY");
-  // En SALE/TRADE es el roll exacto de una instancia real; en BUY es el
-  // mínimo que el comprador pide (ver comentario de ListingOption en
-  // schema.prisma) — el rango válido [minValue, maxValue] es el mismo en
-  // los dos casos. defsById también se reutiliza para el webhook más abajo.
+  // BUY = "mínimos deseados" (se permiten huecos: pedir solo un slot); el resto
+  // describe una instancia real → sin huecos. defsById se reutiliza (webhook/DM).
+  const rawOptions = await parseOptionsFromFormData(formData, type === "BUY");
   const defsById = await validateOptions(rawOptions, optionGroup);
 
-  // Cantidad libre para todos los tipos: ya no se fuerza 1 en ningún caso (se
-  // deja bajo cuenta y riesgo del usuario — p. ej. vender/regalar equipo con
-  // options, o tradear un lote de 500). En TRADE el intercambio sigue siendo
-  // por el LOTE COMPLETO, no parcial: aceptar una oferta cierra el listing
-  // entero (ver acceptTradeOffer en trade-offers.ts). Ilimitado ("los que
-  // tengas" → null) se mantiene como estaba: solo BUY, o SALE de un item SIN
-  // options (infinitas copias de un ejemplar con options aleatorias no tiene
-  // sentido). La señal de ilimitado es el checkbox `unlimited` del form, no un
-  // campo vacío (no se confía en lo que mande el cliente: si no se permite, se
-  // ignora).
+  // Ilimitado ("los que tengas" → null): solo BUY, o SALE de un item SIN options
+  // (infinitas copias de un ejemplar con options aleatorias no tiene sentido).
   let quantity: number | null;
   if (
-    (parsed.data.type === "BUY" || (parsed.data.type === "SALE" && optionGroup === null)) &&
+    (type === "BUY" || (type === "SALE" && optionGroup === null)) &&
     formData.get("unlimited") === "on"
   ) {
     quantity = null;
@@ -259,9 +203,8 @@ export async function createListing(formData: FormData) {
     quantity = qParsed.data;
   }
 
-  const refineEligible = isRefineEligible(item);
   let refineLevel = 0;
-  if (refineEligible) {
+  if (isRefineEligible(item)) {
     const rawRefine = formData.get("refineLevel");
     refineLevel = typeof rawRefine === "string" && rawRefine !== "" ? Number(rawRefine) : 0;
     if (!Number.isInteger(refineLevel) || refineLevel < 0) {
@@ -290,6 +233,59 @@ export async function createListing(formData: FormData) {
   if (notes && notes.length > MAX_LISTING_NOTES_LENGTH) {
     throw new Error(t("notesTooLong", { max: MAX_LISTING_NOTES_LENGTH }));
   }
+
+  return { price, quantity, refineLevel, cardSlots, notes, rawOptions, defsById };
+}
+
+export async function createListing(formData: FormData) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+
+  const { maintenanceModeEnabled } = await loadMarketConfig();
+  if (maintenanceModeEnabled && !session.user.isAdmin) {
+    throw new Error(t("maintenanceMode"));
+  }
+
+  // Los mensajes de zod se resuelven aquí dentro (no como const a nivel de
+  // módulo) porque necesitan el traductor, que solo existe dentro de la
+  // request — reconstruir el schema en cada llamada no tiene coste real.
+  const createListingSchema = z.object({
+    itemId: z.string().min(1, t("selectItem")),
+    // Acción única para TODOS los tipos, incluido GIFT (antes en sendGift). El
+    // único caso con lógica propia es el regalo CON destinatario (entrega
+    // directa, más abajo); el reclamable es una publicación normal más.
+    type: z.enum(["SALE", "BUY", "TRADE", "GIFT"]).default("SALE"),
+  });
+
+  const parsed = createListingSchema.safeParse({
+    itemId: formData.get("itemId"),
+    type: formData.get("type") || "SALE",
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
+  }
+
+  const item = await prisma.item.findUnique({
+    where: { id: parsed.data.itemId },
+  });
+  if (!item) throw new Error(t("itemNotFound"));
+
+  // Regalo CON destinatario = entrega directa (ver más abajo). Sin destinatario,
+  // el GIFT es RECLAMABLE: una publicación normal más. Solo se lee/valida el
+  // destinatario en GIFT; en el resto de tipos se ignora aunque venga en el form.
+  const recipientId =
+    parsed.data.type === "GIFT"
+      ? ((formData.get("recipientId") as string) || "").trim() || undefined
+      : undefined;
+  if (recipientId) {
+    if (recipientId === session.user.discordId) throw new Error(t("cannotGiftSelf"));
+    const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
+    if (!recipient) throw new Error(t("recipientNotFound"));
+  }
+  const isDirectGift = parsed.data.type === "GIFT" && !!recipientId;
+
+  const { price, quantity, refineLevel, cardSlots, notes, rawOptions, defsById } =
+    await parseListingFields(formData, parsed.data.type, item, t);
 
   const listing = await prisma.$transaction(async (tx) => {
     const created = await tx.listing.create({
@@ -389,6 +385,71 @@ export async function createListing(formData: FormData) {
 
   revalidatePath("/market");
   return { id: listing.id, directGift: false };
+}
+
+// Editar una publicación propia. Reutiliza el mismo parseo de campos que
+// createListing (parseListingFields). El TIPO y el ITEM no se editan: se toman
+// del listing existente, no se confía en lo que mande el form. Solo se permite
+// si el listing es del usuario, está ACTIVE y NO tiene deals vivos.
+export async function updateListing(listingId: string, formData: FormData) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+
+  const { maintenanceModeEnabled } = await loadMarketConfig();
+  if (maintenanceModeEnabled && !session.user.isAdmin) {
+    throw new Error(t("maintenanceMode"));
+  }
+
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: { item: true },
+  });
+  if (!listing) throw new Error(t("listingNotFound"));
+  if (listing.posterId !== session.user.discordId) throw new Error(t("notYourListing"));
+  if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+
+  // Tipo e item se toman del listing (bloqueados en edición), así el parseo usa
+  // la misma semántica con la que se creó.
+  const { price, quantity, refineLevel, cardSlots, notes, rawOptions } =
+    await parseListingFields(formData, listing.type, listing.item, t);
+
+  // Editable solo SIN deals vivos (PENDING o ACCEPTED); CANCELLED/REJECTED no
+  // cuentan. Se comprueba DENTRO de la transacción para cerrar la ventana con
+  // una oferta que entre justo ahora. Esto excluye de suyo el regalo directo
+  // (nace con Deal ACCEPTED). Opciones: se borran y se recrean (más simple y
+  // seguro que un diff, y el volumen es mínimo: hasta MAX_OPTION_SLOTS filas).
+  await prisma.$transaction(async (tx) => {
+    const liveDeals = await tx.deal.count({
+      where: { listingId, status: { in: ["PENDING", "ACCEPTED"] } },
+    });
+    if (liveDeals > 0) throw new Error(t("listingHasDeals"));
+
+    await tx.listingOption.deleteMany({ where: { listingId } });
+    await tx.listing.update({
+      where: { id: listingId },
+      data: {
+        quantity,
+        price,
+        refineLevel,
+        cardSlots,
+        notes,
+        options:
+          rawOptions.length > 0
+            ? {
+                create: rawOptions.map((o) => ({
+                  slotIndex: o.slotIndex,
+                  defId: o.defId,
+                  value: o.value,
+                })),
+              }
+            : undefined,
+      },
+    });
+  });
+
+  revalidatePath("/market");
+  revalidatePath(`/market/${listingId}`);
+  return { id: listingId };
 }
 
 // Quien publica cierra la publicación. Regla de cierre (ver deals.ts): si hubo

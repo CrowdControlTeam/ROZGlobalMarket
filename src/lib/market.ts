@@ -313,15 +313,22 @@ export async function getListings(filters: MarketFilters) {
   });
   const soldMap = new Map<string, number>();
   const reservedMap = new Map<string, number>();
+  // Listings con algún Deal VIVO (PENDING o ACCEPTED), sea del modo que sea —a
+  // diferencia de `reserved`, que es 0 en competitivo/trade aunque haya PENDING.
+  // Se usa para el gate de "editar" (editable solo sin deals vivos): mode-
+  // independiente, así el botón no aparece cuando el server lo rechazaría.
+  const dealsMap = new Set<string>();
   for (const g of dealAgg) {
     const q = g._sum.quantity ?? 0;
     if (g.status === "ACCEPTED") soldMap.set(g.listingId, (soldMap.get(g.listingId) ?? 0) + q);
     else if (g.status === "PENDING") reservedMap.set(g.listingId, (reservedMap.get(g.listingId) ?? 0) + q);
+    dealsMap.add(g.listingId);
   }
   const pageWithSold = page.map((l) => ({
     ...l,
     sold: soldMap.get(l.id) ?? 0,
     reserved: reservedMap.get(l.id) ?? 0,
+    hasLiveDeals: dealsMap.has(l.id),
   }));
 
   return { listings: pageWithSold, nextCursor, total };

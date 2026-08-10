@@ -101,6 +101,8 @@
     "notesTooLong": "Las notas no pueden superar {max} caracteres",
     "listingNotFound": "Publicación no encontrada",
     "onlyPosterCancel": "Solo quien la publicó puede cancelarla",
+    "notYourListing": "No tienes permiso sobre esta publicación",
+    "listingHasDeals": "No se puede editar: la publicación ya tiene ofertas o ventas",
     "listingNotActive": "Esta publicación ya no está activa",
     "cannotBuyOwn": "No puedes comprar tu propia publicación",
     "notDirectSale": "Esta publicación no es una venta directa",
@@ -547,6 +549,8 @@
         "TRADE": "Publicar",
         "GIFT": "Regalar"
       },
+      "saveLabel": "Guardar",
+      "editTitle": "Editar publicación",
       "publishing": "Publicando...",
       "recognitionLabel": "Reconocer desde captura (opcional)",
       "itemLabel": "Item",

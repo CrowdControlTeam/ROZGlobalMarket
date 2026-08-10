@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ItemOptionDef, ListingType } from "@prisma/client";
-import { createListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
+import { createListing, updateListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
 import { recognizeItemFromScreenshot } from "@/lib/item-recognition";
 import { buttonClass, selectClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
@@ -40,29 +40,54 @@ const TYPE_SEGMENTS: TypeSegment[] = [
 // Formulario de publicar del rediseño (2 columnas: escaneo · O · formulario;
 // una sola columna si el reconocimiento no está disponible). Reutiliza íntegra
 // la lógica del NewPublicationForm de página; el contrato de FormData hacia
-// createListing/sendGift es idéntico.
+// createListing es idéntico. Con `editListing` funciona en modo EDICIÓN: precarga
+// los campos, bloquea tipo e item, oculta el escáner y el destinatario, y envía
+// a updateListing en vez de createListing.
+
+// Valores iniciales para el modo edición (los arma EditSlot desde el listing).
+export type EditListingData = {
+  id: string;
+  type: PublicationType;
+  item: ItemResult;
+  quantity: number | null; // null = ilimitado
+  price: number | null; // null = sin precio (SALE/BUY) o no aplica (TRADE/GIFT)
+  refineLevel: number;
+  cardSlots: number;
+  notes: string;
+  optionSelections: OptionSelection[];
+};
+
 export function PublishForm({
   recognitionEnabled,
   initialType,
   onClose,
+  editListing,
 }: {
   recognitionEnabled: boolean;
   initialType: PublicationType;
   onClose: () => void;
+  editListing?: EditListingData;
 }) {
   const router = useRouter();
-  const [type, setType] = useState<PublicationType>(initialType);
-  const [selectedItem, setSelectedItem] = useState<ItemResult | null>(null);
+  const isEdit = editListing !== undefined;
+  const [type, setType] = useState<PublicationType>(editListing?.type ?? initialType);
+  const [selectedItem, setSelectedItem] = useState<ItemResult | null>(editListing?.item ?? null);
   const [selectedRecipient, setSelectedRecipient] = useState<UserResult | null>(null);
   const [optionDefs, setOptionDefs] = useState<ItemOptionDef[]>([]);
-  const [optionSelections, setOptionSelections] = useState<OptionSelection[]>(emptyOptionSelections());
-  const [refineLevel, setRefineLevel] = useState(0);
-  const [cardSlots, setCardSlots] = useState(0);
-  const [quantity, setQuantity] = useState<number | "">(1);
-  const [price, setPrice] = useState<number | "">("");
-  const [unlimited, setUnlimited] = useState(false);
-  const [noPrice, setNoPrice] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [optionSelections, setOptionSelections] = useState<OptionSelection[]>(
+    editListing?.optionSelections ?? emptyOptionSelections(),
+  );
+  const [refineLevel, setRefineLevel] = useState(editListing?.refineLevel ?? 0);
+  const [cardSlots, setCardSlots] = useState(editListing?.cardSlots ?? 0);
+  const [quantity, setQuantity] = useState<number | "">(editListing ? (editListing.quantity ?? "") : 1);
+  const [price, setPrice] = useState<number | "">(editListing ? (editListing.price ?? "") : "");
+  const [unlimited, setUnlimited] = useState(editListing ? editListing.quantity === null : false);
+  // noPrice (competitivo) solo aplica a SALE/BUY; en TRADE/GIFT el precio es null
+  // por naturaleza, no por "sin precio".
+  const [noPrice, setNoPrice] = useState(
+    editListing ? editListing.price === null && (editListing.type === "SALE" || editListing.type === "BUY") : false,
+  );
+  const [notes, setNotes] = useState(editListing?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [priceMissing, setPriceMissing] = useState(false);
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
@@ -248,6 +273,13 @@ export function PublishForm({
     startSubmitTransition(async () => {
       try {
         const fd = buildFormData();
+        if (isEdit) {
+          // Edición: tipo e item los toma el server del listing; el resto se
+          // actualiza. Se vuelve al mercado (la card refleja el cambio).
+          await updateListing(editListing.id, fd);
+          router.push("/market");
+          return;
+        }
         // Acción única para todos los tipos. Solo el regalo DIRECTO (con
         // destinatario) vuelve a /my/gifts; el resto —incluido el reclamable—
         // vuelve al mercado (ya hay preview antes, así que no abrimos el detalle).
@@ -312,7 +344,7 @@ export function PublishForm({
   const formColumn = (
     <div className="flex min-w-0 flex-col gap-3 sm:h-full">
       {/* Ítem. */}
-      <ItemPicker selected={selectedItem} onSelect={handleItemSelect} onClear={handleItemClear} />
+      <ItemPicker selected={selectedItem} onSelect={handleItemSelect} onClear={handleItemClear} locked={isEdit} />
       <input type="hidden" name="itemId" value={selectedItem?.id ?? ""} />
 
       {/* Tipo (fuera de las pestañas). */}
@@ -327,10 +359,11 @@ export function PublishForm({
               aria-pressed={active}
               aria-label={label}
               title={label}
+              disabled={isEdit}
               onClick={() => handleTypeChange(seg.value)}
-              className={`flex flex-1 items-center justify-center rounded-full py-1.5 transition-colors ${
+              className={`flex flex-1 items-center justify-center rounded-full py-1.5 transition-colors disabled:cursor-not-allowed ${
                 active ? `${seg.activeBg} text-ro-on-type` : "text-ro-text hover:bg-ro-panel-border/40"
-              }`}
+              } ${isEdit && !active ? "opacity-40" : ""}`}
             >
               <seg.Icon size={15} className={active ? "" : seg.iconColor} aria-hidden />
             </button>
@@ -440,8 +473,9 @@ export function PublishForm({
             )}
           </div>
 
-          {/* Destinatario (regalo). */}
-          {type === "GIFT" && (
+          {/* Destinatario (regalo). No en edición: un regalo reclamable se
+              mantiene reclamable; no se convierte en directo desde el editar. */}
+          {type === "GIFT" && !isEdit && (
             <div>
               <label className="mb-1 block text-xs font-medium text-ro-text-muted">{t("recipientLabel")}</label>
               <UserPicker key={selectedRecipient?.id ?? "empty"} onSelect={setSelectedRecipient} />
@@ -582,7 +616,7 @@ export function PublishForm({
               {tCommon("cancel")}
             </button>
             <button type="button" onClick={handlePublish} disabled={!canSubmit} className={buttonClass("primary")}>
-              {t(`submitLabels.${type}`)}
+              {isEdit ? t("saveLabel") : t(`submitLabels.${type}`)}
             </button>
           </>
         )}
