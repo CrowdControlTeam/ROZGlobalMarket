@@ -101,6 +101,8 @@
     "notesTooLong": "Notes can't exceed {max} characters",
     "listingNotFound": "Listing not found",
     "onlyPosterCancel": "Only the poster can cancel this",
+    "notYourListing": "You don't have permission over this listing",
+    "listingHasDeals": "Can't edit: this listing already has offers or sales",
     "listingNotActive": "This listing is no longer active",
     "cannotBuyOwn": "You can't buy your own listing",
     "notDirectSale": "This listing isn't a direct sale",

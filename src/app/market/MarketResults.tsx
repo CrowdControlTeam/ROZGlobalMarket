@@ -29,6 +29,7 @@ type Listing = {
   quantity: number | null; // null = ilimitado ("los que tengas")
   sold: number;
   reserved: number; // Σ PENDING; se resta solo en precio fijo (ver countLabel)
+  hasLiveDeals: boolean; // algún Deal PENDING/ACCEPTED (mode-independiente): gate de editar
   price: number | null;
   refineLevel: number;
   cardSlots: number;
@@ -97,9 +98,12 @@ function ListingCard({
   const t = useTranslations("market");
   const router = useRouter();
   const [contactOpen, setContactOpen] = useState(false);
-  // Editar: solo el dueño y sin ofertas pendientes (reserved = Σ PENDING). De
-  // momento no hace nada (placeholder para la edición futura).
-  const canEdit = listing.poster.id === currentUserId && listing.reserved === 0;
+  // Editar: solo el dueño y sin NINGÚN deal vivo (PENDING o ACCEPTED). Se usa
+  // hasLiveDeals (mode-independiente), no `reserved` (que es 0 en competitivo/
+  // trade aunque haya ofertas), para no ofrecer editar algo que el server
+  // rechazaría. CANCELLED/REJECTED no cuentan → al cancelarse, vuelve a ser
+  // editable.
+  const canEdit = listing.poster.id === currentUserId && !listing.hasLiveDeals;
   // Contactar: al vendedor (no a uno mismo) y con el bot de DMs disponible.
   const canContact = dmAvailable && listing.poster.id !== currentUserId && !!listing.item;
 
