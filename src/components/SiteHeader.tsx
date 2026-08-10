@@ -6,6 +6,7 @@ import { loadMarketConfig, DEFAULT_SITE_NAME } from "@/lib/market-config";
 import { isAppLocale, DEFAULT_LOCALE } from "@/lib/locale-constants";
 import { loadGuildRoleNames } from "@/lib/discord-bot";
 import { UserMenu } from "./UserMenu";
+import { HeaderNav } from "./HeaderNav";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
@@ -64,19 +65,24 @@ export async function SiteHeader({
 
   return (
     <header className="border-b border-ro-gold/25 bg-ro-navy text-ro-on-navy">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy"
-        >
-          {/* Logo opcional junto al título, solo en PC (sm+). Data-URI en la
-              config; por eso <img> y no next/image. */}
-          {logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element -- data-URI configurable, no procede next/image
-            <img src={logoUrl} alt="" className="hidden h-7 w-auto sm:block" />
-          )}
-          {siteName}
-        </Link>
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-6 py-3">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy"
+          >
+            {/* Logo opcional junto al título, solo en PC (sm+). Data-URI en la
+                config; por eso <img> y no next/image. */}
+            {logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- data-URI configurable, no procede next/image
+              <img src={logoUrl} alt="" className="hidden h-7 w-auto sm:block" />
+            )}
+            {siteName}
+          </Link>
+          {/* Pilares de sección (Mercado · BiS): solo con sesión, ambos
+              requieren login. */}
+          {fullUser && user && <HeaderNav />}
+        </div>
 
         <div className="flex items-center gap-3">
           {fullUser && user ? (

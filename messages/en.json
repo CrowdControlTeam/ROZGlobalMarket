@@ -16,6 +16,11 @@
     "openMenu": "Open market menu",
     "newPublication": "New listing",
     "comingSoon": "(coming soon)",
+    "sections": {
+      "label": "Sections",
+      "market": "Market",
+      "bis": "BiS"
+    },
     "account": {
       "title": "Your account",
       "discordId": "Discord ID",
