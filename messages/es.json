@@ -640,5 +640,39 @@
       "giftClaimRejected": "{username} ha rechazado tu reclamación de {item}",
       "contactMessage": "{username} te ha escrito sobre {item}"
     }
+  },
+  "bis": {
+    "title": "BiS · Best in Slot",
+    "subtitle": "Los mejores objetos por slot de equipo para cada etapa del juego.",
+    "stageLabel": "Etapa",
+    "filters": {
+      "roleLegend": "Rol",
+      "jobLegend": "Job",
+      "clear": "Quitar filtros"
+    },
+    "cells": {
+      "head": "Cabeza",
+      "weapon": "Arma",
+      "garment": "Manto",
+      "accessory": "Accesorio",
+      "armor": "Armadura",
+      "shield": "Escudo",
+      "footgear": "Calzado"
+    },
+    "cell": {
+      "empty": "Sin BiS todavía",
+      "noMatches": "Sin coincidencias"
+    },
+    "detail": {
+      "close": "Cerrar",
+      "options": "Options",
+      "roles": "Roles",
+      "jobs": "Jobs",
+      "note": "Nota"
+    },
+    "showAll": "Ver todas ({count})",
+    "showLess": "Ver menos",
+    "anyItem": "Cualquiera",
+    "noStages": "Todavía no hay etapas configuradas."
   }
 }

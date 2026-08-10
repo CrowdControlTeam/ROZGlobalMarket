@@ -640,5 +640,39 @@
       "giftClaimRejected": "{username} rejected your claim of {item}",
       "contactMessage": "{username} wrote to you about {item}"
     }
+  },
+  "bis": {
+    "title": "BiS · Best in Slot",
+    "subtitle": "The best gear per equipment slot for each stage of the game.",
+    "stageLabel": "Stage",
+    "filters": {
+      "roleLegend": "Role",
+      "jobLegend": "Job",
+      "clear": "Clear filters"
+    },
+    "cells": {
+      "head": "Headgear",
+      "weapon": "Weapon",
+      "garment": "Garment",
+      "accessory": "Accessory",
+      "armor": "Armor",
+      "shield": "Shield",
+      "footgear": "Footgear"
+    },
+    "cell": {
+      "empty": "No BiS yet",
+      "noMatches": "No matches"
+    },
+    "detail": {
+      "close": "Close",
+      "options": "Options",
+      "roles": "Roles",
+      "jobs": "Jobs",
+      "note": "Note"
+    },
+    "showAll": "Show all ({count})",
+    "showLess": "Show less",
+    "anyItem": "Any item",
+    "noStages": "No stages configured yet."
   }
 }

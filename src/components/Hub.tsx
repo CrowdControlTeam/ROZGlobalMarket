@@ -88,23 +88,11 @@ export async function Hub({
           <TileText label={t("tiles.publish.label")} desc={t("tiles.publish.desc")} />
         </Link>
 
-        {/* BiSes: aún sin página → tile no interactivo con aviso "Próximamente". */}
-        <div
-          aria-disabled
-          title={t("tiles.comingSoon")}
-          className={`${TILE_BASE} cursor-default opacity-80 sm:col-span-2`}
-        >
-          <TileIcon Icon={Trophy} muted />
-          <span className="flex min-w-0 flex-col">
-            <span className="flex items-center gap-2">
-              <span className="font-semibold">{t("tiles.bis.label")}</span>
-              <span className="rounded-full border border-ro-panel-border px-2 py-0.5 text-xs font-medium text-ro-text-muted">
-                {t("tiles.comingSoon")}
-              </span>
-            </span>
-            <span className="line-clamp-2 min-h-10 text-sm text-ro-text-muted">{t("tiles.bis.desc")}</span>
-          </span>
-        </div>
+        {/* BiSes: página pública de mejores items por slot, a todo el ancho. */}
+        <Link href="/bis" className={`${TILE_LINK} sm:col-span-2`}>
+          <TileIcon Icon={Trophy} />
+          <TileText label={t("tiles.bis.label")} desc={t("tiles.bis.desc")} />
+        </Link>
 
         {/* Estadísticas + Ajustes: solo admins, en una fila de dos columnas. */}
         {isAdmin && (
