@@ -35,12 +35,23 @@ export function OptionsFilter({
   const t = useTranslations("market.filters");
   // Índice del slot cuyo popover está abierto (null = ninguno).
   const [editing, setEditing] = useState<number | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (editing === null) return;
     function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setEditing(null);
+      const target = e.target as Node;
+      // Dentro del popover → se mantiene abierto.
+      if (popoverRef.current?.contains(target)) return;
+      // Sobre un chip/disparador (un botón del contenedor): lo gestiona su
+      // propio onClick (abrir/cambiar/cerrar), no cerramos aquí.
+      const el = target instanceof Element ? target : null;
+      if (rootRef.current?.contains(target) && el?.closest("button")) return;
+      // Cualquier otro sitio —incluido el HUECO del contenedor de options, otra
+      // sección o los resultados— cierra. Antes la referencia era el contenedor
+      // entero, así que clicar en su hueco no cerraba (el bug reportado).
+      setEditing(null);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setEditing(null);
@@ -72,7 +83,7 @@ export function OptionsFilter({
   }
 
   return (
-    <div ref={ref} className="flex flex-col gap-2">
+    <div ref={rootRef} className="flex flex-col gap-2">
       {isBuy && <p className="text-xs italic text-ro-text-muted">{t("buyOptionsHint")}</p>}
       <div className="relative">
         <div className="flex flex-wrap gap-1.5">
@@ -134,7 +145,10 @@ export function OptionsFilter({
               (sel.max < selectedStat.minValue || sel.max > selectedStat.maxValue);
             return (
               // Popover anclado a la fila (left-0 + w-full), así no desborda el panel.
-              <div className="absolute left-0 top-full z-20 mt-1 w-full rounded-md border border-ro-panel-border bg-ro-panel-alt p-2 shadow-lg">
+              <div
+                ref={popoverRef}
+                className="absolute left-0 top-full z-20 mt-1 w-full rounded-md border border-ro-panel-border bg-ro-panel-alt p-2 shadow-lg"
+              >
                 <select
                   value={sel.statCode}
                   onChange={(e) => onStatChange(index, e.target.value)}
