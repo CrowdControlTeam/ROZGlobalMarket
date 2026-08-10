@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { PublishForm } from "./PublishForm";
+import { PublishForm, type EditListingData } from "./PublishForm";
 import type { PublicationType } from "./new/NewPublicationForm";
 
 // Shell del modal de publicar: overlay centrado con backdrop oscuro sobre el
@@ -14,12 +14,15 @@ import type { PublicationType } from "./new/NewPublicationForm";
 export function PublishModal({
   recognitionEnabled,
   initialType,
+  editListing,
 }: {
   recognitionEnabled: boolean;
   initialType: PublicationType;
+  editListing?: EditListingData;
 }) {
   const router = useRouter();
   const t = useTranslations();
+  const title = editListing ? t("market.form.editTitle") : t("home.tiles.publish.label");
 
   function close() {
     router.back();
@@ -45,7 +48,7 @@ export function PublishModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={t("home.tiles.publish.label")}
+        aria-label={title}
         // Ancho adaptativo: ancho para el layout de 2 columnas (escáner + form)
         // cuando el reconocimiento está disponible; estrecho para solo-formulario
         // cuando no lo está.
@@ -54,7 +57,7 @@ export function PublishModal({
         }`}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-ro-panel-border bg-ro-panel-header px-4 py-3">
-          <h2 className="font-heading text-base text-ro-text">{t("home.tiles.publish.label")}</h2>
+          <h2 className="font-heading text-base text-ro-text">{title}</h2>
           <button
             type="button"
             onClick={close}
@@ -65,7 +68,7 @@ export function PublishModal({
           </button>
         </div>
         {/* El propio form gestiona su scroll interno y su pie fijo (flex-1). */}
-        <PublishForm recognitionEnabled={recognitionEnabled} initialType={initialType} onClose={close} />
+        <PublishForm recognitionEnabled={recognitionEnabled} initialType={initialType} onClose={close} editListing={editListing} />
       </div>
     </div>
   );

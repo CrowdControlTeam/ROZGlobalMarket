@@ -76,6 +76,7 @@ function applyPatches(
 function ListingCard({
   listing,
   href,
+  editHref,
   // replace = ya hay un detalle abierto (?listing en la URL): al abrir otro
   // listing se REEMPLAZA en el historial en vez de apilar, para que la ✕
   // (router.back) cierre al mercado y no al detalle anterior.
@@ -88,6 +89,7 @@ function ListingCard({
 }: {
   listing: Listing;
   href: string;
+  editHref: string;
   replace: boolean;
   showBadge: boolean;
   currentUserId: string;
@@ -178,7 +180,7 @@ function ListingCard({
 
   const kebabItems: KebabItem[] = [
     ...(canEdit
-      ? [{ label: t("card.edit"), icon: <Pencil size={14} aria-hidden />, onSelect: () => {} }]
+      ? [{ label: t("card.edit"), icon: <Pencil size={14} aria-hidden />, onSelect: () => router.push(editHref) }]
       : []),
     { label: t("card.viewDetail"), icon: <Eye size={14} aria-hidden />, onSelect: () => (replace ? router.replace(href) : router.push(href)) },
     {
@@ -413,6 +415,15 @@ export function MarketResults({
     return `${pathname}?${params.toString()}`;
   }
 
+  // Href del modal de editar (?edit=). Quita `listing` para no apilar el modal
+  // sobre un detalle abierto.
+  function editHref(id: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("listing");
+    params.set("edit", id);
+    return `${pathname}?${params.toString()}`;
+  }
+
   function loadMore() {
     setLoadMoreError(null);
     startTransition(async () => {
@@ -437,6 +448,7 @@ export function MarketResults({
   const cardProps = (listing: Listing) => ({
     listing,
     href: listingHref(listing.id),
+    editHref: editHref(listing.id),
     replace: detailOpen,
     showBadge,
     currentUserId,

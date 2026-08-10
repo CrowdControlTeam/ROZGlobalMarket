@@ -549,6 +549,8 @@
         "TRADE": "Publicar",
         "GIFT": "Regalar"
       },
+      "saveLabel": "Guardar",
+      "editTitle": "Editar publicación",
       "publishing": "Publicando...",
       "recognitionLabel": "Reconocer desde captura (opcional)",
       "itemLabel": "Item",

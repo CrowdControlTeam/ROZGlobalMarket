@@ -25,9 +25,12 @@ export function ItemPicker({
   selected,
   onSelect,
   onClear,
+  locked = false,
 }: {
   selected: ItemResult | null;
   onSelect: (item: ItemResult) => void;
+  // En edición el item no se cambia: se muestra la tarjeta sin "Cambiar".
+  locked?: boolean;
   // Con un item ya elegido, el input queda bloqueado (readOnly) y el único
   // modo de cambiarlo es este botón — antes se podía editar el texto libre
   // sin que eso quitase la selección del padre, dejando secciones
@@ -71,13 +74,15 @@ export function ItemPicker({
           <p className="truncate text-sm font-medium text-ro-text">{selected.name}</p>
           <p className="truncate text-xs text-ro-text-muted">{itemHint(t, selected)}</p>
         </div>
-        <button
-          type="button"
-          onClick={handleClear}
-          className="shrink-0 text-xs font-medium text-ro-accent hover:underline"
-        >
-          {t("itemPicker.change")}
-        </button>
+        {!locked && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="shrink-0 text-xs font-medium text-ro-accent hover:underline"
+          >
+            {t("itemPicker.change")}
+          </button>
+        )}
       </div>
     );
   }

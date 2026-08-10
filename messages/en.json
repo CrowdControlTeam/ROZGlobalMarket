@@ -549,6 +549,8 @@
         "TRADE": "Post",
         "GIFT": "Send gift"
       },
+      "saveLabel": "Save",
+      "editTitle": "Edit listing",
       "publishing": "Posting...",
       "recognitionLabel": "Recognize from screenshot (optional)",
       "itemLabel": "Item",
