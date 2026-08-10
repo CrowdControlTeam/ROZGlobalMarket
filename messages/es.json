@@ -306,6 +306,7 @@
       "priceMin": "Precio mín.",
       "priceMax": "Precio máx.",
       "optionPlaceholder": "-- Option {slot} --",
+      "optionSlotLabel": "Op {slot}",
       "min": "Mín",
       "max": "Máx",
       "value": "Valor",

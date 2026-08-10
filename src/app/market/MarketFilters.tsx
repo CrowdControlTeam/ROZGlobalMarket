@@ -27,11 +27,12 @@ import {
   getMaxRefineLevel,
   getOptionsFeatureAvailable,
 } from "@/lib/listings";
-import { inputBaseClass, selectClass } from "@/lib/ui";
+import { inputBaseClass } from "@/lib/ui";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { UserPicker, type UserResult } from "@/components/UserPicker";
 import { Drawer } from "@/components/Drawer";
 import { MultiSelectFilter } from "./MultiSelectFilter";
+import { OptionsFilter } from "./OptionsFilter";
 import { useMarketSearch } from "./marketSearchStore";
 
 type OptionFilterSelection = { statCode: string; min: number | ""; max: number | "" };
@@ -325,45 +326,15 @@ export function MarketFilters() {
             count: optionsActive,
             clear: clearOptions,
             content: (
-              <div className="flex flex-col gap-2">
-                {isBuyFilter && <p className="text-xs italic text-ro-text-muted">{t("filters.buyOptionsHint")}</p>}
-                {Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
-                  const index = slotIndex - 1;
-                  const sel = optionSelections[index];
-                  const statsForSlot = statsBySlot[index];
-                  const selectedStat = statsForSlot.find((s) => s.statCode === sel.statCode);
-                  const isMinOutOfRange =
-                    selectedStat !== undefined && sel.min !== "" && (sel.min < selectedStat.minValue || sel.min > selectedStat.maxValue);
-                  const isMaxOutOfRange =
-                    selectedStat !== undefined && sel.max !== "" && (sel.max < selectedStat.minValue || sel.max > selectedStat.maxValue);
-                  return (
-                    <div key={slotIndex} className="flex flex-col gap-1">
-                      <select value={sel.statCode} onChange={(e) => handleOptionSelectChange(index, e.target.value)} className={`w-full ${selectClass}`}>
-                        <option value="">{t("filters.optionPlaceholder", { slot: slotIndex })}</option>
-                        {statsForSlot.map((s) => (
-                          <option key={s.statCode} value={s.statCode}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                      {sel.statCode && (
-                        <div className="flex items-center gap-2">
-                          {!isBuyFilter && (
-                            <input type="number" placeholder={selectedStat ? String(selectedStat.minValue) : t("filters.min")} value={sel.min}
-                              onChange={(e) => handleOptionMinChange(index, e.target.value)}
-                              className={`w-full ${inputBaseClass}`} style={isMinOutOfRange ? { borderColor: "#dc2626" } : undefined} />
-                          )}
-                          <input type="number"
-                            placeholder={selectedStat ? (isBuyFilter ? `${selectedStat.minValue}-${selectedStat.maxValue}` : String(selectedStat.maxValue)) : isBuyFilter ? t("filters.value") : t("filters.max")}
-                            value={sel.max}
-                            onChange={(e) => handleOptionMaxChange(index, e.target.value)}
-                            className={`w-full ${inputBaseClass}`} style={isMaxOutOfRange ? { borderColor: "#dc2626" } : undefined} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <OptionsFilter
+                statsBySlot={statsBySlot}
+                selections={optionSelections}
+                isBuy={isBuyFilter}
+                onStatChange={handleOptionSelectChange}
+                onMinChange={handleOptionMinChange}
+                onMaxChange={handleOptionMaxChange}
+                onClear={(index) => handleOptionSelectChange(index, "")}
+              />
             ),
           } satisfies Section,
         ]
