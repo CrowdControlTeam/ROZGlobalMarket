@@ -34,10 +34,14 @@ export function HeaderNav() {
           key={it.href}
           href={it.href}
           aria-current={it.active ? "page" : undefined}
+          // Regla del rediseño: los estados activos usan el ACENTO (Azul ROZ),
+          // no blanco/gris (rojo = acciones, gold = precios). Sobre la barra
+          // navy el texto se mantiene claro (ro-on-navy) por contraste en ambos
+          // temas; el activo se marca con tinte de acento, como en MarketNav.
           className={`rounded-md px-2.5 py-1 text-sm font-bold transition-colors ${
             it.active
-              ? "bg-white/15 text-ro-on-navy"
-              : "text-ro-on-navy/70 hover:bg-white/10 hover:text-ro-on-navy"
+              ? "bg-ro-accent/20 text-ro-on-navy"
+              : "text-ro-on-navy/70 hover:bg-ro-accent/10 hover:text-ro-on-navy"
           }`}
         >
           {it.label}
