@@ -663,6 +663,14 @@
       "empty": "Sin BiS todavía",
       "noMatches": "Sin coincidencias"
     },
+    "detail": {
+      "close": "Cerrar",
+      "options": "Options",
+      "optionAny": "Cualquier valor",
+      "roles": "Roles",
+      "jobs": "Jobs",
+      "note": "Nota"
+    },
     "showAll": "Ver todas ({count})",
     "showLess": "Ver menos",
     "anyItem": "Cualquiera",

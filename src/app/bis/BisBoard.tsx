@@ -13,12 +13,14 @@ import {
   ShieldHalf,
   Footprints,
   ChevronDown,
+  MessageSquareText,
   X,
   type LucideIcon,
 } from "lucide-react";
 import type { EquipSlot } from "@prisma/client";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount } from "@/lib/market-labels";
+import { BisDetail, type BisDetailData } from "./BisDetail";
 
 type Tag = { id: string; label: string };
 
@@ -115,7 +117,7 @@ function TagBadge({ label, variant }: { label: string; variant: "role" | "job" }
   );
 }
 
-function EntryCard({ entry }: { entry: BisEntryView }) {
+function EntryCard({ entry, onOpen }: { entry: BisEntryView; onOpen: () => void }) {
   const t = useTranslations("bis");
 
   const iconBox = entry.item ? (
@@ -132,11 +134,18 @@ function EntryCard({ entry }: { entry: BisEntryView }) {
     ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
     : t("anyItem");
 
+  // La card abre el detalle (panel/bottom sheet). La nota ya no va inline: se
+  // señala con el icono de bocadillo en la esquina (como en los listings) y su
+  // texto completo se ve en el detalle.
   return (
-    <div className="flex h-full min-h-[3.5rem] gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="relative flex h-full min-h-[3.5rem] w-full gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2 text-left transition-colors hover:border-ro-accent"
+    >
       {iconBox}
       <div className="min-w-0 flex-1">
-        <p className={`truncate text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>
+        <p className={`truncate pr-4 text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>
           {title}
         </p>
 
@@ -164,10 +173,17 @@ function EntryCard({ entry }: { entry: BisEntryView }) {
             ))}
           </div>
         )}
-
-        {entry.note && <p className="mt-1 line-clamp-2 text-[0.65rem] italic text-ro-text-muted">{entry.note}</p>}
       </div>
-    </div>
+
+      {entry.note && (
+        <span
+          aria-label={t("detail.note")}
+          className="absolute right-1.5 top-1.5 text-ro-text-muted"
+        >
+          <MessageSquareText size={13} aria-hidden />
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -178,11 +194,13 @@ function SlotCell({
   label,
   all,
   shown,
+  onOpen,
 }: {
   def: CellDef;
   label: string;
   all: BisEntryView[];
   shown: BisEntryView[];
+  onOpen: (entry: BisEntryView) => void;
 }) {
   const t = useTranslations("bis");
   const [expanded, setExpanded] = useState(false);
@@ -212,7 +230,7 @@ function SlotCell({
           <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
             {visible.map((entry) => (
               <li key={entry.id}>
-                <EntryCard entry={entry} />
+                <EntryCard entry={entry} onOpen={() => onOpen(entry)} />
               </li>
             ))}
           </ul>
@@ -244,6 +262,9 @@ export function BisBoard({
   const t = useTranslations("bis");
   const [activeRole, setActiveRole] = useState<string | null>(null);
   const [activeJob, setActiveJob] = useState<string | null>(null);
+  // Entrada abierta en el detalle (panel/bottom sheet); guarda también el
+  // nombre de su celda (slot), que la propia entrada no conoce como texto.
+  const [selected, setSelected] = useState<BisDetailData | null>(null);
 
   function toggle(current: string | null, next: string, set: (v: string | null) => void) {
     set(current === next ? null : next);
@@ -267,7 +288,16 @@ export function BisBoard({
     const label = t(`cells.${def.key}`);
     const all = entries.filter((e) => def.slots.includes(e.slot));
     const shown = filtered.filter((e) => def.slots.includes(e.slot));
-    return <SlotCell key={def.key} def={def} label={label} all={all} shown={shown} />;
+    return (
+      <SlotCell
+        key={def.key}
+        def={def}
+        label={label}
+        all={all}
+        shown={shown}
+        onOpen={(entry) => setSelected({ entry, slotLabel: label })}
+      />
+    );
   }
 
   return (
@@ -307,6 +337,8 @@ export function BisBoard({
       <div className="grid grid-cols-1 gap-4 lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-4">
         {ALL_CELLS.map(renderCell)}
       </div>
+
+      {selected && <BisDetail data={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
