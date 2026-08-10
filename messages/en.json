@@ -203,6 +203,12 @@
       "none": "No restriction (membership only)",
       "roleIdPlaceholder": "Access role ID (empty = no restriction)"
     },
+    "bisEditor": {
+      "legend": "BiS editor",
+      "hint": "Role required to create and edit BiS items. It's a separate permission: admins are NOT exempt, you must have this role. No role = BiS is read-only for everyone.",
+      "none": "Nobody (read-only)",
+      "roleIdPlaceholder": "Editor role ID (empty = read-only)"
+    },
     "webhook": {
       "legend": "Discord notifications",
       "toggleLabel": "Send a new-sale notification to the webhook",

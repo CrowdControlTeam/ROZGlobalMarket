@@ -126,6 +126,8 @@ model User {
   // Tratos donde este usuario es la contraparte (comprador/vendedor/oferente/
   // reclamante) — ver model Deal.
   deals    Deal[]
+  // BiS que ha creado (página /bis).
+  bisEntries BisEntry[]
 }
 
 model Item {
@@ -157,6 +159,8 @@ model Item {
   listings       Listing[]
   // Deals en los que este item es la contraoferta de un trade (Deal.offeredItem).
   offeredInDeals Deal[]
+  // BiS que apuntan a este item concreto (ver BisEntry).
+  bisEntries     BisEntry[]
 
   @@index([category, slot])
   @@index([name])
@@ -320,6 +324,12 @@ model MarketConfig {
   // el callback signIn de src/auth.ts.
   accessRoleId String?
 
+  // Rol de Discord que puede añadir/editar/reordenar los BiS (página pública
+  // /bis). Ver canEditBis en src/lib/bis.ts. Null = nadie edita (solo lectura).
+  // Los admins NO están exentos aquí: editar BiS es una tarea concreta, no
+  // administración del mercado.
+  bisEditorRoleId String?
+
   // Nombre de la app mostrado en la cabecera (enlaza a /market) y como
   // <title> de la pestaña — cada guild pone el suyo. Null hasta
   // configurarse la primera vez: el placeholder/fallback "ROZ Global
@@ -362,7 +372,8 @@ model ItemOptionDef {
   // Igual a minValue cuando el valor es fijo (p.ej. ASPD siempre +1).
   maxValue  Int
 
-  selections ListingOption[]
+  selections      ListingOption[]
+  bisEntryOptions BisEntryOption[]
 
   @@unique([group, slotIndex, statCode])
   @@index([group, slotIndex])
@@ -397,4 +408,97 @@ model RateLimit {
   key         String   @id
   count       Int      @default(0)
   windowStart DateTime @default(now())
+}
+
+// ── BiS (Best in Slot) ─────────────────────────────────────────────────────
+// Página pública /bis: sets de equipo recomendados por etapa del juego, slot,
+// rol y job. Ver src/lib/bis.ts.
+
+// Tier de job. En EC solo hay 1st jobs; los 2nd (y siguientes) se añaden luego
+// y apuntan a su 1st job vía parentJob.
+enum JobTier {
+  FIRST
+  SECOND
+  THIRD
+}
+
+// Etapa/periodo del juego (EC = Early Content, etc.). La página muestra por
+// defecto la de mayor `order` (la última) y deja elegir anteriores.
+model BisStage {
+  id        String     @id @default(cuid())
+  key       String     @unique
+  label     String
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+  entries   BisEntry[]
+}
+
+// Rol de combate (tank/dps/support/healer). Configurable (seed inicial), igual
+// que los jobs. Se llama CombatRole para no confundir con los roles de Discord.
+model CombatRole {
+  id      String     @id @default(cuid())
+  key     String     @unique
+  label   String
+  order   Int        @default(0)
+  entries BisEntry[]
+}
+
+// Job/clase de RO. Jerarquía por tier (1st -> 2nd...) vía parentJob. Seed con
+// los 6 1st jobs; el resto se añade cuando salgan.
+model Job {
+  id          String     @id @default(cuid())
+  key         String     @unique
+  label       String
+  tier        JobTier    @default(FIRST)
+  parentJob   Job?       @relation("JobHierarchy", fields: [parentJobId], references: [id])
+  parentJobId String?
+  children    Job[]      @relation("JobHierarchy")
+  order       Int        @default(0)
+  entries     BisEntry[]
+}
+
+// Un BiS: recomendación para un slot de equipo en una etapa, etiquetada con
+// rol(es) y/o job(s) (al menos una etiqueta — se valida en la acción). Dos
+// modos EXCLUYENTES:
+//   - CONCRETO: `itemId` (+ refino/slots objetivo), sin options.
+//   - GENÉRICO: sin item, con `options` posicionales ("cualquier pieza con
+//     estas stats"; cada una con mínimo opcional).
+model BisEntry {
+  id          String   @id @default(cuid())
+  stage       BisStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  stageId     String
+  slot        EquipSlot
+  // Modo concreto.
+  item        Item?    @relation(fields: [itemId], references: [id])
+  itemId      String?
+  refineLevel Int?
+  cardSlots   Int?
+  // Modo genérico (options posicionales, ver BisEntryOption).
+  options     BisEntryOption[]
+  // Etiquetas (M2M implícito). >=1 entre roles y jobs (validado en la acción).
+  roles       CombatRole[]
+  jobs        Job[]
+  note        String?
+  // Orden de visualización dentro de (stage, slot) — el drag&drop lo actualiza.
+  position    Int      @default(0)
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([stageId, slot, position])
+}
+
+// Requisito de option de un BiS genérico: posicional (slotIndex) + stat (def),
+// con valor mínimo opcional (null = "solo esta stat", sin exigir valor).
+model BisEntryOption {
+  id        String        @id @default(cuid())
+  entry     BisEntry      @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId   String
+  slotIndex Int
+  def       ItemOptionDef @relation(fields: [defId], references: [id])
+  defId     String
+  minValue  Int?
+
+  @@unique([entryId, slotIndex])
 }

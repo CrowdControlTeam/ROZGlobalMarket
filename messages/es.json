@@ -203,6 +203,12 @@
       "none": "Sin restricción (solo pertenencia)",
       "roleIdPlaceholder": "ID del rol de acceso (vacío = sin restricción)"
     },
+    "bisEditor": {
+      "legend": "Editor de BiS",
+      "hint": "Rol necesario para crear y modificar objetos BiS. Es un permiso aparte: los administradores NO están exentos, hay que tener este rol. Sin rol = BiS de solo lectura para todos.",
+      "none": "Nadie (solo lectura)",
+      "roleIdPlaceholder": "ID del rol de editor (vacío = solo lectura)"
+    },
     "webhook": {
       "legend": "Notificaciones a Discord",
       "toggleLabel": "Enviar notificación de nueva venta al webhook",

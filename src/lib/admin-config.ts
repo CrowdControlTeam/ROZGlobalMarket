@@ -61,6 +61,7 @@ export async function getMarketConfig() {
     optionsCatalogCount,
     adminRoleIds: config.adminRoleIds,
     accessRoleId: config.accessRoleId,
+    bisEditorRoleId: config.bisEditorRoleId,
     guildRolesResult,
     // Se devuelven completos (admin-only): el formulario los reenvía tal cual
     // si no se cambian (así "sin tocar" = conservar; vacío = borrar).
@@ -138,6 +139,15 @@ export async function updateMarketConfig(formData: FormData) {
       ? accessRoleRaw.trim()
       : null;
 
+  // Rol de editor de BiS: un único snowflake, o vacío = nadie puede editar
+  // (null → BiS de solo lectura). Los admin NO están exentos: editar BiS es un
+  // permiso aparte, hay que tener este rol explícitamente.
+  const bisEditorRoleRaw = formData.get("bisEditorRoleId");
+  const bisEditorRoleId =
+    typeof bisEditorRoleRaw === "string" && SNOWFLAKE.test(bisEditorRoleRaw.trim())
+      ? bisEditorRoleRaw.trim()
+      : null;
+
   // Imágenes de marca (logo + imagen del hub): data-URI base64 o vacío = borrar
   // (null). Se validan formato y peso. El formulario reenvía el valor completo
   // (no enmascarado), así que "sin tocar" ya trae el data-URI existente.
@@ -172,6 +182,7 @@ export async function updateMarketConfig(formData: FormData) {
       webhookUrl: parsed.data.webhookUrl ?? null,
       adminRoleIds,
       accessRoleId,
+      bisEditorRoleId,
       siteName: parsed.data.siteName ?? null,
       logoUrl: images.logoUrl,
       homeImageUrl: images.homeImageUrl,
@@ -187,6 +198,7 @@ export async function updateMarketConfig(formData: FormData) {
       ...(parsed.data.webhookUrl ? { webhookUrl: parsed.data.webhookUrl } : {}),
       adminRoleIds,
       accessRoleId,
+      bisEditorRoleId,
       siteName: parsed.data.siteName ?? null,
       logoUrl: images.logoUrl,
       homeImageUrl: images.homeImageUrl,

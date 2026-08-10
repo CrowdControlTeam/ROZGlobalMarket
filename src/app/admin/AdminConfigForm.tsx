@@ -131,6 +131,33 @@ export function AdminConfigForm({ config }: { config: Config }) {
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold text-ro-text">{t("bisEditor.legend")}</legend>
+        <p className="text-xs text-ro-text-muted">{t("bisEditor.hint")}</p>
+        {config.guildRolesResult.status === "ok" ? (
+          <select
+            name="bisEditorRoleId"
+            defaultValue={config.bisEditorRoleId ?? ""}
+            className={`${selectClass} w-full`}
+          >
+            <option value="">{t("bisEditor.none")}</option>
+            {config.guildRolesResult.roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type="text"
+            name="bisEditorRoleId"
+            defaultValue={config.bisEditorRoleId ?? ""}
+            placeholder={t("bisEditor.roleIdPlaceholder")}
+            className={inputClass}
+          />
+        )}
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("market.maxRefineLabel")}</legend>
         <input
           type="number"
