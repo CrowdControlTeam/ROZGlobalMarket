@@ -115,7 +115,7 @@ function TagBadge({ label, variant }: { label: string; variant: "role" | "job" }
   );
 }
 
-function EntryCard({ entry, cellLabel }: { entry: BisEntryView; cellLabel: string }) {
+function EntryCard({ entry }: { entry: BisEntryView }) {
   const t = useTranslations("bis");
 
   const iconBox = entry.item ? (
@@ -130,7 +130,7 @@ function EntryCard({ entry, cellLabel }: { entry: BisEntryView; cellLabel: strin
 
   const title = entry.item
     ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
-    : t("anyItem", { slot: cellLabel.toLowerCase() });
+    : t("anyItem");
 
   return (
     <div className="flex h-full min-h-[3.5rem] gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
@@ -212,7 +212,7 @@ function SlotCell({
           <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
             {visible.map((entry) => (
               <li key={entry.id}>
-                <EntryCard entry={entry} cellLabel={label} />
+                <EntryCard entry={entry} />
               </li>
             ))}
           </ul>
