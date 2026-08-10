@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon } from "lucide-react";
+import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon, MessageSquareText } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ItemOptionDef, ListingType } from "@prisma/client";
 import { createListing, updateListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
@@ -298,13 +298,23 @@ export function PublishForm({
     .map((sel) => ({ sel, def: optionDefs.find((d) => d.id === sel.defId) }))
     .filter((o) => o.def !== undefined && o.sel.value !== "");
   const previewCard = selectedItem && (
-    <div className="rounded-xl border border-ro-panel-border bg-ro-panel p-3">
+    <div className="relative rounded-xl border border-ro-panel-border bg-ro-panel p-3">
+      {/* Bocadillo de notas en la esquina, igual que en la card del mercado. */}
+      {notes.trim() && (
+        <span
+          title={tMarket("card.hasNotes")}
+          aria-label={tMarket("card.hasNotes")}
+          className="absolute right-2 top-2 text-ro-text-muted"
+        >
+          <MessageSquareText size={15} aria-hidden />
+        </span>
+      )}
       <div className="flex gap-2.5">
         <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
           <Image src={selectedItem.iconUrl} alt="" width={32} height={32} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-ro-text">
+          <p className="truncate pr-5 text-sm font-bold text-ro-text">
             {formatItemDisplayName(selectedItem.name, refineLevel, cardSlots)}
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-ro-text-muted">
