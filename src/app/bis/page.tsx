@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { EquipSlot } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { slotLabel } from "@/lib/market-labels";
 import { BisBoard, type BisEntryView } from "./BisBoard";
 
 // Ruta PÚBLICA a propósito: no llama a requireSession(), así que se ve sin
@@ -10,39 +8,18 @@ import { BisBoard, type BisEntryView } from "./BisBoard";
 // editar (gated por canEditBis) llega en la fase 3.
 export const dynamic = "force-dynamic";
 
-// Orden de presentación de los slots (de la cabeza a los pies, luego arma/
-// escudo/accesorio). Coincide con el orden del enum EquipSlot en el schema.
-const SLOT_ORDER: EquipSlot[] = [
-  EquipSlot.UPPER_HEADGEAR,
-  EquipSlot.MID_HEADGEAR,
-  EquipSlot.LOWER_HEADGEAR,
-  EquipSlot.ARMOR,
-  EquipSlot.SHIELD,
-  EquipSlot.GARMENT,
-  EquipSlot.FOOTGEAR,
-  EquipSlot.ACCESSORY,
-  EquipSlot.WEAPON,
-];
-
 export default async function BisPage({
   searchParams,
 }: {
   searchParams: Promise<{ stage?: string }>;
 }) {
   const { stage: stageParam } = await searchParams;
-  const [t, tMarket] = await Promise.all([
-    getTranslations("bis"),
-    getTranslations("market"),
-  ]);
+  const t = await getTranslations("bis");
 
   // Etapas ordenadas de más reciente a más antigua: la primera es la de por
   // defecto; ?stage=<key> permite ver una anterior.
   const stages = await prisma.bisStage.findMany({ orderBy: { order: "desc" } });
   const selectedStage = stages.find((s) => s.key === stageParam) ?? stages[0] ?? null;
-
-  const slotLabels = Object.fromEntries(
-    SLOT_ORDER.map((s) => [s, slotLabel((k) => tMarket(k), s)]),
-  ) as Record<EquipSlot, string>;
 
   const header = (
     <header className="mb-6">
@@ -134,13 +111,7 @@ export default async function BisPage({
         </div>
       )}
 
-      <BisBoard
-        entries={entries}
-        roles={roles}
-        jobs={jobs}
-        slotOrder={SLOT_ORDER}
-        slotLabels={slotLabels}
-      />
+      <BisBoard entries={entries} roles={roles} jobs={jobs} />
     </main>
   );
 }

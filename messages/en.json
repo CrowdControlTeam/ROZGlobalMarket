@@ -646,16 +646,27 @@
     "subtitle": "The best gear per equipment slot for each stage of the game.",
     "stageLabel": "Stage",
     "filters": {
-      "slotLegend": "Slot",
       "roleLegend": "Role",
       "jobLegend": "Job",
       "clear": "Clear filters"
     },
+    "cells": {
+      "head": "Headgear",
+      "weapon": "Weapon",
+      "garment": "Garment",
+      "accessory": "Accessory",
+      "armor": "Armor",
+      "shield": "Shield",
+      "footgear": "Footgear"
+    },
+    "cell": {
+      "empty": "No BiS yet",
+      "noMatches": "No matches"
+    },
+    "showAll": "Show all ({count})",
+    "showLess": "Show less",
     "anyItem": "Any {slot} with these options",
-    "anyItemNoSlot": "Any item with these options",
     "optionAnyValue": "any value",
-    "empty": "No BiS items for this stage yet.",
-    "noMatches": "No item matches the filters.",
     "noStages": "No stages configured yet."
   }
 }

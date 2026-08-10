@@ -646,16 +646,27 @@
     "subtitle": "Los mejores objetos por slot de equipo para cada etapa del juego.",
     "stageLabel": "Etapa",
     "filters": {
-      "slotLegend": "Slot",
       "roleLegend": "Rol",
       "jobLegend": "Job",
       "clear": "Quitar filtros"
     },
+    "cells": {
+      "head": "Cabeza",
+      "weapon": "Arma",
+      "garment": "Manto",
+      "accessory": "Accesorio",
+      "armor": "Armadura",
+      "shield": "Escudo",
+      "footgear": "Calzado"
+    },
+    "cell": {
+      "empty": "Sin BiS todavía",
+      "noMatches": "Sin coincidencias"
+    },
+    "showAll": "Ver todas ({count})",
+    "showLess": "Ver menos",
     "anyItem": "Cualquier {slot} con estas options",
-    "anyItemNoSlot": "Cualquier objeto con estas options",
     "optionAnyValue": "cualquier valor",
-    "empty": "Todavía no hay objetos BiS para esta etapa.",
-    "noMatches": "Ningún objeto coincide con los filtros.",
     "noStages": "Todavía no hay etapas configuradas."
   }
 }
