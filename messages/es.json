@@ -640,5 +640,22 @@
       "giftClaimRejected": "{username} ha rechazado tu reclamación de {item}",
       "contactMessage": "{username} te ha escrito sobre {item}"
     }
+  },
+  "bis": {
+    "title": "BiS · Best in Slot",
+    "subtitle": "Los mejores objetos por slot de equipo para cada etapa del juego.",
+    "stageLabel": "Etapa",
+    "filters": {
+      "slotLegend": "Slot",
+      "roleLegend": "Rol",
+      "jobLegend": "Job",
+      "clear": "Quitar filtros"
+    },
+    "anyItem": "Cualquier {slot} con estas options",
+    "anyItemNoSlot": "Cualquier objeto con estas options",
+    "optionAnyValue": "cualquier valor",
+    "empty": "Todavía no hay objetos BiS para esta etapa.",
+    "noMatches": "Ningún objeto coincide con los filtros.",
+    "noStages": "Todavía no hay etapas configuradas."
   }
 }
