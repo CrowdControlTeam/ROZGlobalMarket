@@ -8,7 +8,6 @@ import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIco
 import type { LucideIcon } from "lucide-react";
 import type { ItemOptionDef, ListingType } from "@prisma/client";
 import { createListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
-import { sendGift } from "@/lib/gifts";
 import { recognizeItemFromScreenshot } from "@/lib/item-recognition";
 import { buttonClass, selectClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
@@ -23,6 +22,7 @@ import {
 } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
+import { MAX_LISTING_NOTES_LENGTH } from "@/lib/listing-notes-constants";
 import { getErrorMessage, rethrowFrameworkErrors } from "@/lib/errors";
 import { ItemPicker, type ItemResult } from "./new/ItemPicker";
 import { ScreenshotDropzone } from "./new/ScreenshotDropzone";
@@ -62,6 +62,7 @@ export function PublishForm({
   const [price, setPrice] = useState<number | "">("");
   const [unlimited, setUnlimited] = useState(false);
   const [noPrice, setNoPrice] = useState(false);
+  const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [priceMissing, setPriceMissing] = useState(false);
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
@@ -202,6 +203,7 @@ export function PublishForm({
       else if (price !== "") fd.set("price", String(price));
     }
     if (type === "GIFT" && selectedRecipient) fd.set("recipientId", selectedRecipient.id);
+    if (notes.trim()) fd.set("notes", notes);
     optionSelections.forEach((sel, i) => {
       if (sel.defId && sel.value !== "") {
         fd.set(`option${i + 1}DefId`, sel.defId);
@@ -246,13 +248,11 @@ export function PublishForm({
     startSubmitTransition(async () => {
       try {
         const fd = buildFormData();
-        if (type === "GIFT") {
-          await sendGift(fd);
-          router.push("/my/gifts");
-        } else {
-          const { id } = await createListing(fd);
-          router.push(`/market/${id}`);
-        }
+        // Acción única para todos los tipos. Solo el regalo DIRECTO (con
+        // destinatario) vuelve a /my/gifts; el resto —incluido el reclamable—
+        // vuelve al mercado (ya hay preview antes, así que no abrimos el detalle).
+        const { directGift } = await createListing(fd);
+        router.push(directGift ? "/my/gifts" : "/market");
       } catch (err) {
         submittingRef.current = false;
         setError(getErrorMessage(err));
@@ -449,10 +449,16 @@ export function PublishForm({
             </div>
           )}
 
-          {/* Notas: rellena el hueco del alto fijo. Sin `name` — de momento no
-              se envía ni se guarda (solo diseño). */}
+          {/* Notas libres opcionales (se guardan en el listing y se muestran en
+              el detalle). buildFormData las lee del estado, no del DOM. */}
           <FloatingField label={t("notes")} className="min-h-[3.5rem] flex-1">
-            <textarea className={`${floatingControlClass} h-full resize-none`} />
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              maxLength={MAX_LISTING_NOTES_LENGTH}
+              placeholder={t("notesPlaceholder")}
+              className={`${floatingControlClass} h-full resize-none`}
+            />
           </FloatingField>
       </div>
 

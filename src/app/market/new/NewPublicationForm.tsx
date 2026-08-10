@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ItemOptionDef } from "@prisma/client";
 import { createListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
-import { sendGift } from "@/lib/gifts";
 import { recognizeItemFromScreenshot } from "@/lib/item-recognition";
 import { buttonClass, inputClass, inputBaseClass, selectClass, labelClass } from "@/lib/ui";
 import { PriceInput } from "@/components/PriceInput";
@@ -17,6 +16,7 @@ import {
 } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { getMaxCardSlots } from "@/lib/card-slots-constants";
+import { MAX_LISTING_NOTES_LENGTH } from "@/lib/listing-notes-constants";
 import { getErrorMessage, rethrowFrameworkErrors } from "@/lib/errors";
 import { ItemPicker, type ItemResult } from "./ItemPicker";
 import { ScreenshotDropzone } from "./ScreenshotDropzone";
@@ -207,13 +207,12 @@ export function NewPublicationForm({
         setError(null);
         startSubmitTransition(async () => {
           try {
-            if (type === "GIFT") {
-              await sendGift(formData);
-              router.push("/my/gifts");
-            } else {
-              const { id } = await createListing(formData);
-              router.push(`/market/${id}`);
-            }
+            // Acción única para todos los tipos. Solo el regalo DIRECTO (con
+            // destinatario) hace entrega instantánea y vuelve a /my/gifts; el
+            // resto —incluido el regalo reclamable— vuelve al mercado, donde
+            // aparece el listing recién creado (revalidado en createListing).
+            const { directGift } = await createListing(formData);
+            router.push(directGift ? "/my/gifts" : "/market");
           } catch (err) {
             submittingRef.current = false;
             setError(getErrorMessage(err));
@@ -406,6 +405,17 @@ export function NewPublicationForm({
           </div>
         </div>
       )}
+
+      <div>
+        <label className={labelClass}>{tField("notes")}</label>
+        <textarea
+          name="notes"
+          rows={3}
+          maxLength={MAX_LISTING_NOTES_LENGTH}
+          placeholder={t("notesPlaceholder")}
+          className={`w-full resize-y ${inputBaseClass}`}
+        />
+      </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
 

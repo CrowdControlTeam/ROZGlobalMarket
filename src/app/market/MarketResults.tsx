@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, MessageSquareText, SlidersHorizontal } from "lucide-react";
 import { loadMoreListings } from "@/lib/market-actions";
 import type { MarketFilters } from "@/lib/market";
 import { buttonClass } from "@/lib/ui";
@@ -32,6 +32,7 @@ type Listing = {
   price: number | null;
   refineLevel: number;
   cardSlots: number;
+  notes: string | null;
   item: Item;
   poster: Poster;
   options: ListingOption[];
@@ -199,9 +200,23 @@ function ListingCard({
       : []),
   ];
 
-  const kebab = (
-    <div className="absolute right-1.5 top-1.5">
+  // Columna de acciones en la esquina superior derecha: kebab arriba y, debajo,
+  // el indicador de notas (bocadillo, solo si hay). Aquí irá también el botón de
+  // favorito más adelante. Va sobre la tarjeta (fuera del <Link>) para no anidar
+  // controles dentro del <a>. Es de un icono de ancho (igual que el kebab), así
+  // que no interfiere con el nombre por muy largo que sea.
+  const cornerActions = (
+    <div className="absolute right-1.5 top-1.5 flex flex-col items-center gap-1">
       <KebabMenu label={t("card.menu")} items={kebabItems} />
+      {listing.notes && (
+        <span
+          title={t("card.hasNotes")}
+          aria-label={t("card.hasNotes")}
+          className="grid h-6 w-6 place-items-center text-ro-text-muted"
+        >
+          <MessageSquareText size={15} aria-hidden />
+        </span>
+      )}
     </div>
   );
 
@@ -239,7 +254,7 @@ function ListingCard({
             <div className="mt-0.5 text-xs text-ro-text-muted">{countLabel}</div>
           </div>
         </Link>
-        {kebab}
+        {cornerActions}
         {contactModal}
       </div>
     );
@@ -255,8 +270,10 @@ function ListingCard({
       >
         <div className="flex gap-2.5">
           {iconBox}
-          <div className="min-w-0 flex-1">
-            <p className="truncate pr-5 text-sm font-bold text-ro-text">{name}</p>
+          {/* pr-5 en el contenedor (no solo en el nombre) para que también el
+              meta libre la columna de acciones de la esquina. */}
+          <div className="min-w-0 flex-1 pr-5">
+            <p className="truncate text-sm font-bold text-ro-text">{name}</p>
             {meta}
           </div>
         </div>
@@ -268,7 +285,7 @@ function ListingCard({
           <span className="text-sm">{priceLine}</span>
         </div>
       </Link>
-      {kebab}
+      {cornerActions}
       {contactModal}
     </div>
   );

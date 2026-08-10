@@ -98,6 +98,7 @@
     "refineTooHigh": "El refine no puede ser mayor que +{max}",
     "positiveCardSlots": "Los slots deben ser un número entero positivo",
     "cardSlotsTooHigh": "Este item admite como máximo {max} slots",
+    "notesTooLong": "Las notas no pueden superar {max} caracteres",
     "listingNotFound": "Publicación no encontrada",
     "onlyPosterCancel": "Solo quien la publicó puede cancelarla",
     "listingNotActive": "Esta publicación ya no está activa",
@@ -276,6 +277,7 @@
       "message": "Mensaje",
       "refine": "Refine",
       "cardSlots": "Slots",
+      "notes": "Notas",
       "minStats": "Stats mínimos",
       "payUpTo": "Pago/ud",
       "bestOffer": "Hacer oferta",
@@ -331,7 +333,8 @@
       "edit": "Editar",
       "viewDetail": "Ver detalle",
       "share": "Compartir",
-      "contact": "Contactar"
+      "contact": "Contactar",
+      "hasNotes": "Tiene notas"
     },
     "sort": {
       "label": "Orden",
@@ -549,6 +552,7 @@
       "itemLabel": "Item",
       "priceLabel": "Precio/ud",
       "payUpToLabel": "Pago/ud",
+      "notesPlaceholder": "Notas opcionales: detalles del trato, horario de conexión, condiciones…",
       "unlimitedLabel": "Ilimitados",
       "noPriceLabel": "Sin precio",
       "recipientLabel": "Destinatario (opcional — sin él, cualquiera puede reclamarlo)",
