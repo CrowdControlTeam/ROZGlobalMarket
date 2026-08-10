@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Boxes, type LucideIcon } from "lucide-react";
+import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount } from "@/lib/market-labels";
 import type { BisEntryView } from "./BisBoard";
 
@@ -56,7 +57,9 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
   }
 
   const { entry, slotLabel, slotIcon: SlotIcon } = data;
-  const name = entry.item?.name ?? t("anyItem");
+  const name = entry.item
+    ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
+    : t("anyItem");
 
   return (
     <div
@@ -106,11 +109,6 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
                   <Boxes size={30} aria-hidden />
                 </div>
               )}
-              {entry.item && entry.item.refineLevel > 0 && (
-                <span className="absolute -bottom-1.5 -right-1.5 rounded-md border border-ro-gold-dark bg-ro-panel px-1.5 py-px text-xs font-extrabold text-ro-gold shadow-sm">
-                  +{entry.item.refineLevel}
-                </span>
-              )}
             </div>
             <div className="min-w-0">
               <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-ro-accent/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-ro-accent">
@@ -119,9 +117,6 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
               </span>
               <p className={`truncate text-lg font-bold leading-tight ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>
                 {name}
-                {entry.item && entry.item.cardSlots > 0 && (
-                  <span className="ml-1 text-ro-text-muted">[{entry.item.cardSlots}]</span>
-                )}
               </p>
             </div>
           </div>
