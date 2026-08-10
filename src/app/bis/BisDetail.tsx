@@ -115,9 +115,11 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
                 className="flex items-center justify-between gap-2 rounded-md border border-ro-panel-border bg-ro-panel-alt px-2.5 py-1.5 text-sm"
               >
                 <span className="text-ro-text">{o.label}</span>
-                <span className="shrink-0 font-semibold text-ro-accent">
-                  {o.minValue !== null ? formatOptionAmount(o.minValue, true) : t("detail.optionAny")}
-                </span>
+                {o.minValue !== null && (
+                  <span className="shrink-0 font-semibold text-ro-accent">
+                    {formatOptionAmount(o.minValue, true)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
