@@ -205,8 +205,8 @@
     },
     "bisEditor": {
       "legend": "Editor de BiS",
-      "hint": "Rol necesario para crear y modificar objetos BiS. Es un permiso aparte: los administradores NO están exentos, hay que tener este rol. Sin rol = BiS de solo lectura para todos.",
-      "none": "Nadie (solo lectura)",
+      "hint": "Rol que puede crear y modificar objetos BiS, además de los administradores (que siempre pueden). Sin rol = solo los administradores; para el resto, BiS de solo lectura.",
+      "none": "Solo administradores",
       "roleIdPlaceholder": "ID del rol de editor (vacío = solo lectura)"
     },
     "webhook": {

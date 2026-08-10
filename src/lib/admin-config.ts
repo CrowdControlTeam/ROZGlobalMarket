@@ -139,9 +139,9 @@ export async function updateMarketConfig(formData: FormData) {
       ? accessRoleRaw.trim()
       : null;
 
-  // Rol de editor de BiS: un único snowflake, o vacío = nadie puede editar
-  // (null → BiS de solo lectura). Los admin NO están exentos: editar BiS es un
-  // permiso aparte, hay que tener este rol explícitamente.
+  // Rol de editor de BiS: un único snowflake, o vacío = solo los admin editan
+  // (null → BiS de solo lectura para el resto). Si se configura, pueden editar
+  // los admin O quien tenga ese rol.
   const bisEditorRoleRaw = formData.get("bisEditorRoleId");
   const bisEditorRoleId =
     typeof bisEditorRoleRaw === "string" && SNOWFLAKE.test(bisEditorRoleRaw.trim())

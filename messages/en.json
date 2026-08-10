@@ -205,8 +205,8 @@
     },
     "bisEditor": {
       "legend": "BiS editor",
-      "hint": "Role required to create and edit BiS items. It's a separate permission: admins are NOT exempt, you must have this role. No role = BiS is read-only for everyone.",
-      "none": "Nobody (read-only)",
+      "hint": "Role that can create and edit BiS items, in addition to admins (who always can). No role = admins only; read-only for everyone else.",
+      "none": "Admins only",
       "roleIdPlaceholder": "Editor role ID (empty = read-only)"
     },
     "webhook": {

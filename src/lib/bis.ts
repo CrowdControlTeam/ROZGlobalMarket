@@ -3,17 +3,19 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { loadMarketConfig } from "@/lib/market-config";
 
-// ¿Puede el usuario actual crear/editar BiS? Requiere sesión + tener el rol
-// `bisEditorRoleId` configurado en /admin. Los administradores NO están
-// exentos: editar BiS es un permiso aparte, hay que tener ese rol en concreto.
-// Sin rol configurado (null) → nadie edita, la página es de solo lectura.
+// ¿Puede el usuario actual crear/editar BiS? Pueden los administradores O quien
+// tenga el rol `bisEditorRoleId` configurado en /admin. Sin rol configurado
+// (null) solo editan los administradores; el resto es solo lectura.
 export async function canEditBis(): Promise<boolean> {
-  const { bisEditorRoleId } = await loadMarketConfig();
-  if (!bisEditorRoleId) return false;
-
   const session = await auth();
   const discordId = session?.user?.discordId;
   if (!discordId) return false;
+
+  // Los administradores siempre pueden; se corta antes de tocar BD.
+  if (session.user.isAdmin) return true;
+
+  const { bisEditorRoleId } = await loadMarketConfig();
+  if (!bisEditorRoleId) return false;
 
   // Los roles del guild viven en el User (los guarda/actualiza el login, ver
   // src/auth.ts); la sesión no los lleva, así que se leen de BD.

@@ -325,9 +325,8 @@ model MarketConfig {
   accessRoleId String?
 
   // Rol de Discord que puede añadir/editar/reordenar los BiS (página pública
-  // /bis). Ver canEditBis en src/lib/bis.ts. Null = nadie edita (solo lectura).
-  // Los admins NO están exentos aquí: editar BiS es una tarea concreta, no
-  // administración del mercado.
+  // /bis), además de los administradores (que siempre pueden). Ver canEditBis
+  // en src/lib/bis.ts. Null = solo administradores; para el resto, solo lectura.
   bisEditorRoleId String?
 
   // Nombre de la app mostrado en la cabecera (enlaza a /market) y como
