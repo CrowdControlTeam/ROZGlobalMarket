@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/guard";
 import { BisBoard, type BisEntryView } from "./BisBoard";
 
-// Ruta PÚBLICA a propósito: no llama a requireSession(), así que se ve sin
-// login (a diferencia del resto de la app). Solo lectura en esta fase; crear/
-// editar (gated por canEditBis) llega en la fase 3.
+// Visible para cualquier usuario logueado (no solo admins), como el resto de la
+// app: requiere sesión. Solo lectura en esta fase; crear/editar (gated por
+// canEditBis: admin o rol) llega en la fase 3.
 export const dynamic = "force-dynamic";
 
 export default async function BisPage({
@@ -13,6 +14,7 @@ export default async function BisPage({
 }: {
   searchParams: Promise<{ stage?: string }>;
 }) {
+  await requireSession();
   const { stage: stageParam } = await searchParams;
   const t = await getTranslations("bis");
 
