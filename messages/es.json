@@ -666,7 +666,6 @@
     "showAll": "Ver todas ({count})",
     "showLess": "Ver menos",
     "anyItem": "Cualquier {slot} con estas options",
-    "optionAnyValue": "cualquier valor",
     "noStages": "Todavía no hay etapas configuradas."
   }
 }

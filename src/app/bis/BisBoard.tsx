@@ -52,6 +52,9 @@ const RIGHT_CELLS: CellDef[] = [
   { key: "shield", slots: ["SHIELD"], Icon: ShieldHalf },
   { key: "footgear", slots: ["FOOTGEAR"], Icon: Footprints },
 ];
+// Orden de render: relleno por columnas (grid-flow-col) → primero toda la
+// columna izquierda, luego la derecha. En móvil marca el orden de apilado.
+const ALL_CELLS: CellDef[] = [...LEFT_CELLS, ...RIGHT_CELLS];
 
 // Chip de filtro (toggle). Un único valor activo por dimensión; volver a
 // pulsarlo lo limpia.
@@ -130,7 +133,7 @@ function EntryCard({ entry, cellLabel }: { entry: BisEntryView; cellLabel: strin
     : t("anyItem", { slot: cellLabel.toLowerCase() });
 
   return (
-    <div className="flex gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
+    <div className="flex h-full min-h-[3.5rem] gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
       {iconBox}
       <div className="min-w-0 flex-1">
         <p className={`truncate text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>
@@ -144,7 +147,8 @@ function EntryCard({ entry, cellLabel }: { entry: BisEntryView; cellLabel: strin
                 key={o.slotIndex}
                 className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1 py-px text-[0.6rem] text-ro-accent"
               >
-                {o.label} {o.minValue !== null ? formatOptionAmount(o.minValue, true) : t("optionAnyValue")}
+                {o.label}
+                {o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}
               </span>
             ))}
           </div>
@@ -188,7 +192,7 @@ function SlotCell({
   const visible = expanded ? shown : shown.slice(0, CELL_LIMIT);
 
   return (
-    <section className="rounded-xl border border-ro-panel-border bg-ro-panel p-3">
+    <section className="flex h-full flex-col rounded-xl border border-ro-panel-border bg-ro-panel p-3">
       <header className="mb-2 flex items-center gap-2">
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-ro-accent/10 text-ro-accent">
           <Icon size={16} aria-hidden />
@@ -205,7 +209,7 @@ function SlotCell({
         </p>
       ) : (
         <>
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
             {visible.map((entry) => (
               <li key={entry.id}>
                 <EntryCard entry={entry} cellLabel={label} />
@@ -296,13 +300,12 @@ export function BisBoard({
         )}
       </div>
 
-      {/* Paperdoll: columna izquierda (cabeza, arma, manto, accesorio) y derecha
-          (armadura, escudo, calzado). En móvil se apilan en una sola columna. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-4">{LEFT_CELLS.map(renderCell)}</div>
-        <div className="flex flex-col gap-4 lg:border-l lg:border-ro-panel-border lg:pl-4">
-          {RIGHT_CELLS.map(renderCell)}
-        </div>
+      {/* Paperdoll: en desktop, rejilla de 2 columnas × 4 filas rellenada por
+          columnas (izquierda: cabeza, arma, manto, accesorio; derecha:
+          armadura, escudo, calzado). Las filas son 1fr, así todas las celdas
+          ocupan lo mismo. En móvil se apilan en una sola columna. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-4">
+        {ALL_CELLS.map(renderCell)}
       </div>
     </div>
   );
