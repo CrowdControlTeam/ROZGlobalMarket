@@ -66,7 +66,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
         active
           ? "border-ro-accent bg-ro-accent/10 text-ro-accent"
           : "border-ro-panel-border bg-ro-panel-alt text-ro-text-muted hover:border-ro-accent hover:text-ro-accent"
@@ -77,7 +77,10 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
-function FilterRow({
+// Un grupo de filtro (Rol o Job): leyenda + chips, en línea. Los grupos se
+// colocan lado a lado en desktop y se apilan en móvil (sin caja pesada), así
+// que todo sigue visible a un clic pero ocupa mucho menos.
+function FilterGroup({
   legend,
   options,
   activeId,
@@ -90,10 +93,8 @@ function FilterRow({
 }) {
   if (options.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="w-10 shrink-0 text-xs font-semibold uppercase tracking-wide text-ro-text-muted">
-        {legend}
-      </span>
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-ro-text-muted">{legend}</span>
       {options.map((o) => (
         <FilterChip key={o.id} label={o.label} active={activeId === o.id} onClick={() => onToggle(o.id)} />
       ))}
@@ -302,14 +303,14 @@ export function BisBoard({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2.5 rounded-xl border border-ro-panel-border bg-ro-panel p-4">
-        <FilterRow
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <FilterGroup
           legend={t("filters.roleLegend")}
           options={roles}
           activeId={activeRole}
           onToggle={(id) => toggle(activeRole, id, setActiveRole)}
         />
-        <FilterRow
+        <FilterGroup
           legend={t("filters.jobLegend")}
           options={jobs}
           activeId={activeJob}
@@ -322,7 +323,7 @@ export function BisBoard({
               setActiveRole(null);
               setActiveJob(null);
             }}
-            className="mt-0.5 inline-flex w-fit items-center gap-1 text-xs text-ro-text-muted hover:text-ro-accent"
+            className="inline-flex items-center gap-1 text-xs text-ro-text-muted hover:text-ro-accent"
           >
             <X size={12} aria-hidden />
             {t("filters.clear")}
