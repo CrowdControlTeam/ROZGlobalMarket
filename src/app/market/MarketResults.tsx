@@ -212,7 +212,7 @@ function ListingCard({
         <span
           title={t("card.hasNotes")}
           aria-label={t("card.hasNotes")}
-          className="grid h-6 w-6 place-items-center text-ro-accent"
+          className="grid h-6 w-6 place-items-center text-ro-text-muted"
         >
           <MessageSquareText size={15} aria-hidden />
         </span>
