@@ -3,12 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Boxes } from "lucide-react";
-import { formatItemDisplayName } from "@/lib/card-slots-constants";
+import { Boxes, type LucideIcon } from "lucide-react";
 import { formatOptionAmount } from "@/lib/market-labels";
 import type { BisEntryView } from "./BisBoard";
 
-export type BisDetailData = { entry: BisEntryView; slotLabel: string };
+export type BisDetailData = { entry: BisEntryView; slotLabel: string; slotIcon: LucideIcon };
 
 // Ficha de un BiS: panel lateral en desktop, bottom sheet en móvil. A
 // diferencia del detalle del mercado (atado a la URL con router.back), este va
@@ -56,10 +55,8 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
     else setDragY(0);
   }
 
-  const { entry, slotLabel } = data;
-  const title = entry.item
-    ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
-    : t("anyItem");
+  const { entry, slotLabel, slotIcon: SlotIcon } = data;
+  const name = entry.item?.name ?? t("anyItem");
 
   return (
     <div
@@ -89,47 +86,79 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
         </button>
       </div>
 
-      <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-6">
-        {/* Cabecera: icono grande + nombre + slot. */}
-        <header className="flex items-center gap-3">
-          {entry.item ? (
-            <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
-              <Image src={entry.item.iconUrl} alt={entry.item.name} width={40} height={40} />
+      <div className="flex flex-col gap-5 overflow-y-auto px-4 pb-6">
+        {/* Hero: banda con degradado de acento + icono del slot como marca de
+            agua y como chip; icono del item grande con badge de refine. */}
+        <header className="relative -mx-4 -mt-2 overflow-hidden border-y border-ro-panel-border bg-gradient-to-br from-ro-accent/12 via-ro-panel-alt to-ro-panel px-4 py-4">
+          <SlotIcon
+            size={104}
+            aria-hidden
+            className="pointer-events-none absolute -right-4 -top-5 text-ro-accent/10"
+          />
+          <div className="relative flex items-center gap-3.5">
+            <div className="relative shrink-0">
+              {entry.item ? (
+                <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-xl border border-ro-panel-border bg-ro-panel shadow-sm">
+                  <Image src={entry.item.iconUrl} alt={entry.item.name} width={52} height={52} />
+                </div>
+              ) : (
+                <div className="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-ro-accent/40 bg-ro-panel text-ro-accent/70">
+                  <Boxes size={30} aria-hidden />
+                </div>
+              )}
+              {entry.item && entry.item.refineLevel > 0 && (
+                <span className="absolute -bottom-1.5 -right-1.5 rounded-md border border-ro-gold-dark bg-ro-panel px-1.5 py-px text-xs font-extrabold text-ro-gold shadow-sm">
+                  +{entry.item.refineLevel}
+                </span>
+              )}
             </div>
-          ) : (
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg border border-dashed border-ro-panel-border bg-ro-panel-alt text-ro-text-muted">
-              <Boxes size={22} aria-hidden />
+            <div className="min-w-0">
+              <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-ro-accent/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-ro-accent">
+                <SlotIcon size={12} aria-hidden />
+                {slotLabel}
+              </span>
+              <p className={`truncate text-lg font-bold leading-tight ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>
+                {name}
+                {entry.item && entry.item.cardSlots > 0 && (
+                  <span className="ml-1 text-ro-text-muted">[{entry.item.cardSlots}]</span>
+                )}
+              </p>
             </div>
-          )}
-          <div className="min-w-0">
-            <p className={`text-base font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>{title}</p>
-            <p className="text-xs uppercase tracking-wide text-ro-text-muted">{slotLabel}</p>
           </div>
         </header>
 
-        {entry.options.length > 0 && <DetailSection title={t("detail.options")}>
-          <ul className="flex flex-col gap-1.5">
-            {entry.options.map((o) => (
-              <li
-                key={o.slotIndex}
-                className="flex items-center justify-between gap-2 rounded-md border border-ro-panel-border bg-ro-panel-alt px-2.5 py-1.5 text-sm"
-              >
-                <span className="text-ro-text">{o.label}</span>
-                {o.minValue !== null && (
-                  <span className="shrink-0 font-semibold text-ro-accent">
-                    {formatOptionAmount(o.minValue, true)}
+        {entry.options.length > 0 && (
+          <DetailSection title={t("detail.options")}>
+            <ul className="flex flex-col gap-1.5">
+              {entry.options.map((o) => (
+                <li
+                  key={o.slotIndex}
+                  className="flex items-center gap-2.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt px-2.5 py-2"
+                >
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-ro-accent/15 text-[0.7rem] font-bold text-ro-accent">
+                    {o.slotIndex}
                   </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </DetailSection>}
+                  <span className="flex-1 text-sm text-ro-text">{o.label}</span>
+                  {o.minValue !== null && (
+                    <span className="shrink-0 rounded-full bg-ro-accent/10 px-2 py-0.5 text-xs font-bold text-ro-accent">
+                      {formatOptionAmount(o.minValue, true)}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </DetailSection>
+        )}
 
         {entry.roles.length > 0 && (
           <DetailSection title={t("detail.roles")}>
             <div className="flex flex-wrap gap-1.5">
               {entry.roles.map((r) => (
-                <span key={r.id} className="rounded border border-ro-accent/40 bg-ro-accent/10 px-2 py-0.5 text-xs text-ro-accent">
+                <span
+                  key={r.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-ro-accent/40 bg-ro-accent/10 px-2.5 py-1 text-xs font-medium text-ro-accent"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-ro-accent" aria-hidden />
                   {r.label}
                 </span>
               ))}
@@ -141,7 +170,10 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
           <DetailSection title={t("detail.jobs")}>
             <div className="flex flex-wrap gap-1.5">
               {entry.jobs.map((j) => (
-                <span key={j.id} className="rounded border border-ro-panel-border bg-ro-panel-alt px-2 py-0.5 text-xs text-ro-text-muted">
+                <span
+                  key={j.id}
+                  className="rounded-full border border-ro-panel-border bg-ro-panel-alt px-2.5 py-1 text-xs font-medium text-ro-text"
+                >
                   {j.label}
                 </span>
               ))}
@@ -151,7 +183,9 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
 
         {entry.note && (
           <DetailSection title={t("detail.note")}>
-            <p className="whitespace-pre-wrap text-sm text-ro-text">{entry.note}</p>
+            <p className="whitespace-pre-wrap rounded-lg border border-ro-panel-border bg-ro-panel-alt px-3 py-2 text-sm text-ro-text">
+              {entry.note}
+            </p>
           </DetailSection>
         )}
       </div>
@@ -161,8 +195,11 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
 
 function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-1.5">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-ro-text-muted">{title}</h3>
+    <section className="flex flex-col gap-2">
+      <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ro-text-muted">
+        <span className="h-3 w-1 rounded-full bg-ro-accent" aria-hidden />
+        {title}
+      </h3>
       {children}
     </section>
   );

@@ -295,7 +295,7 @@ export function BisBoard({
         label={label}
         all={all}
         shown={shown}
-        onOpen={(entry) => setSelected({ entry, slotLabel: label })}
+        onOpen={(entry) => setSelected({ entry, slotLabel: label, slotIcon: def.Icon })}
       />
     );
   }
