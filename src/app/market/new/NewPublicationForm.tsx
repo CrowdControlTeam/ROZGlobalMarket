@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ItemOptionDef } from "@prisma/client";
 import { createListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
-import { sendGift } from "@/lib/gifts";
 import { recognizeItemFromScreenshot } from "@/lib/item-recognition";
 import { buttonClass, inputClass, inputBaseClass, selectClass, labelClass } from "@/lib/ui";
 import { PriceInput } from "@/components/PriceInput";
@@ -208,16 +207,12 @@ export function NewPublicationForm({
         setError(null);
         startSubmitTransition(async () => {
           try {
-            if (type === "GIFT") {
-              await sendGift(formData);
-              router.push("/my/gifts");
-            } else {
-              // Ya hay una preview antes de confirmar, así que tras publicar
-              // volvemos al mercado (donde aparece el listing recién creado,
-              // revalidado en createListing) en vez de abrir su detalle.
-              await createListing(formData);
-              router.push("/market");
-            }
+            // Acción única para todos los tipos. Solo el regalo DIRECTO (con
+            // destinatario) hace entrega instantánea y vuelve a /my/gifts; el
+            // resto —incluido el regalo reclamable— vuelve al mercado, donde
+            // aparece el listing recién creado (revalidado en createListing).
+            const { directGift } = await createListing(formData);
+            router.push(directGift ? "/my/gifts" : "/market");
           } catch (err) {
             submittingRef.current = false;
             setError(getErrorMessage(err));

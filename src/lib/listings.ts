@@ -20,6 +20,7 @@ import {
 } from "@/lib/item-options";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
+import { formatOptionAmount } from "@/lib/market-labels";
 import { MAX_LISTING_NOTES_LENGTH, parseListingNotes } from "@/lib/listing-notes-constants";
 import { loadMarketConfig } from "@/lib/market-config";
 import { searchCatalog } from "@/lib/item-catalog";
@@ -157,8 +158,10 @@ export async function createListing(formData: FormData) {
   // request — reconstruir el schema en cada llamada no tiene coste real.
   const createListingSchema = z.object({
     itemId: z.string().min(1, t("selectItem")),
-    // GIFT no entra por aquí: los regalos se crean con sendGift (gifts.ts).
-    type: z.enum(["SALE", "BUY", "TRADE"]).default("SALE"),
+    // Acción única para TODOS los tipos, incluido GIFT (antes en sendGift). El
+    // único caso con lógica propia es el regalo CON destinatario (entrega
+    // directa, más abajo); el reclamable es una publicación normal más.
+    type: z.enum(["SALE", "BUY", "TRADE", "GIFT"]).default("SALE"),
   });
 
   const parsed = createListingSchema.safeParse({
@@ -197,6 +200,20 @@ export async function createListing(formData: FormData) {
     where: { id: parsed.data.itemId },
   });
   if (!item) throw new Error(t("itemNotFound"));
+
+  // Regalo CON destinatario = entrega directa (ver más abajo). Sin destinatario,
+  // el GIFT es RECLAMABLE: una publicación normal más. Solo se lee/valida el
+  // destinatario en GIFT; en el resto de tipos se ignora aunque venga en el form.
+  const recipientId =
+    parsed.data.type === "GIFT"
+      ? ((formData.get("recipientId") as string) || "").trim() || undefined
+      : undefined;
+  if (recipientId) {
+    if (recipientId === session.user.discordId) throw new Error(t("cannotGiftSelf"));
+    const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
+    if (!recipient) throw new Error(t("recipientNotFound"));
+  }
+  const isDirectGift = parsed.data.type === "GIFT" && !!recipientId;
 
   const [magicalTypes, optionsAvailable] = await Promise.all([
     loadMagicalWeaponTypes(),
@@ -274,48 +291,104 @@ export async function createListing(formData: FormData) {
     throw new Error(t("notesTooLong", { max: MAX_LISTING_NOTES_LENGTH }));
   }
 
-  const listing = await prisma.listing.create({
-    data: {
-      posterId: session.user.discordId,
-      itemId: parsed.data.itemId,
-      type: parsed.data.type,
-      quantity,
-      price,
-      refineLevel,
-      cardSlots,
-      notes,
-      options:
-        rawOptions.length > 0
-          ? {
-              create: rawOptions.map((o) => ({
-                slotIndex: o.slotIndex,
-                defId: o.defId,
-                value: o.value,
-              })),
-            }
-          : undefined,
-    },
+  const listing = await prisma.$transaction(async (tx) => {
+    const created = await tx.listing.create({
+      data: {
+        posterId: session.user.discordId,
+        itemId: parsed.data.itemId,
+        type: parsed.data.type,
+        quantity,
+        price,
+        // Regalo directo: nace ya cerrado (la entrega es instantánea).
+        status: isDirectGift ? "COMPLETED" : "ACTIVE",
+        refineLevel,
+        cardSlots,
+        notes,
+        options:
+          rawOptions.length > 0
+            ? {
+                create: rawOptions.map((o) => ({
+                  slotIndex: o.slotIndex,
+                  defId: o.defId,
+                  value: o.value,
+                })),
+              }
+            : undefined,
+      },
+    });
+    // Regalo directo: además del listing, un Deal ACCEPTED para el destinatario
+    // (la transferencia ya hecha). Sin destinatario no hay Deal (reclamable).
+    if (isDirectGift) {
+      await tx.deal.create({
+        data: {
+          listingId: created.id,
+          userId: recipientId!,
+          quantity: quantity ?? 1,
+          status: "ACCEPTED",
+          unitPrice: null,
+        },
+      });
+    }
+    return created;
   });
 
   const appUrl = getAppUrl();
-  await sendListingCreatedWebhook({
-    itemName: formatItemDisplayName(item.name, refineLevel, cardSlots),
-    itemIconUrl: `${appUrl}${item.iconUrl}`,
-    type: parsed.data.type,
-    price: listing.price,
-    quantity: listing.quantity,
-    posterUsername: session.user.username,
-    posterAvatarUrl: session.user.avatarUrl,
-    posterId: session.user.discordId,
-    listingUrl: `${appUrl}/market/${listing.id}`,
-    options: rawOptions.map((o) => ({
-      label: defsById.get(o.defId)!.label,
-      value: o.value,
-    })),
-  });
+
+  // Regalo directo: DM al destinatario (la entrega ya está hecha) y punto —no se
+  // anuncia por webhook—; se vuelve a /my/gifts (ahí aparece, tiene Deal).
+  if (isDirectGift) {
+    const tDiscord = await getTranslations("discord");
+    const tField = await getTranslations("market.field");
+    const itemName = formatItemDisplayName(item.name, refineLevel, cardSlots);
+    await sendDirectMessage(recipientId!, {
+      title: tDiscord("dm.gifted", { username: session.user.username, item: itemName }),
+      url: `${appUrl}/my/gifts`,
+      color: DISCORD_EMBED_COLOR.GIFT,
+      itemIconUrl: `${appUrl}${item.iconUrl}`,
+      fields: [
+        { name: tField("quantity"), value: String(quantity), inline: true },
+        ...(rawOptions.length > 0
+          ? [
+              {
+                name: tField("options"),
+                value: rawOptions
+                  .map((o) => `${defsById.get(o.defId)!.label}: ${formatOptionAmount(o.value, false)}`)
+                  .join("\n"),
+                inline: false,
+              },
+            ]
+          : []),
+        { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
+      ],
+    });
+    revalidatePath("/my/gifts");
+    revalidatePath("/market");
+    return { id: listing.id, directGift: true };
+  }
+
+  // SALE/BUY/TRADE: anuncio en el webhook de "publicación creada". El regalo
+  // RECLAMABLE no se anuncia por webhook (como antes con sendGift: se "anuncia"
+  // apareciendo en el mercado).
+  if (parsed.data.type !== "GIFT") {
+    await sendListingCreatedWebhook({
+      itemName: formatItemDisplayName(item.name, refineLevel, cardSlots),
+      itemIconUrl: `${appUrl}${item.iconUrl}`,
+      type: parsed.data.type,
+      price: listing.price,
+      quantity: listing.quantity,
+      posterUsername: session.user.username,
+      posterAvatarUrl: session.user.avatarUrl,
+      posterId: session.user.discordId,
+      listingUrl: `${appUrl}/market/${listing.id}`,
+      options: rawOptions.map((o) => ({
+        label: defsById.get(o.defId)!.label,
+        value: o.value,
+      })),
+    });
+  }
 
   revalidatePath("/market");
-  return { id: listing.id };
+  return { id: listing.id, directGift: false };
 }
 
 // Quien publica cierra la publicación. Regla de cierre (ver deals.ts): si hubo
