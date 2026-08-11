@@ -24,7 +24,7 @@ const APP_VERSION = `v${pkg.version}`;
 // usuario/botón de publicar (necesitan la sesión resuelta).
 export function SiteHeaderFallback() {
   return (
-    <header className="border-b border-ro-gold/25 bg-ro-navy text-ro-on-navy">
+    <header className="bg-ro-navy text-ro-on-navy">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
         <span className="font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy">
           {DEFAULT_SITE_NAME}
@@ -64,9 +64,9 @@ export async function SiteHeader({
       : new Map<string, string>();
 
   return (
-    <header className="border-b border-ro-gold/25 bg-ro-navy text-ro-on-navy">
+    <header className="bg-ro-navy text-ro-on-navy">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-6 py-3">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href="/"
             className="flex items-center gap-2.5 font-heading text-sm font-bold leading-none tracking-wide text-ro-on-navy"
@@ -80,8 +80,14 @@ export async function SiteHeader({
             {siteName}
           </Link>
           {/* Pilares de sección (Mercado · BiS): solo con sesión, ambos
-              requieren login. */}
-          {fullUser && user && <HeaderNav />}
+              requieren login. Separador vertical para que el menú no parezca
+              parte del título. */}
+          {fullUser && user && (
+            <>
+              <span aria-hidden className="h-5 w-px shrink-0 bg-ro-on-navy/25" />
+              <HeaderNav />
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
