@@ -7,7 +7,7 @@ import { EquipSlot, ItemOptionGroup, type ItemOptionDef } from "@prisma/client";
 import { ItemPicker, type ItemResult } from "@/app/market/new/ItemPicker";
 import { getOptionChoices } from "@/lib/listings";
 import { createBisEntry, updateBisEntry, deleteBisEntry } from "@/lib/bis-actions";
-import { optionGroupForSlot, slotSupportsGeneric } from "@/lib/bis-constants";
+import { optionGroupForSlot } from "@/lib/bis-constants";
 import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
 import { getErrorMessage } from "@/lib/errors";
@@ -15,7 +15,6 @@ import { slotLabel } from "@/lib/market-labels";
 import { buttonClass, inputBaseClass, selectClass, labelClass } from "@/lib/ui";
 import type { Tag, BisEntryView, BisEntryItem } from "./BisBoard";
 
-type Mode = "CONCRETE" | "GENERIC";
 type WeaponClass = "PHYSICAL" | "MAGICAL" | "";
 type OptionInput = { defId: string; minValue: string };
 
@@ -58,8 +57,6 @@ export function BisEntryForm({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [slot, setSlot] = useState<EquipSlot>(entry?.slot ?? slots[0]);
-  const supportsGeneric = slotSupportsGeneric(slot);
-  const [mode, setMode] = useState<Mode>(entry ? (entry.item ? "CONCRETE" : "GENERIC") : "CONCRETE");
 
   const [selectedItem, setSelectedItem] = useState<ItemResult | null>(
     entry?.item ? toItemResult(entry.item) : null,
@@ -83,17 +80,17 @@ export function BisEntryForm({
   const [jobIds, setJobIds] = useState<string[]>(entry?.jobs.map((j) => j.id) ?? []);
   const [note, setNote] = useState(entry?.note ?? "");
 
-  // Grupo de options efectivo (genérico): por slot, o físico/mágico en arma.
-  const group: ItemOptionGroup | null =
-    mode !== "GENERIC"
-      ? null
-      : slot === EquipSlot.WEAPON
-        ? weaponClass === "PHYSICAL"
-          ? ItemOptionGroup.WEAPON_PHYSICAL
-          : weaponClass === "MAGICAL"
-            ? ItemOptionGroup.WEAPON_MAGICAL
-            : null
-        : optionGroupForSlot(slot);
+  // Pool de options: del propio item si se elige uno (un item concreto también
+  // puede llevar options); si no hay item, por slot (o físico/mágico en arma).
+  const group: ItemOptionGroup | null = selectedItem
+    ? selectedItem.optionGroup
+    : slot === EquipSlot.WEAPON
+      ? weaponClass === "PHYSICAL"
+        ? ItemOptionGroup.WEAPON_PHYSICAL
+        : weaponClass === "MAGICAL"
+          ? ItemOptionGroup.WEAPON_MAGICAL
+          : null
+      : optionGroupForSlot(slot);
 
   useEffect(() => {
     // La sección de options solo se pinta cuando hay `group`, así que basta con
@@ -110,6 +107,20 @@ export function BisEntryForm({
     };
   }, [group]);
 
+  function emptyOptions(): OptionInput[] {
+    return Array.from({ length: MAX_OPTION_SLOTS }, () => ({ defId: "", minValue: "" }));
+  }
+  // Al cambiar el item (o quitarlo) el pool cambia, así que las options elegidas
+  // dejan de valer: se limpian.
+  function chooseItem(item: ItemResult) {
+    setSelectedItem(item);
+    setOptions(emptyOptions());
+  }
+  function clearItem() {
+    setSelectedItem(null);
+    setOptions(emptyOptions());
+  }
+
   function toggle(list: string[], id: string, set: (v: string[]) => void) {
     set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   }
@@ -117,35 +128,31 @@ export function BisEntryForm({
   const maxCardSlots = selectedItem ? getMaxCardSlots(selectedItem) : 0;
   const hasTag = roleIds.length + jobIds.length > 0;
   const hasOption = options.some((o) => o.defId !== "");
-  const canSubmit =
-    hasTag &&
-    (mode === "CONCRETE"
-      ? selectedItem !== null
-      : group !== null && hasOption);
+  // Item y options son opcionales, pero hace falta al menos uno (además de ≥1 tag).
+  const canSubmit = hasTag && (selectedItem !== null || hasOption);
 
   function submit() {
     setError(null);
     const fd = new FormData();
     fd.set("stageId", stageId);
     fd.set("slot", slot);
-    fd.set("mode", mode);
     if (note.trim()) fd.set("note", note.trim());
     roleIds.forEach((id) => fd.append("roleIds", id));
     jobIds.forEach((id) => fd.append("jobIds", id));
 
-    if (mode === "CONCRETE") {
-      if (selectedItem) fd.set("itemId", selectedItem.id);
+    if (selectedItem) {
+      fd.set("itemId", selectedItem.id);
       if (refine.trim()) fd.set("refineLevel", refine.trim());
       if (cardSlots.trim()) fd.set("cardSlots", cardSlots.trim());
-    } else {
-      if (slot === EquipSlot.WEAPON && weaponClass) fd.set("weaponClass", weaponClass);
-      options.forEach((o, i) => {
-        if (o.defId) {
-          fd.set(`option${i + 1}DefId`, o.defId);
-          if (o.minValue.trim()) fd.set(`option${i + 1}MinValue`, o.minValue.trim());
-        }
-      });
+    } else if (slot === EquipSlot.WEAPON && weaponClass) {
+      fd.set("weaponClass", weaponClass);
     }
+    options.forEach((o, i) => {
+      if (o.defId) {
+        fd.set(`option${i + 1}DefId`, o.defId);
+        if (o.minValue.trim()) fd.set(`option${i + 1}MinValue`, o.minValue.trim());
+      }
+    });
 
     startTransition(async () => {
       try {
@@ -210,137 +217,111 @@ export function BisEntryForm({
             </div>
           )}
 
-          {/* Modo: concreto vs genérico (solo si el slot admite options). */}
-          {supportsGeneric && (
-            <div className="flex gap-1.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-1">
-              {(["CONCRETE", "GENERIC"] as Mode[]).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMode(m)}
-                  className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
-                    mode === m ? "bg-ro-accent/15 text-ro-accent" : "text-ro-text-muted hover:text-ro-text"
-                  }`}
-                >
-                  {t(m === "CONCRETE" ? "form.modeConcrete" : "form.modeGeneric")}
-                </button>
-              ))}
+          {/* Item (opcional) y options (opcional): al menos uno. Un item concreto
+              puede además llevar options concretas de su propio pool. */}
+          <div>
+            <label className={labelClass}>{t("form.itemLabel")}</label>
+            <ItemPicker selected={selectedItem} onSelect={chooseItem} onClear={clearItem} />
+            <p className="mt-1 text-[0.7rem] text-ro-text-muted">{t("form.itemOrOptionHint")}</p>
+          </div>
+
+          {selectedItem && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>{t("form.refine")}</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={refine}
+                  onChange={(e) => setRefine(e.target.value)}
+                  placeholder="0"
+                  className={`w-full ${inputBaseClass}`}
+                />
+              </div>
+              {maxCardSlots > 0 && (
+                <div>
+                  <label className={labelClass}>{t("form.cardSlots")}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={maxCardSlots}
+                    value={cardSlots}
+                    onChange={(e) => setCardSlots(e.target.value)}
+                    placeholder="0"
+                    className={`w-full ${inputBaseClass}`}
+                  />
+                </div>
+              )}
             </div>
           )}
 
-          {mode === "CONCRETE" ? (
-            <>
-              <div>
-                <label className={labelClass}>{t("form.itemLabel")}</label>
-                <ItemPicker
-                  selected={selectedItem}
-                  onSelect={setSelectedItem}
-                  onClear={() => setSelectedItem(null)}
-                />
+          {/* Físico/mágico: solo para options SIN item en arma (con item, el pool
+              lo fija el propio item por su weaponType). */}
+          {!selectedItem && slot === EquipSlot.WEAPON && (
+            <div>
+              <label className={labelClass}>{t("form.weaponClass")}</label>
+              <div className="flex gap-1.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-1">
+                {(["PHYSICAL", "MAGICAL"] as const).map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => {
+                      setWeaponClass(w);
+                      setOptions(emptyOptions());
+                    }}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+                      weaponClass === w ? "bg-ro-accent/15 text-ro-accent" : "text-ro-text-muted hover:text-ro-text"
+                    }`}
+                  >
+                    {t(w === "PHYSICAL" ? "form.physical" : "form.magical")}
+                  </button>
+                ))}
               </div>
-              {selectedItem && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelClass}>{t("form.refine")}</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={refine}
-                      onChange={(e) => setRefine(e.target.value)}
-                      placeholder="0"
-                      className={`w-full ${inputBaseClass}`}
-                    />
-                  </div>
-                  {maxCardSlots > 0 && (
-                    <div>
-                      <label className={labelClass}>{t("form.cardSlots")}</label>
+            </div>
+          )}
+
+          {group && (
+            <div>
+              <label className={labelClass}>{t("form.optionsLabel")}</label>
+              <div className="flex flex-col gap-2">
+                {options.map((o, i) => {
+                  const defsForSlot = optionDefs.filter((d) => d.slotIndex === i + 1);
+                  const def = defsForSlot.find((d) => d.id === o.defId);
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-ro-accent/15 text-[0.7rem] font-bold text-ro-accent">
+                        {i + 1}
+                      </span>
+                      <select
+                        value={o.defId}
+                        onChange={(e) =>
+                          setOptions((prev) => prev.map((p, j) => (j === i ? { ...p, defId: e.target.value } : p)))
+                        }
+                        className={`min-w-0 flex-1 ${selectClass}`}
+                      >
+                        <option value="">{t("form.optionNone")}</option>
+                        {defsForSlot.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.label}
+                          </option>
+                        ))}
+                      </select>
                       <input
                         type="number"
-                        min={0}
-                        max={maxCardSlots}
-                        value={cardSlots}
-                        onChange={(e) => setCardSlots(e.target.value)}
-                        placeholder="0"
-                        className={`w-full ${inputBaseClass}`}
+                        value={o.minValue}
+                        disabled={!o.defId}
+                        onChange={(e) =>
+                          setOptions((prev) => prev.map((p, j) => (j === i ? { ...p, minValue: e.target.value } : p)))
+                        }
+                        placeholder={def ? `${def.minValue}` : t("form.min")}
+                        className={`w-20 ${inputBaseClass} disabled:opacity-40`}
                       />
                     </div>
-                  )}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              {slot === EquipSlot.WEAPON && (
-                <div>
-                  <label className={labelClass}>{t("form.weaponClass")}</label>
-                  <div className="flex gap-1.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-1">
-                    {(["PHYSICAL", "MAGICAL"] as const).map((w) => (
-                      <button
-                        key={w}
-                        type="button"
-                        onClick={() => {
-                          setWeaponClass(w);
-                          // Al cambiar de pool, las options elegidas dejan de valer.
-                          setOptions(Array.from({ length: MAX_OPTION_SLOTS }, () => ({ defId: "", minValue: "" })));
-                        }}
-                        className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
-                          weaponClass === w ? "bg-ro-accent/15 text-ro-accent" : "text-ro-text-muted hover:text-ro-text"
-                        }`}
-                      >
-                        {t(w === "PHYSICAL" ? "form.physical" : "form.magical")}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {group && (
-                <div>
-                  <label className={labelClass}>{t("form.optionsLabel")}</label>
-                  <div className="flex flex-col gap-2">
-                    {options.map((o, i) => {
-                      const defsForSlot = optionDefs.filter((d) => d.slotIndex === i + 1);
-                      const def = defsForSlot.find((d) => d.id === o.defId);
-                      return (
-                        <div key={i} className="flex items-center gap-2">
-                          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-ro-accent/15 text-[0.7rem] font-bold text-ro-accent">
-                            {i + 1}
-                          </span>
-                          <select
-                            value={o.defId}
-                            onChange={(e) =>
-                              setOptions((prev) =>
-                                prev.map((p, j) => (j === i ? { ...p, defId: e.target.value } : p)),
-                              )
-                            }
-                            className={`min-w-0 flex-1 ${selectClass}`}
-                          >
-                            <option value="">{t("form.optionNone")}</option>
-                            {defsForSlot.map((d) => (
-                              <option key={d.id} value={d.id}>
-                                {d.label}
-                              </option>
-                            ))}
-                          </select>
-                          <input
-                            type="number"
-                            value={o.minValue}
-                            disabled={!o.defId}
-                            onChange={(e) =>
-                              setOptions((prev) =>
-                                prev.map((p, j) => (j === i ? { ...p, minValue: e.target.value } : p)),
-                              )
-                            }
-                            placeholder={def ? `${def.minValue}` : t("form.min")}
-                            className={`w-20 ${inputBaseClass} disabled:opacity-40`}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-1 text-[0.7rem] text-ro-text-muted">{t("form.optionsHint")}</p>
-                </div>
-              )}
-            </>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-[0.7rem] text-ro-text-muted">{t("form.optionsHint")}</p>
+            </div>
           )}
 
           {/* Etiquetas: roles + jobs (multi, ≥1 en total). */}

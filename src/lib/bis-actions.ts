@@ -9,7 +9,8 @@ import { requireSession } from "@/lib/guard";
 import { canEditBis, optionGroupForSlot } from "@/lib/bis";
 import { loadMarketConfig } from "@/lib/market-config";
 import { getMaxCardSlots } from "@/lib/card-slots-constants";
-import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
+import { loadMagicalWeaponTypes } from "@/lib/item-options";
+import { MAX_OPTION_SLOTS, getItemOptionGroup } from "@/lib/item-options-constants";
 
 const MAX_BIS_NOTE = 500;
 
@@ -92,17 +93,15 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
   const schema = z.object({
     stageId: z.string().min(1, t("invalidData")),
     slot: z.nativeEnum(EquipSlot),
-    mode: z.enum(["CONCRETE", "GENERIC"]),
     note: z.string().trim().max(MAX_BIS_NOTE, t("notesTooLong", { max: MAX_BIS_NOTE })).optional(),
   });
   const parsed = schema.safeParse({
     stageId: formData.get("stageId"),
     slot: formData.get("slot"),
-    mode: formData.get("mode"),
     note: formData.get("note") || undefined,
   });
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
-  const { stageId, slot, mode, note } = parsed.data;
+  const { stageId, slot, note } = parsed.data;
 
   const stage = await prisma.bisStage.findUnique({ where: { id: stageId }, select: { id: true } });
   if (!stage) throw new Error(t("stageNotFound"));
@@ -111,17 +110,22 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
   const jobIds = uniqueStrings(formData.getAll("jobIds"));
   if (roleIds.length + jobIds.length === 0) throw new Error(t("bisNeedTag"));
 
+  // Item (opcional) y options (opcional), pero al menos uno de los dos. Un item
+  // concreto puede además llevar options concretas (de su propio pool).
   let itemId: string | null = null;
   let refineLevel: number | null = null;
   let cardSlots: number | null = null;
-  let options: ParsedOption[] = [];
+  // Grupo del pool de options: del propio item si hay uno; si no, por slot (o
+  // físico/mágico en arma).
+  let group: ItemOptionGroup | null = null;
 
-  if (mode === "CONCRETE") {
-    const rawItemId = formData.get("itemId");
-    if (typeof rawItemId !== "string" || rawItemId === "") throw new Error(t("selectItem"));
+  const rawItemId = formData.get("itemId");
+  const hasItem = typeof rawItemId === "string" && rawItemId !== "";
+
+  if (hasItem) {
     const item = await prisma.item.findUnique({
-      where: { id: rawItemId },
-      select: { id: true, category: true, slot: true },
+      where: { id: rawItemId as string },
+      select: { id: true, category: true, slot: true, weaponType: true },
     });
     if (!item) throw new Error(t("itemNotFound"));
     // Integridad: el arma va en el slot WEAPON; el resto, el slot del item debe
@@ -129,6 +133,7 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
     const slotOk = slot === EquipSlot.WEAPON ? item.category === "WEAPON" : item.slot === slot;
     if (!slotOk) throw new Error(t("bisItemSlotMismatch"));
     itemId = item.id;
+    group = getItemOptionGroup(item, await loadMagicalWeaponTypes());
 
     const { maxRefineLevel } = await loadMarketConfig();
     refineLevel = parseOptionalInt(formData.get("refineLevel"), t);
@@ -146,12 +151,22 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
     const rawWeaponClass = formData.get("weaponClass");
     const weaponClass: WeaponClass | null =
       rawWeaponClass === "PHYSICAL" || rawWeaponClass === "MAGICAL" ? rawWeaponClass : null;
-    const group = resolveOptionGroup(slot, weaponClass);
+    group = resolveOptionGroup(slot, weaponClass);
+  }
+
+  const options = parseBisOptions(formData, t);
+
+  // Regla: al menos uno de item u options.
+  if (!hasItem && options.length === 0) throw new Error(t("bisNeedItemOrOption"));
+
+  if (options.length > 0) {
     if (!group) {
-      throw new Error(slot === EquipSlot.WEAPON ? t("bisWeaponClassRequired") : t("bisNoOptionsForSlot"));
+      // Hay options pero no hay pool: item que no admite options, o arma
+      // genérica sin elegir físico/mágico, o slot sin options.
+      throw new Error(
+        !hasItem && slot === EquipSlot.WEAPON ? t("bisWeaponClassRequired") : t("bisNoOptionsForSlot"),
+      );
     }
-    options = parseBisOptions(formData, t);
-    if (options.length === 0) throw new Error(t("bisNeedOption"));
     await validateBisOptions(options, group, t);
   }
 
@@ -244,6 +259,34 @@ export async function deleteBisEntry(entryId: string): Promise<void> {
   } catch {
     throw new Error(t("bisEntryNotFound"));
   }
+
+  revalidatePath("/bis");
+}
+
+// Reordena los BiS de un slot (drag & drop): `orderedIds` es el nuevo orden
+// completo de las entradas de ese stage+slot; se les asigna position = índice.
+// Solo se tocan las que de verdad pertenecen a ese stage+slot (defensa).
+export async function reorderBisEntries(
+  stageId: string,
+  slot: EquipSlot,
+  orderedIds: string[],
+): Promise<void> {
+  const t = await getTranslations("errors");
+  await requireSession();
+  if (!(await canEditBis())) throw new Error(t("notBisEditor"));
+
+  const existing = await prisma.bisEntry.findMany({
+    where: { stageId, slot },
+    select: { id: true },
+  });
+  const valid = new Set(existing.map((e) => e.id));
+  const ordered = orderedIds.filter((id) => valid.has(id));
+
+  await prisma.$transaction(
+    ordered.map((id, index) =>
+      prisma.bisEntry.update({ where: { id }, data: { position: index } }),
+    ),
+  );
 
   revalidatePath("/bis");
 }
