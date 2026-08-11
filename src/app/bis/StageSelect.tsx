@@ -22,24 +22,20 @@ export function StageSelect({
   const t = useTranslations("bis");
 
   return (
-    <label className="flex shrink-0 items-center gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-ro-text-muted">
-        {t("stageLabel")}
-      </span>
-      <select
-        value={selectedKey}
-        onChange={(e) => {
-          const key = e.target.value;
-          router.push(key === defaultKey ? "/bis" : `/bis?stage=${encodeURIComponent(key)}`);
-        }}
-        className={selectClass}
-      >
-        {stages.map((s) => (
-          <option key={s.id} value={s.key}>
-            {s.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      aria-label={t("stageLabel")}
+      value={selectedKey}
+      onChange={(e) => {
+        const key = e.target.value;
+        router.push(key === defaultKey ? "/bis" : `/bis?stage=${encodeURIComponent(key)}`);
+      }}
+      className={`shrink-0 ${selectClass}`}
+    >
+      {stages.map((s) => (
+        <option key={s.id} value={s.key}>
+          {s.label}
+        </option>
+      ))}
+    </select>
   );
 }
