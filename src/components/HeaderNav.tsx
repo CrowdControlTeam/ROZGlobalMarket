@@ -28,20 +28,20 @@ export function HeaderNav() {
   ];
 
   return (
-    <nav aria-label={t("label")} className="flex items-center gap-1">
+    <nav aria-label={t("label")} className="flex items-center gap-3 sm:gap-4">
       {items.map((it) => (
         <Link
           key={it.href}
           href={it.href}
           aria-current={it.active ? "page" : undefined}
-          // Regla del rediseño: los estados activos usan el ACENTO (Azul ROZ),
-          // no blanco/gris (rojo = acciones, gold = precios). Sobre la barra
-          // navy el texto se mantiene claro (ro-on-navy) por contraste en ambos
-          // temas; el activo se marca con tinte de acento, como en MarketNav.
-          className={`rounded-md px-2.5 py-1 text-sm font-bold transition-colors ${
+          // Estilo del mockup del rediseño (.nlink): enlaces de texto sobre la
+          // barra navy, sin pill de fondo. Inactivo atenuado (ro-on-navy ~60%);
+          // el activo va a full + subrayado de ACENTO (border-b), como en el
+          // diseño. El borde transparente en inactivo evita salto de layout.
+          className={`border-b-2 pb-0.5 text-sm font-semibold transition-colors ${
             it.active
-              ? "bg-ro-accent/20 text-ro-on-navy"
-              : "text-ro-on-navy/70 hover:bg-ro-accent/10 hover:text-ro-on-navy"
+              ? "border-ro-accent text-ro-on-navy"
+              : "border-transparent text-ro-on-navy/60 hover:text-ro-on-navy"
           }`}
         >
           {it.label}
