@@ -87,9 +87,9 @@ export default async function BisPage({
           cardSlots: e.cardSlots ?? 0,
         }
       : null,
-    // Grupo del BiS genérico = el de cualquiera de sus options (todas comparten
-    // pool); null en los concretos.
-    optionGroup: e.itemId ? null : (e.options[0]?.def.group ?? null),
+    // Grupo del pool de sus options (todas comparten pool); null si no lleva
+    // options. Un item concreto también puede tener options.
+    optionGroup: e.options[0]?.def.group ?? null,
     options: e.options.map((o) => ({
       slotIndex: o.slotIndex,
       defId: o.defId,
