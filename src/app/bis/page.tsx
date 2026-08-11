@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
 import { BisBoard, type BisEntryView } from "./BisBoard";
+import { StageSelect } from "./StageSelect";
 
 // Visible para cualquier usuario logueado (no solo admins), como el resto de la
 // app: requiere sesión. Solo lectura en esta fase; crear/editar (gated por
@@ -23,17 +23,17 @@ export default async function BisPage({
   const stages = await prisma.bisStage.findMany({ orderBy: { order: "desc" } });
   const selectedStage = stages.find((s) => s.key === stageParam) ?? stages[0] ?? null;
 
-  const header = (
-    <header className="mb-6">
+  const heading = (
+    <div className="min-w-0">
       <h1 className="font-heading text-lg tracking-wide text-ro-text">{t("title")}</h1>
       <p className="mt-1 text-sm text-ro-text-muted">{t("subtitle")}</p>
-    </header>
+    </div>
   );
 
   if (!selectedStage) {
     return (
       <main className="mx-auto max-w-5xl px-6 py-8">
-        {header}
+        <div className="mb-6">{heading}</div>
         <p className="text-ro-text-muted">{t("noStages")}</p>
       </main>
     );
@@ -86,32 +86,12 @@ export default async function BisPage({
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
-      {header}
-
-      {stages.length > 1 && (
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-ro-text-muted">
-            {t("stageLabel")}
-          </span>
-          {stages.map((s) => {
-            const active = s.id === selectedStage.id;
-            return (
-              <Link
-                key={s.id}
-                href={s.key === stages[0].key ? "/bis" : `/bis?stage=${encodeURIComponent(s.key)}`}
-                aria-current={active ? "true" : undefined}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  active
-                    ? "border-ro-accent bg-ro-accent/10 text-ro-accent"
-                    : "border-ro-panel-border bg-ro-panel-alt text-ro-text-muted hover:border-ro-accent hover:text-ro-accent"
-                }`}
-              >
-                {s.label}
-              </Link>
-            );
-          })}
-        </div>
-      )}
+      <div className="mb-6 flex items-start justify-between gap-4">
+        {heading}
+        {stages.length > 1 && (
+          <StageSelect stages={stages} selectedKey={selectedStage.key} defaultKey={stages[0].key} />
+        )}
+      </div>
 
       <BisBoard entries={entries} roles={roles} jobs={jobs} />
     </main>
