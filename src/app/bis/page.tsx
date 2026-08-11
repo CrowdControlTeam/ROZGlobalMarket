@@ -1,6 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
+import { canEditBis } from "@/lib/bis";
+import { loadMagicalWeaponTypes } from "@/lib/item-options";
+import { getItemOptionGroup } from "@/lib/item-options-constants";
 import { BisBoard, type BisEntryView } from "./BisBoard";
 import { StageSelect } from "./StageSelect";
 
@@ -39,15 +42,17 @@ export default async function BisPage({
     );
   }
 
-  const [rawEntries, roles, jobs] = await Promise.all([
+  const [rawEntries, roles, jobs, magicalTypes, canEdit] = await Promise.all([
     prisma.bisEntry.findMany({
       where: { stageId: selectedStage.id },
       orderBy: [{ slot: "asc" }, { position: "asc" }],
       include: {
-        item: { select: { id: true, name: true, iconUrl: true } },
+        item: {
+          select: { id: true, name: true, iconUrl: true, category: true, slot: true, weaponType: true },
+        },
         options: {
           orderBy: { slotIndex: "asc" },
-          select: { slotIndex: true, minValue: true, def: { select: { label: true } } },
+          select: { slotIndex: true, defId: true, minValue: true, def: { select: { label: true, group: true } } },
         },
         roles: { orderBy: { order: "asc" }, select: { id: true, label: true } },
         jobs: { orderBy: { order: "asc" }, select: { id: true, label: true } },
@@ -61,6 +66,8 @@ export default async function BisPage({
       orderBy: { order: "asc" },
       select: { id: true, label: true },
     }),
+    loadMagicalWeaponTypes(),
+    canEditBis(),
   ]);
 
   const entries: BisEntryView[] = rawEntries.map((e) => ({
@@ -69,14 +76,23 @@ export default async function BisPage({
     note: e.note,
     item: e.item
       ? {
+          id: e.item.id,
           name: e.item.name,
           iconUrl: e.item.iconUrl,
+          category: e.item.category,
+          slot: e.item.slot,
+          weaponType: e.item.weaponType,
+          optionGroup: getItemOptionGroup(e.item, magicalTypes),
           refineLevel: e.refineLevel ?? 0,
           cardSlots: e.cardSlots ?? 0,
         }
       : null,
+    // Grupo del BiS genérico = el de cualquiera de sus options (todas comparten
+    // pool); null en los concretos.
+    optionGroup: e.itemId ? null : (e.options[0]?.def.group ?? null),
     options: e.options.map((o) => ({
       slotIndex: o.slotIndex,
+      defId: o.defId,
       minValue: o.minValue,
       label: o.def.label,
     })),
@@ -93,7 +109,13 @@ export default async function BisPage({
         )}
       </div>
 
-      <BisBoard entries={entries} roles={roles} jobs={jobs} />
+      <BisBoard
+        entries={entries}
+        roles={roles}
+        jobs={jobs}
+        canEdit={canEdit}
+        stageId={selectedStage.id}
+      />
     </main>
   );
 }

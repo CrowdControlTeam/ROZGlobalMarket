@@ -138,7 +138,15 @@
     "noImageReceived": "No se ha recibido ninguna imagen",
     "imageTooLarge": "La imagen no puede superar los {max} MB",
     "rateLimited": "Demasiadas peticiones. Espera {seconds} s e inténtalo de nuevo.",
-    "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano."
+    "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano.",
+    "notBisEditor": "No tienes permiso para editar BiS",
+    "stageNotFound": "La etapa no existe",
+    "bisEntryNotFound": "El BiS no existe o ya se ha eliminado",
+    "bisNeedTag": "Selecciona al menos un rol o un job",
+    "bisNeedOption": "Añade al menos una option",
+    "bisNoOptionsForSlot": "Este slot no admite random options",
+    "bisWeaponClassRequired": "Elige si el arma es física o mágica",
+    "bisItemSlotMismatch": "El item no corresponde a este slot de equipo"
   },
   "admin": {
     "title": "Configuración",
@@ -678,6 +686,35 @@
     "showAll": "Ver todas ({count})",
     "showLess": "Ver menos",
     "anyItem": "Cualquiera",
-    "noStages": "Todavía no hay etapas configuradas."
+    "noStages": "Todavía no hay etapas configuradas.",
+    "add": "Añadir",
+    "edit": "Editar",
+    "form": {
+      "addTitle": "Añadir BiS",
+      "editTitle": "Editar BiS",
+      "slotLabel": "Slot",
+      "modeConcrete": "Item concreto",
+      "modeGeneric": "Cualquiera con options",
+      "itemLabel": "Item",
+      "refine": "Refine",
+      "cardSlots": "Slots",
+      "weaponClass": "Tipo de arma",
+      "physical": "Física",
+      "magical": "Mágica",
+      "optionsLabel": "Options",
+      "optionNone": "— Sin option —",
+      "optionsHint": "El valor es un mínimo opcional; vacío = cualquier valor.",
+      "min": "Mín",
+      "rolesLabel": "Roles",
+      "jobsLabel": "Jobs",
+      "needTag": "Selecciona al menos un rol o un job.",
+      "noteLabel": "Nota",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "delete": "Borrar",
+      "confirmDelete": "¿Seguro? Borrar",
+      "saveError": "No se pudo guardar. Inténtalo de nuevo."
+    }
   }
 }

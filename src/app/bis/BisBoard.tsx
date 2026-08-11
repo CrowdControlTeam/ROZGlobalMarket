@@ -14,24 +14,42 @@ import {
   Footprints,
   ChevronDown,
   MessageSquareText,
+  Plus,
   X,
   type LucideIcon,
 } from "lucide-react";
-import type { EquipSlot } from "@prisma/client";
+import type { EquipSlot, ItemCategory, ItemOptionGroup, WeaponType } from "@prisma/client";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount } from "@/lib/market-labels";
 import { BisDetail, type BisDetailData } from "./BisDetail";
+import { BisEntryForm } from "./BisEntryForm";
 
-type Tag = { id: string; label: string };
+export type Tag = { id: string; label: string };
+
+// Item concreto de un BiS: además de lo que pinta la card (name/icon/refine/
+// slots), lleva lo que necesita el editor (id + category/slot/weaponType para
+// validar y calcular slots, optionGroup ya resuelto). null = BiS genérico.
+export type BisEntryItem = {
+  id: string;
+  name: string;
+  iconUrl: string;
+  category: ItemCategory;
+  slot: EquipSlot | null;
+  weaponType: WeaponType | null;
+  optionGroup: ItemOptionGroup | null;
+  refineLevel: number;
+  cardSlots: number;
+};
 
 export type BisEntryView = {
   id: string;
   slot: EquipSlot;
   note: string | null;
-  // Item concreto (con su refine/slots ya resueltos) o null = BiS genérico
-  // ("cualquier pieza con estas options").
-  item: { name: string; iconUrl: string; refineLevel: number; cardSlots: number } | null;
-  options: { slotIndex: number; minValue: number | null; label: string }[];
+  item: BisEntryItem | null;
+  // Grupo de options de un BiS genérico (null en los concretos). Sirve al editor
+  // para recargar el pool correcto y, en arma, saber si es físico o mágico.
+  optionGroup: ItemOptionGroup | null;
+  options: { slotIndex: number; defId: string; minValue: number | null; label: string }[];
   roles: Tag[];
   jobs: Tag[];
 };
@@ -195,13 +213,17 @@ function SlotCell({
   label,
   all,
   shown,
+  canEdit,
   onOpen,
+  onAdd,
 }: {
   def: CellDef;
   label: string;
   all: BisEntryView[];
   shown: BisEntryView[];
+  canEdit: boolean;
   onOpen: (entry: BisEntryView) => void;
+  onAdd: () => void;
 }) {
   const t = useTranslations("bis");
   const [expanded, setExpanded] = useState(false);
@@ -217,9 +239,22 @@ function SlotCell({
           <Icon size={16} aria-hidden />
         </span>
         <h3 className="font-heading text-xs tracking-wide text-ro-text">{label}</h3>
-        {shown.length > 0 && (
-          <span className="ml-auto text-[0.65rem] font-semibold text-ro-text-muted">{shown.length}</span>
-        )}
+        <div className="ml-auto flex items-center gap-1.5">
+          {shown.length > 0 && (
+            <span className="text-[0.65rem] font-semibold text-ro-text-muted">{shown.length}</span>
+          )}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={onAdd}
+              aria-label={t("add")}
+              title={t("add")}
+              className="grid h-6 w-6 place-items-center rounded-md border border-ro-panel-border text-ro-text-muted transition-colors hover:border-ro-accent hover:text-ro-accent"
+            >
+              <Plus size={14} aria-hidden />
+            </button>
+          )}
+        </div>
       </header>
 
       {shown.length === 0 ? (
@@ -255,10 +290,14 @@ export function BisBoard({
   entries,
   roles,
   jobs,
+  canEdit,
+  stageId,
 }: {
   entries: BisEntryView[];
   roles: Tag[];
   jobs: Tag[];
+  canEdit: boolean;
+  stageId: string;
 }) {
   const t = useTranslations("bis");
   const [activeRole, setActiveRole] = useState<string | null>(null);
@@ -266,6 +305,9 @@ export function BisBoard({
   // Entrada abierta en el detalle (panel/bottom sheet); guarda también el
   // nombre de su celda (slot), que la propia entrada no conoce como texto.
   const [selected, setSelected] = useState<BisDetailData | null>(null);
+  // Modal de edición: al crear lleva los slots del cell (cabeza = 3) y entry
+  // null; al editar, la entrada y su propio slot.
+  const [editing, setEditing] = useState<{ slots: EquipSlot[]; entry: BisEntryView | null } | null>(null);
 
   function toggle(current: string | null, next: string, set: (v: string | null) => void) {
     set(current === next ? null : next);
@@ -296,7 +338,9 @@ export function BisBoard({
         label={label}
         all={all}
         shown={shown}
+        canEdit={canEdit}
         onOpen={(entry) => setSelected({ entry, slotLabel: label, slotIcon: def.Icon })}
+        onAdd={() => setEditing({ slots: def.slots, entry: null })}
       />
     );
   }
@@ -339,7 +383,29 @@ export function BisBoard({
         {ALL_CELLS.map(renderCell)}
       </div>
 
-      {selected && <BisDetail data={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <BisDetail
+          data={selected}
+          canEdit={canEdit}
+          onEdit={() => {
+            setEditing({ slots: [selected.entry.slot], entry: selected.entry });
+            setSelected(null);
+          }}
+          onClose={() => setSelected(null)}
+        />
+      )}
+
+      {editing && (
+        <BisEntryForm
+          key={editing.entry?.id ?? `new-${editing.slots.join("-")}`}
+          stageId={stageId}
+          slots={editing.slots}
+          entry={editing.entry}
+          roles={roles}
+          jobs={jobs}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }

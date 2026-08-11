@@ -138,7 +138,15 @@
     "noImageReceived": "No image was received",
     "imageTooLarge": "The image can't be larger than {max} MB",
     "rateLimited": "Too many requests. Wait {seconds}s and try again.",
-    "recognitionFailed": "Automatic detection failed. Try again or fill in the item by hand."
+    "recognitionFailed": "Automatic detection failed. Try again or fill in the item by hand.",
+    "notBisEditor": "You don't have permission to edit BiS",
+    "stageNotFound": "The stage does not exist",
+    "bisEntryNotFound": "The BiS doesn't exist or was already removed",
+    "bisNeedTag": "Pick at least one role or job",
+    "bisNeedOption": "Add at least one option",
+    "bisNoOptionsForSlot": "This slot doesn't allow random options",
+    "bisWeaponClassRequired": "Choose whether the weapon is physical or magical",
+    "bisItemSlotMismatch": "The item doesn't match this equipment slot"
   },
   "admin": {
     "title": "Settings",
@@ -678,6 +686,35 @@
     "showAll": "Show all ({count})",
     "showLess": "Show less",
     "anyItem": "Any item",
-    "noStages": "No stages configured yet."
+    "noStages": "No stages configured yet.",
+    "add": "Add",
+    "edit": "Edit",
+    "form": {
+      "addTitle": "Add BiS",
+      "editTitle": "Edit BiS",
+      "slotLabel": "Slot",
+      "modeConcrete": "Specific item",
+      "modeGeneric": "Any with options",
+      "itemLabel": "Item",
+      "refine": "Refine",
+      "cardSlots": "Slots",
+      "weaponClass": "Weapon type",
+      "physical": "Physical",
+      "magical": "Magical",
+      "optionsLabel": "Options",
+      "optionNone": "— No option —",
+      "optionsHint": "The value is an optional minimum; empty = any value.",
+      "min": "Min",
+      "rolesLabel": "Roles",
+      "jobsLabel": "Jobs",
+      "needTag": "Pick at least one role or job.",
+      "noteLabel": "Note",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "confirmDelete": "Sure? Delete",
+      "saveError": "Couldn't save. Try again."
+    }
   }
 }
