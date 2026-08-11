@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Boxes, type LucideIcon } from "lucide-react";
+import { Boxes, Pencil, type LucideIcon } from "lucide-react";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount } from "@/lib/market-labels";
 import type { BisEntryView } from "./BisBoard";
@@ -15,7 +15,17 @@ export type BisDetailData = { entry: BisEntryView; slotLabel: string; slotIcon: 
 // controlado por estado del board (la entrada ya está en memoria), así que se
 // cierra llamando a onClose. Se cierra con la X, Escape o (en móvil)
 // arrastrando el panel hacia abajo. Mismo look que market/DetailPanel.
-export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () => void }) {
+export function BisDetail({
+  data,
+  canEdit,
+  onEdit,
+  onClose,
+}: {
+  data: BisDetailData;
+  canEdit: boolean;
+  onEdit: () => void;
+  onClose: () => void;
+}) {
   const t = useTranslations("bis");
   const [mounted, setMounted] = useState(false);
   const [dragY, setDragY] = useState(0);
@@ -78,7 +88,7 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
         <span className="h-1.5 w-10 rounded-full bg-ro-panel-border" />
       </div>
 
-      <div className="flex shrink-0 justify-start px-4 pb-2 pt-3">
+      <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-3">
         <button
           type="button"
           onClick={onClose}
@@ -87,6 +97,16 @@ export function BisDetail({ data, onClose }: { data: BisDetailData; onClose: () 
         >
           ✕
         </button>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center gap-1.5 rounded-md border border-ro-panel-border px-2.5 py-1 text-xs font-medium text-ro-text transition-colors hover:border-ro-accent hover:text-ro-accent"
+          >
+            <Pencil size={13} aria-hidden />
+            {t("edit")}
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-5 overflow-y-auto px-4 pb-6">
