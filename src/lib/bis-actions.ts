@@ -247,3 +247,31 @@ export async function deleteBisEntry(entryId: string): Promise<void> {
 
   revalidatePath("/bis");
 }
+
+// Reordena los BiS de un slot (drag & drop): `orderedIds` es el nuevo orden
+// completo de las entradas de ese stage+slot; se les asigna position = índice.
+// Solo se tocan las que de verdad pertenecen a ese stage+slot (defensa).
+export async function reorderBisEntries(
+  stageId: string,
+  slot: EquipSlot,
+  orderedIds: string[],
+): Promise<void> {
+  const t = await getTranslations("errors");
+  await requireSession();
+  if (!(await canEditBis())) throw new Error(t("notBisEditor"));
+
+  const existing = await prisma.bisEntry.findMany({
+    where: { stageId, slot },
+    select: { id: true },
+  });
+  const valid = new Set(existing.map((e) => e.id));
+  const ordered = orderedIds.filter((id) => valid.has(id));
+
+  await prisma.$transaction(
+    ordered.map((id, index) =>
+      prisma.bisEntry.update({ where: { id }, data: { position: index } }),
+    ),
+  );
+
+  revalidatePath("/bis");
+}

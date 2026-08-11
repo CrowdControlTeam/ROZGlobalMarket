@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Boxes,
@@ -18,9 +19,20 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { EquipSlot, ItemCategory, ItemOptionGroup, WeaponType } from "@prisma/client";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount } from "@/lib/market-labels";
+import { reorderBisEntries } from "@/lib/bis-actions";
 import { BisDetail, type BisDetailData } from "./BisDetail";
 import { BisEntryForm } from "./BisEntryForm";
 
@@ -206,6 +218,32 @@ function EntryCard({ entry, onOpen }: { entry: BisEntryView; onOpen: () => void 
   );
 }
 
+// Card arrastrable (drag & drop de reordenación). Activación por DISTANCIA
+// (ver PointerSensor abajo), así un click sin arrastrar sigue abriendo el
+// detalle; arrastrar reordena.
+function SortableEntry({ entry, onOpen }: { entry: BisEntryView; onOpen: () => void }) {
+  const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({
+    id: entry.id,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+    zIndex: isDragging ? 20 : undefined,
+  };
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab touch-none active:cursor-grabbing"
+    >
+      <EntryCard entry={entry} onOpen={onOpen} />
+    </li>
+  );
+}
+
 // Una celda de slot del paperdoll: cabecera (icono + nombre) y sus items. Vacía
 // muestra un aviso en gris; si hay más de CELL_LIMIT, un botón las despliega.
 function SlotCell({
@@ -214,23 +252,53 @@ function SlotCell({
   all,
   shown,
   canEdit,
+  sortable,
   onOpen,
   onAdd,
+  onReorder,
 }: {
   def: CellDef;
   label: string;
   all: BisEntryView[];
   shown: BisEntryView[];
   canEdit: boolean;
+  // DnD activo: editor, sin filtros y celda de un solo slot (la cabeza combina
+  // 3 slots distintos, reordenar entre ellos no tendría sentido).
+  sortable: boolean;
   onOpen: (entry: BisEntryView) => void;
   onAdd: () => void;
+  onReorder: (orderedIds: string[]) => void;
 }) {
   const t = useTranslations("bis");
   const [expanded, setExpanded] = useState(false);
   const { Icon } = def;
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  // @dnd-kit genera ids (aria-describedby) que no cuadran entre SSR y cliente;
+  // se activa solo tras montar para evitar el mismatch de hidratación (en SSR y
+  // primer render se pinta la lista plana).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- flag de "montado" (tras hidratar) para evitar el mismatch de @dnd-kit; SSR y primer render pintan la lista plana.
+    setMounted(true);
+  }, []);
+  const dndEnabled = sortable && mounted;
 
   const overLimit = shown.length > CELL_LIMIT;
   const visible = expanded ? shown : shown.slice(0, CELL_LIMIT);
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = visible.map((e) => e.id);
+    const oldIndex = ids.indexOf(active.id as string);
+    const newIndex = ids.indexOf(over.id as string);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const newVisible = arrayMove(ids, oldIndex, newIndex);
+    // El orden completo del slot = visibles reordenadas + las ocultas (colapso).
+    const hidden = shown.slice(CELL_LIMIT).map((e) => e.id);
+    onReorder([...newVisible, ...hidden]);
+  }
 
   return (
     <section className="flex h-full flex-col rounded-xl border border-ro-panel-border bg-ro-panel p-3">
@@ -263,13 +331,25 @@ function SlotCell({
         </p>
       ) : (
         <>
-          <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
-            {visible.map((entry) => (
-              <li key={entry.id}>
-                <EntryCard entry={entry} onOpen={() => onOpen(entry)} />
-              </li>
-            ))}
-          </ul>
+          {dndEnabled ? (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={visible.map((e) => e.id)} strategy={rectSortingStrategy}>
+                <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
+                  {visible.map((entry) => (
+                    <SortableEntry key={entry.id} entry={entry} onOpen={() => onOpen(entry)} />
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
+              {visible.map((entry) => (
+                <li key={entry.id}>
+                  <EntryCard entry={entry} onOpen={() => onOpen(entry)} />
+                </li>
+              ))}
+            </ul>
+          )}
           {overLimit && (
             <button
               type="button"
@@ -300,6 +380,8 @@ export function BisBoard({
   stageId: string;
 }) {
   const t = useTranslations("bis");
+  const router = useRouter();
+  const [, startReorder] = useTransition();
   const [activeRole, setActiveRole] = useState<string | null>(null);
   const [activeJob, setActiveJob] = useState<string | null>(null);
   // Entrada abierta en el detalle (panel/bottom sheet); guarda también el
@@ -309,6 +391,16 @@ export function BisBoard({
   // null; al editar, la entrada y su propio slot.
   const [editing, setEditing] = useState<{ slots: EquipSlot[]; entry: BisEntryView | null } | null>(null);
 
+  // Copia local de las entradas para el reorden OPTIMISTA (el DnD mueve al vuelo;
+  // el servidor persiste y refresca). Se resetea cuando el server manda datos
+  // nuevos (patrón de ajustar estado en render al cambiar la prop).
+  const [items, setItems] = useState(entries);
+  const [prevEntries, setPrevEntries] = useState(entries);
+  if (prevEntries !== entries) {
+    setPrevEntries(entries);
+    setItems(entries);
+  }
+
   function toggle(current: string | null, next: string, set: (v: string | null) => void) {
     set(current === next ? null : next);
   }
@@ -317,19 +409,40 @@ export function BisBoard({
   // lleva ese rol/job entre sus etiquetas.
   const filtered = useMemo(
     () =>
-      entries.filter(
+      items.filter(
         (e) =>
           (!activeRole || e.roles.some((r) => r.id === activeRole)) &&
           (!activeJob || e.jobs.some((j) => j.id === activeJob)),
       ),
-    [entries, activeRole, activeJob],
+    [items, activeRole, activeJob],
   );
 
   const hasFilters = activeRole !== null || activeJob !== null;
 
+  function handleReorder(slot: EquipSlot, orderedIds: string[]) {
+    // Optimista: recoloca las entradas de ese slot según el nuevo orden y deja
+    // las demás como estaban.
+    setItems((prev) => {
+      const idSet = new Set(orderedIds);
+      const inSlot = orderedIds
+        .map((id) => prev.find((e) => e.id === id))
+        .filter((e): e is BisEntryView => e !== undefined);
+      const others = prev.filter((e) => !idSet.has(e.id));
+      return [...inSlot, ...others];
+    });
+    startReorder(async () => {
+      try {
+        await reorderBisEntries(stageId, slot, orderedIds);
+      } finally {
+        // Sincroniza con la verdad del servidor (y revierte si algo falló).
+        router.refresh();
+      }
+    });
+  }
+
   function renderCell(def: CellDef) {
     const label = t(`cells.${def.key}`);
-    const all = entries.filter((e) => def.slots.includes(e.slot));
+    const all = items.filter((e) => def.slots.includes(e.slot));
     const shown = filtered.filter((e) => def.slots.includes(e.slot));
     return (
       <SlotCell
@@ -339,8 +452,10 @@ export function BisBoard({
         all={all}
         shown={shown}
         canEdit={canEdit}
+        sortable={canEdit && !hasFilters && def.slots.length === 1}
         onOpen={(entry) => setSelected({ entry, slotLabel: label, slotIcon: def.Icon })}
         onAdd={() => setEditing({ slots: def.slots, entry: null })}
+        onReorder={(orderedIds) => handleReorder(def.slots[0], orderedIds)}
       />
     );
   }
