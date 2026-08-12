@@ -20,8 +20,7 @@ import {
   buildOptionSelectionsFromDetected,
   type OptionSelection,
 } from "@/lib/item-options-constants";
-import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
-import { formatItemDisplayName } from "@/lib/card-slots-constants";
+import { isRefineEligible, formatRefinedName, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { MAX_LISTING_NOTES_LENGTH } from "@/lib/listing-notes-constants";
 import { getErrorMessage, rethrowFrameworkErrors } from "@/lib/errors";
 import { ItemPicker, type ItemResult } from "./new/ItemPicker";
@@ -308,7 +307,9 @@ export function PublishForm({
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate pr-5 text-sm font-bold text-ro-text">
-            {formatItemDisplayName(selectedItem.name, refineLevel, selectedItem.slotCount)}
+            {/* selectedItem.name ya incluye el sufijo de ranuras (viene del
+                bundle), así que solo se antepone el refine, no se duplica. */}
+            {formatRefinedName(selectedItem.name, refineLevel)}
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-ro-text-muted">
             <span className={`shrink-0 rounded px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide ${LISTING_TYPE_BADGE_CLASS[previewType]}`}>
