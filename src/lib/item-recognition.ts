@@ -247,10 +247,13 @@ export async function recognizeItemFromScreenshot(formData: FormData): Promise<R
     const sameSlots = narrowedCandidates.filter((c) => c.slotCount === extraction.cardSlots);
     if (sameSlots.length > 0) narrowedCandidates = sameSlots;
 
+    // Los nombres del bundle llevan el sufijo de ranuras ("Coat[1]"); Gemini
+    // devuelve el nombre sin sufijo, así que se compara contra el nombre base.
+    const baseName = (c: { name: string }) => c.name.replace(/\[\d+\]$/, "");
     const matchedItem =
-      findBestMatch(extraction.itemName, narrowedCandidates, (c) => c.name, NAME_MATCH_THRESHOLD) ??
+      findBestMatch(extraction.itemName, narrowedCandidates, baseName, NAME_MATCH_THRESHOLD) ??
       (narrowedCandidates !== candidates
-        ? findBestMatch(extraction.itemName, candidates, (c) => c.name, NAME_MATCH_THRESHOLD)
+        ? findBestMatch(extraction.itemName, candidates, baseName, NAME_MATCH_THRESHOLD)
         : null);
     if (!matchedItem) {
       return { status: "no_match", detectedName: extraction.itemName };

@@ -111,7 +111,9 @@ async function main() {
     .filter((r) => r.tradeable)
     .map((r) => ({
       id: r.id,
-      name: r.name,
+      // El nombre lleva el sufijo de ranuras ("Coat[1]") para distinguir en el
+      // buscador las variantes con/sin slots del mismo item.
+      name: r.slotCount > 0 ? `${r.name}[${r.slotCount}]` : r.name,
       iconUrl: r.iconUrl,
       category: r.category,
       slot: r.slot,
