@@ -30,13 +30,18 @@ export function getAllCatalogItems(): CatalogItem[] {
 // EMPIEZAN por la consulta van primero (mejor UX que un "contiene" plano), y
 // dentro de cada grupo por nombre — mismo criterio de fondo que el
 // `contains` insensible que hacía la BD, pero en memoria.
-export function searchCatalog(query: string, limit = 20): CatalogItem[] {
+export function searchCatalog(
+  query: string,
+  limit = 20,
+  filter?: (item: CatalogItem) => boolean,
+): CatalogItem[] {
   const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
 
   const prefix: CatalogItem[] = [];
   const contains: CatalogItem[] = [];
   for (const item of CATALOG) {
+    if (filter && !filter(item)) continue;
     const idx = item.name.toLowerCase().indexOf(q);
     if (idx === 0) prefix.push(item);
     else if (idx > 0) contains.push(item);

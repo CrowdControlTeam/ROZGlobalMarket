@@ -218,7 +218,7 @@ export function BisEntryForm({
               puede además llevar options concretas de su propio pool. */}
           <div>
             <label className={labelClass}>{t("form.itemLabel")}</label>
-            <ItemPicker selected={selectedItem} onSelect={chooseItem} onClear={clearItem} />
+            <ItemPicker selected={selectedItem} onSelect={chooseItem} onClear={clearItem} slotFilter={slot} />
             <p className="mt-1 text-[0.7rem] text-ro-text-muted">{t("form.itemOrOptionHint")}</p>
           </div>
 

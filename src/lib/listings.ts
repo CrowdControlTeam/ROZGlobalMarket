@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { ItemOptionGroup, type Item } from "@prisma/client";
+import { ItemOptionGroup, type EquipSlot, type Item } from "@prisma/client";
+import { itemFitsSlot } from "@/lib/bis-constants";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
@@ -27,11 +28,13 @@ import { searchCatalog } from "@/lib/item-catalog";
 import { listingStatusOnClose, availableFrom, isSoldOut } from "@/lib/deals";
 import { listingCardState } from "@/lib/listing-card";
 
-export async function searchItems(query: string) {
+export async function searchItems(query: string, slot?: EquipSlot) {
   await requireSession();
   // Búsqueda en memoria (catálogo empaquetado, ver src/lib/item-catalog.ts) en
-  // vez de pegar a la BD en cada tecla.
-  const items = searchCatalog(query, 20);
+  // vez de pegar a la BD en cada tecla. `slot` (lo usa el picker de BiS) acota a
+  // los items que encajan en ese slot de equipo, para no dejar elegir uno que
+  // luego el servidor rechazaría.
+  const items = searchCatalog(query, 20, slot ? (item) => itemFitsSlot(item, slot) : undefined);
   if (items.length === 0) return [];
 
   const [magicalTypes, optionsAvailable] = await Promise.all([

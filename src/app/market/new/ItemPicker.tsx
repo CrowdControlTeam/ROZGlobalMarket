@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import type { EquipSlot } from "@prisma/client";
 import { searchItems } from "@/lib/listings";
 import { inputClass } from "@/lib/ui";
 import { categoryLabel, weaponTypeLabel } from "@/lib/market-labels";
@@ -26,6 +27,7 @@ export function ItemPicker({
   onSelect,
   onClear,
   locked = false,
+  slotFilter,
 }: {
   selected: ItemResult | null;
   onSelect: (item: ItemResult) => void;
@@ -37,6 +39,9 @@ export function ItemPicker({
   // dependientes (refine/slots/options) visibles para un item que ya no
   // coincidía con lo que decía el input.
   onClear: () => void;
+  // Si se pasa, la búsqueda solo devuelve items que encajan en ese slot de
+  // equipo (lo usa el picker de BiS para no ofrecer items de otro slot).
+  slotFilter?: EquipSlot;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ItemResult[]>([]);
@@ -50,7 +55,7 @@ export function ItemPicker({
     setError(null);
     startTransition(async () => {
       try {
-        const found = await searchItems(value);
+        const found = await searchItems(value, slotFilter);
         setResults(found);
       } catch (err) {
         setError(getErrorMessage(err, tCommon("searchError")));

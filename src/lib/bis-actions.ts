@@ -7,6 +7,7 @@ import { EquipSlot, ItemOptionGroup } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
 import { canEditBis, optionGroupForSlot } from "@/lib/bis";
+import { itemFitsSlot } from "@/lib/bis-constants";
 import { loadMarketConfig } from "@/lib/market-config";
 import { loadMagicalWeaponTypes } from "@/lib/item-options";
 import { MAX_OPTION_SLOTS, getItemOptionGroup } from "@/lib/item-options-constants";
@@ -125,10 +126,9 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
       select: { id: true, category: true, slot: true, weaponType: true },
     });
     if (!item) throw new Error(t("itemNotFound"));
-    // Integridad: el arma va en el slot WEAPON; el resto, el slot del item debe
-    // coincidir con el del BiS (no meter un casco en la armadura).
-    const slotOk = slot === EquipSlot.WEAPON ? item.category === "WEAPON" : item.slot === slot;
-    if (!slotOk) throw new Error(t("bisItemSlotMismatch"));
+    // Integridad: el item debe encajar en el slot del BiS (mismo criterio que el
+    // filtro del buscador). Defensa por si llega un itemId manipulado.
+    if (!itemFitsSlot(item, slot)) throw new Error(t("bisItemSlotMismatch"));
     itemId = item.id;
     group = getItemOptionGroup(item, await loadMagicalWeaponTypes());
 
