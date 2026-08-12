@@ -57,6 +57,7 @@ export async function EditSlot({
     category: listing.item.category,
     slot: listing.item.slot,
     weaponType: listing.item.weaponType,
+    slotCount: listing.item.slotCount,
     optionGroup: optionsAvailable ? getItemOptionGroup(listing.item, magicalTypes) : null,
   };
 
@@ -67,7 +68,6 @@ export async function EditSlot({
     quantity: listing.quantity, // null = ilimitado
     price: listing.price, // null = sin precio (SALE/BUY) o no aplica (TRADE/GIFT)
     refineLevel: listing.refineLevel,
-    cardSlots: listing.cardSlots,
     notes: listing.notes ?? "",
     optionSelections: buildOptionSelectionsFromDetected(
       listing.options.map((o) => ({ slotIndex: o.slotIndex, defId: o.defId, value: o.value })),

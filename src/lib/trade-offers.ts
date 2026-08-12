@@ -11,7 +11,7 @@ import { sendDirectMessage } from "@/lib/discord-bot";
 import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
-import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
+import { formatItemDisplayName } from "@/lib/card-slots-constants";
 
 // Flujo de intercambio (TRADE) sobre la tabla Deal (antes TradeOffer — ver el
 // rediseño de listings). Una oferta de trade es un Deal PENDING con item de
@@ -71,18 +71,8 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
     }
   }
 
-  const maxCardSlots = getMaxCardSlots(item);
-  let cardSlots = 0;
-  if (maxCardSlots > 0) {
-    const rawCardSlots = formData.get("cardSlots");
-    cardSlots = typeof rawCardSlots === "string" && rawCardSlots !== "" ? Number(rawCardSlots) : 0;
-    if (!Number.isInteger(cardSlots) || cardSlots < 0) {
-      throw new Error(t("positiveCardSlots"));
-    }
-    if (cardSlots > maxCardSlots) {
-      throw new Error(t("cardSlotsTooHigh", { max: maxCardSlots }));
-    }
-  }
+  // Las ranuras del item ofrecido son fijas por item (offeredItem.slotCount), no
+  // se piden ni se guardan.
 
   // quantity del Deal = unidades del listing que se llevan a cambio. El trade es
   // por el LOTE COMPLETO (no parcial), así que se toma la cantidad entera del
@@ -98,7 +88,6 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
       offeredItemId: parsed.data.itemId,
       offeredQuantity: parsed.data.quantity,
       offeredRefine: refineLevel,
-      offeredCardSlots: cardSlots,
       zenyOffered: parsed.data.zenyOffered,
     },
   });
@@ -114,13 +103,13 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
   await sendDirectMessage(listing.posterId, {
     title: tDiscord("dm.tradeOffered", {
       username: session.user.username,
-      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
+      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.TRADE,
     itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
     fields: [
-      { name: tDiscord("fields.offeredItem"), value: formatItemDisplayName(item.name, refineLevel, cardSlots), inline: true },
+      { name: tDiscord("fields.offeredItem"), value: formatItemDisplayName(item.name, refineLevel, item.slotCount), inline: true },
       ...zenyField,
       { name: tDiscord("fields.offerer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
@@ -186,12 +175,12 @@ export async function acceptTradeOffer(dealId: string) {
   const listingItemName = formatItemDisplayName(
     deal.listing.item.name,
     deal.listing.refineLevel,
-    deal.listing.cardSlots,
+    deal.listing.item.slotCount,
   );
   const offeredItemName = formatItemDisplayName(
     deal.offeredItem!.name,
     deal.offeredRefine ?? 0,
-    deal.offeredCardSlots ?? 0,
+    deal.offeredItem!.slotCount,
   );
   const zenyField =
     deal.zenyOffered > 0

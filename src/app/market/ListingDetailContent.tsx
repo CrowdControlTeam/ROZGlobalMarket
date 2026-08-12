@@ -125,7 +125,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-extrabold text-ro-text">
-            {formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots)}
+            {formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount)}
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-ro-text-muted">
             <span
@@ -265,7 +265,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                   item: formatItemDisplayName(
                     accepted.offeredItem.name,
                     accepted.offeredRefine ?? 0,
-                    accepted.offeredCardSlots ?? 0,
+                    accepted.offeredItem?.slotCount ?? 0,
                   ),
                 })}
                 {(accepted.offeredQuantity ?? 1) > 1 && ` x${accepted.offeredQuantity}`}
@@ -293,7 +293,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                       formatItemDisplayName(
                         offer.offeredItem.name,
                         offer.offeredRefine ?? 0,
-                        offer.offeredCardSlots ?? 0,
+                        offer.offeredItem?.slotCount ?? 0,
                       )}
                     {(offer.offeredQuantity ?? 1) > 1 && ` x${offer.offeredQuantity}`}
                   </span>

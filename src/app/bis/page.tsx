@@ -48,7 +48,9 @@ export default async function BisPage({
       orderBy: [{ slot: "asc" }, { position: "asc" }],
       include: {
         item: {
-          select: { id: true, name: true, iconUrl: true, category: true, slot: true, weaponType: true },
+          select: {
+            id: true, name: true, iconUrl: true, category: true, slot: true, weaponType: true, slotCount: true,
+          },
         },
         options: {
           orderBy: { slotIndex: "asc" },
@@ -84,7 +86,7 @@ export default async function BisPage({
           weaponType: e.item.weaponType,
           optionGroup: getItemOptionGroup(e.item, magicalTypes),
           refineLevel: e.refineLevel ?? 0,
-          cardSlots: e.cardSlots ?? 0,
+          cardSlots: e.item.slotCount,
         }
       : null,
     // Grupo del pool de sus options (todas comparten pool); null si no lleva

@@ -51,7 +51,7 @@ export default async function MyListingsPage({
               <Image src={listing.item.iconUrl} alt={listing.item.name} width={40} height={40} />
               <div className="flex-1">
                 <p className="flex items-center gap-2 font-semibold">
-                  {formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots)}
+                  {formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount)}
                   <span
                     className={`rounded border px-1.5 py-0.5 text-xs font-normal ${LISTING_TYPE_BADGE_CLASS[listing.type]}`}
                   >

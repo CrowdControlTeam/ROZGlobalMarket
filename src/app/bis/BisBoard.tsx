@@ -74,7 +74,7 @@ const CELL_LIMIT = 4;
 // resto es 1 slot por celda. Se muestran siempre, aunque no haya BiS.
 type CellDef = { key: string; slots: EquipSlot[]; Icon: LucideIcon };
 const LEFT_CELLS: CellDef[] = [
-  { key: "head", slots: ["UPPER_HEADGEAR", "MID_HEADGEAR", "LOWER_HEADGEAR"], Icon: Crown },
+  { key: "head", slots: ["HEADGEAR"], Icon: Crown },
   { key: "weapon", slots: ["WEAPON"], Icon: Sword },
   { key: "garment", slots: ["GARMENT"], Icon: Wind },
   { key: "accessory", slots: ["ACCESSORY"], Icon: Gem },

@@ -21,7 +21,7 @@ import {
   type OptionSelection,
 } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
-import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
+import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { MAX_LISTING_NOTES_LENGTH } from "@/lib/listing-notes-constants";
 import { getErrorMessage, rethrowFrameworkErrors } from "@/lib/errors";
 import { ItemPicker, type ItemResult } from "./new/ItemPicker";
@@ -52,7 +52,6 @@ export type EditListingData = {
   quantity: number | null; // null = ilimitado
   price: number | null; // null = sin precio (SALE/BUY) o no aplica (TRADE/GIFT)
   refineLevel: number;
-  cardSlots: number;
   notes: string;
   optionSelections: OptionSelection[];
 };
@@ -78,7 +77,6 @@ export function PublishForm({
     editListing?.optionSelections ?? emptyOptionSelections(),
   );
   const [refineLevel, setRefineLevel] = useState(editListing?.refineLevel ?? 0);
-  const [cardSlots, setCardSlots] = useState(editListing?.cardSlots ?? 0);
   const [quantity, setQuantity] = useState<number | "">(editListing ? (editListing.quantity ?? "") : 1);
   const [price, setPrice] = useState<number | "">(editListing ? (editListing.price ?? "") : "");
   const [unlimited, setUnlimited] = useState(editListing ? editListing.quantity === null : false);
@@ -110,7 +108,6 @@ export function PublishForm({
 
   const optionGroup = selectedItem?.optionGroup ?? null;
   const refineEligible = selectedItem !== null && isRefineEligible(selectedItem);
-  const maxCardSlots = selectedItem !== null ? getMaxCardSlots(selectedItem) : 0;
   // Ya no se fuerza cantidad 1 en ningún tipo: el usuario la pone libremente
   // (TRADE incluido — el intercambio es por el lote completo, ver trade-offers).
   // Ilimitado sigue igual: BUY, o SALE sin options (no ilimitado para items con
@@ -135,7 +132,6 @@ export function PublishForm({
     setSelectedItem(item);
     setOptionSelections(emptyOptionSelections());
     setRefineLevel(0);
-    setCardSlots(0);
     setRecognitionNote(null);
   }
 
@@ -143,7 +139,6 @@ export function PublishForm({
     setSelectedItem(null);
     setOptionSelections(emptyOptionSelections());
     setRefineLevel(0);
-    setCardSlots(0);
     setRecognitionNote(null);
     setTab("info");
   }
@@ -171,7 +166,6 @@ export function PublishForm({
 
         setSelectedItem(result.item);
         setRefineLevel(result.refineLevel);
-        setCardSlots(result.cardSlots);
         setOptionSelections(buildOptionSelectionsFromDetected(result.options));
         setRecognitionNote(t("recognitionDetected", { item: result.item.name }));
       } catch (err) {
@@ -222,7 +216,6 @@ export function PublishForm({
     if (unlimited) fd.set("unlimited", "on");
     else fd.set("quantity", String(quantity || 1));
     if (refineEligible) fd.set("refineLevel", String(refineLevel));
-    if (maxCardSlots > 0) fd.set("cardSlots", String(cardSlots));
     if (showPrice) {
       if (noPrice) fd.set("noPrice", "on");
       else if (price !== "") fd.set("price", String(price));
@@ -315,7 +308,7 @@ export function PublishForm({
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate pr-5 text-sm font-bold text-ro-text">
-            {formatItemDisplayName(selectedItem.name, refineLevel, cardSlots)}
+            {formatItemDisplayName(selectedItem.name, refineLevel, selectedItem.slotCount)}
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-ro-text-muted">
             <span className={`shrink-0 rounded px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide ${LISTING_TYPE_BADGE_CLASS[previewType]}`}>
@@ -468,19 +461,6 @@ export function PublishForm({
               </FloatingField>
             )}
 
-            {maxCardSlots > 0 && (
-              <FloatingField label={tField("cardSlots")}>
-                <input
-                  type="number"
-                  name="cardSlots"
-                  min={0}
-                  max={maxCardSlots}
-                  value={cardSlots}
-                  onChange={(e) => setCardSlots(e.target.value === "" ? 0 : Number(e.target.value))}
-                  className={floatingControlClass}
-                />
-              </FloatingField>
-            )}
           </div>
 
           {/* Destinatario (regalo). No en edición: un regalo reclamable se

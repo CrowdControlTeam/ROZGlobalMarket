@@ -7,7 +7,6 @@ import { useListingSync } from "../listingStore";
 import { getMaxRefineLevel } from "@/lib/listings";
 import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
-import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { getErrorMessage } from "@/lib/errors";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { ItemPicker, type ItemResult } from "../new/ItemPicker";
@@ -16,7 +15,6 @@ export function TradeOfferForm({ listingId }: { listingId: string }) {
   const sync = useListingSync();
   const [selectedItem, setSelectedItem] = useState<ItemResult | null>(null);
   const [refineLevel, setRefineLevel] = useState(0);
-  const [cardSlots, setCardSlots] = useState(0);
   const [zeny, setZeny] = useState<number | "">("");
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
   const [error, setError] = useState<string | null>(null);
@@ -34,18 +32,15 @@ export function TradeOfferForm({ listingId }: { listingId: string }) {
   }, []);
 
   const refineEligible = selectedItem !== null && isRefineEligible(selectedItem);
-  const maxCardSlots = selectedItem !== null ? getMaxCardSlots(selectedItem) : 0;
 
   function handleItemSelect(item: ItemResult) {
     setSelectedItem(item);
     setRefineLevel(0);
-    setCardSlots(0);
   }
 
   function handleItemClear() {
     setSelectedItem(null);
     setRefineLevel(0);
-    setCardSlots(0);
   }
 
   return (
@@ -92,20 +87,6 @@ export function TradeOfferForm({ listingId }: { listingId: string }) {
         </div>
       )}
 
-      {maxCardSlots > 0 && (
-        <div>
-          <label className={labelClass}>{tField("cardSlots")}</label>
-          <input
-            type="number"
-            name="cardSlots"
-            min={0}
-            max={maxCardSlots}
-            value={cardSlots}
-            onChange={(e) => setCardSlots(e.target.value === "" ? 0 : Number(e.target.value))}
-            className={inputClass}
-          />
-        </div>
-      )}
 
       <div>
         <label className={labelClass}>{t("zeny")}</label>

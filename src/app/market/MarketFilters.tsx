@@ -21,7 +21,6 @@ import { ItemCategory, EquipSlot, WeaponType, type ItemOptionDef } from "@prisma
 import { categoryLabel, slotLabel, weaponTypeLabel } from "@/lib/market-labels";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
-import { getMaxCardSlots, MAX_WEAPON_CARD_SLOTS } from "@/lib/card-slots-constants";
 import {
   getAllOptionChoices,
   getMaxRefineLevel,
@@ -135,14 +134,10 @@ export function MarketFilters() {
     hasArmor &&
     (slots.length === 0 || slots.some((s) => isRefineEligible({ category: ItemCategory.ARMOR, slot: s as EquipSlot })));
   const refineFilterEnabled = noCategory || hasWeapon || armorRefineEligible;
-  const armorCardSlotsEligible =
-    hasArmor &&
-    (slots.length === 0 || slots.some((s) => getMaxCardSlots({ category: ItemCategory.ARMOR, slot: s as EquipSlot }) > 0));
-  const cardSlotsFilterEnabled = noCategory || hasWeapon || armorCardSlotsEligible;
-  const cardSlotsFilterMax =
-    !noCategory && hasArmor && !hasWeapon && slots.length > 0
-      ? Math.max(1, ...slots.map((s) => getMaxCardSlots({ category: ItemCategory.ARMOR, slot: s as EquipSlot })))
-      : MAX_WEAPON_CARD_SLOTS;
+  // Las ranuras son un dato del item (Item.slotCount); el filtro aplica a
+  // armas/armaduras. Máximo global 4 (arma).
+  const cardSlotsFilterEnabled = noCategory || hasWeapon || hasArmor;
+  const cardSlotsFilterMax = 4;
 
   // Normalización: al cambiar categoría/slot/tipo, limpia del store los filtros
   // dependientes que dejan de aplicar (equivale al "drop" condicional que antes

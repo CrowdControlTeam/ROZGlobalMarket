@@ -14,6 +14,9 @@ export type CatalogItem = {
   category: ItemCategory;
   slot: EquipSlot | null;
   weaponType: WeaponType | null;
+  // Nº de ranuras de carta del item (fijo por id) — lo usan el match del
+  // reconocimiento (nombre + slots) y la vista previa.
+  slotCount: number;
 };
 
 const CATALOG = catalogData as unknown as CatalogItem[];

@@ -11,7 +11,6 @@ import {
   isOptionsFeatureAvailable,
 } from "@/lib/item-options";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
-import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { findBestMatch } from "@/lib/fuzzy-match";
 import { getAllCatalogItems } from "@/lib/item-catalog";
 import { loadMarketConfig } from "@/lib/market-config";
@@ -161,10 +160,10 @@ export type RecognitionResult =
         category: ItemCategory;
         slot: EquipSlot | null;
         weaponType: WeaponType | null;
+        slotCount: number;
         optionGroup: ItemOptionGroup | null;
       };
       refineLevel: number;
-      cardSlots: number;
       options: { slotIndex: number; defId: string; value: number }[];
     }
   | { status: "no_match"; detectedName: string | null }
@@ -242,6 +241,12 @@ export async function recognizeItemFromScreenshot(formData: FormData): Promise<R
       }
     }
 
+    // Un mismo nombre puede existir con variante con/sin ranuras (ids distintos):
+    // se prefiere el candidato cuyo slotCount coincide con las ranuras detectadas,
+    // para quedarse con el item correcto (las ranuras salen del propio item).
+    const sameSlots = narrowedCandidates.filter((c) => c.slotCount === extraction.cardSlots);
+    if (sameSlots.length > 0) narrowedCandidates = sameSlots;
+
     const matchedItem =
       findBestMatch(extraction.itemName, narrowedCandidates, (c) => c.name, NAME_MATCH_THRESHOLD) ??
       (narrowedCandidates !== candidates
@@ -262,9 +267,6 @@ export async function recognizeItemFromScreenshot(formData: FormData): Promise<R
       const maxRefineLevel = await loadMaxRefineLevel();
       refineLevel = Math.min(Math.max(extraction.refineLevel, 0), maxRefineLevel);
     }
-
-    const maxCardSlots = getMaxCardSlots(matchedItem);
-    const cardSlots = maxCardSlots > 0 ? Math.min(Math.max(extraction.cardSlots, 0), maxCardSlots) : 0;
 
     const options: { slotIndex: number; defId: string; value: number }[] = [];
     if (optionGroup) {
@@ -287,7 +289,6 @@ export async function recognizeItemFromScreenshot(formData: FormData): Promise<R
       status: "matched",
       item: { ...matchedItem, optionGroup },
       refineLevel,
-      cardSlots,
       options,
     };
   } catch (err) {

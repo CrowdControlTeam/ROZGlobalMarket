@@ -19,7 +19,7 @@ import {
   validateOptions,
 } from "@/lib/item-options";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
-import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
+import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount } from "@/lib/market-labels";
 import { MAX_LISTING_NOTES_LENGTH, parseListingNotes } from "@/lib/listing-notes-constants";
 import { loadMarketConfig } from "@/lib/market-config";
@@ -216,25 +216,15 @@ async function parseListingFields(
     }
   }
 
-  const maxCardSlots = getMaxCardSlots(item);
-  let cardSlots = 0;
-  if (maxCardSlots > 0) {
-    const rawCardSlots = formData.get("cardSlots");
-    cardSlots = typeof rawCardSlots === "string" && rawCardSlots !== "" ? Number(rawCardSlots) : 0;
-    if (!Number.isInteger(cardSlots) || cardSlots < 0) {
-      throw new Error(t("positiveCardSlots"));
-    }
-    if (cardSlots > maxCardSlots) {
-      throw new Error(t("cardSlotsTooHigh", { max: maxCardSlots }));
-    }
-  }
+  // Las ranuras de carta ya no las indica quien publica: son fijas por item
+  // (Item.slotCount, extraído del cliente).
 
   const notes = parseListingNotes(formData.get("notes"));
   if (notes && notes.length > MAX_LISTING_NOTES_LENGTH) {
     throw new Error(t("notesTooLong", { max: MAX_LISTING_NOTES_LENGTH }));
   }
 
-  return { price, quantity, refineLevel, cardSlots, notes, rawOptions, defsById };
+  return { price, quantity, refineLevel, notes, rawOptions, defsById };
 }
 
 export async function createListing(formData: FormData) {
@@ -284,7 +274,7 @@ export async function createListing(formData: FormData) {
   }
   const isDirectGift = parsed.data.type === "GIFT" && !!recipientId;
 
-  const { price, quantity, refineLevel, cardSlots, notes, rawOptions, defsById } =
+  const { price, quantity, refineLevel, notes, rawOptions, defsById } =
     await parseListingFields(formData, parsed.data.type, item, t);
 
   const listing = await prisma.$transaction(async (tx) => {
@@ -298,7 +288,6 @@ export async function createListing(formData: FormData) {
         // Regalo directo: nace ya cerrado (la entrega es instantánea).
         status: isDirectGift ? "COMPLETED" : "ACTIVE",
         refineLevel,
-        cardSlots,
         notes,
         options:
           rawOptions.length > 0
@@ -335,7 +324,7 @@ export async function createListing(formData: FormData) {
   if (isDirectGift) {
     const tDiscord = await getTranslations("discord");
     const tField = await getTranslations("market.field");
-    const itemName = formatItemDisplayName(item.name, refineLevel, cardSlots);
+    const itemName = formatItemDisplayName(item.name, refineLevel, item.slotCount);
     await sendDirectMessage(recipientId!, {
       title: tDiscord("dm.gifted", { username: session.user.username, item: itemName }),
       url: `${appUrl}/my/gifts`,
@@ -367,7 +356,7 @@ export async function createListing(formData: FormData) {
   // apareciendo en el mercado).
   if (parsed.data.type !== "GIFT") {
     await sendListingCreatedWebhook({
-      itemName: formatItemDisplayName(item.name, refineLevel, cardSlots),
+      itemName: formatItemDisplayName(item.name, refineLevel, item.slotCount),
       itemIconUrl: `${appUrl}${item.iconUrl}`,
       type: parsed.data.type,
       price: listing.price,
@@ -410,7 +399,7 @@ export async function updateListing(listingId: string, formData: FormData) {
 
   // Tipo e item se toman del listing (bloqueados en edición), así el parseo usa
   // la misma semántica con la que se creó.
-  const { price, quantity, refineLevel, cardSlots, notes, rawOptions } =
+  const { price, quantity, refineLevel, notes, rawOptions } =
     await parseListingFields(formData, listing.type, listing.item, t);
 
   // Editable solo SIN deals vivos (PENDING o ACCEPTED); CANCELLED/REJECTED no
@@ -431,7 +420,6 @@ export async function updateListing(listingId: string, formData: FormData) {
         quantity,
         price,
         refineLevel,
-        cardSlots,
         notes,
         options:
           rawOptions.length > 0
@@ -591,7 +579,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
   await sendDirectMessage(listing.posterId, {
     title: tDiscord("dm.reserveRequested", {
       username: session.user.username,
-      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
+      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
@@ -682,7 +670,7 @@ export async function acceptSaleReservation(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.reserveAccepted", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
@@ -716,7 +704,7 @@ export async function rejectSaleReservation(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.reserveRejected", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
@@ -824,7 +812,7 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
   await sendDirectMessage(listing.posterId, {
     title: tDiscord("dm.fulfillOffered", {
       username: session.user.username,
-      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
+      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
@@ -913,7 +901,7 @@ export async function acceptFulfillOffer(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.fulfillAccepted", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
@@ -947,7 +935,7 @@ export async function rejectFulfillOffer(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.fulfillRejected", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,

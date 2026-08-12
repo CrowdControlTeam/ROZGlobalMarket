@@ -15,7 +15,6 @@ import {
   type OptionSelection,
 } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
-import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { MAX_LISTING_NOTES_LENGTH } from "@/lib/listing-notes-constants";
 import { getErrorMessage, rethrowFrameworkErrors } from "@/lib/errors";
 import { ItemPicker, type ItemResult } from "./ItemPicker";
@@ -42,7 +41,6 @@ export function NewPublicationForm({
     emptyOptionSelections(),
   );
   const [refineLevel, setRefineLevel] = useState(0);
-  const [cardSlots, setCardSlots] = useState(0);
   // "Sin tope" ("los que tengas"): solo SALE/BUY de materiales. Envía
   // unlimited=on y oculta el campo de cantidad (el server pone quantity null).
   const [unlimited, setUnlimited] = useState(false);
@@ -65,7 +63,6 @@ export function NewPublicationForm({
 
   const optionGroup = selectedItem?.optionGroup ?? null;
   const refineEligible = selectedItem !== null && isRefineEligible(selectedItem);
-  const maxCardSlots = selectedItem !== null ? getMaxCardSlots(selectedItem) : 0;
   // Un trade tampoco admite cantidad > 1 (ver nota en listings.ts). Un
   // regalo tiene el mismo criterio que una venta: si el item es
   // option-eligible representa una instancia real única, no varias copias
@@ -94,7 +91,6 @@ export function NewPublicationForm({
     setSelectedItem(item);
     setOptionSelections(emptyOptionSelections());
     setRefineLevel(0);
-    setCardSlots(0);
     setRecognitionNote(null);
   }
 
@@ -102,7 +98,6 @@ export function NewPublicationForm({
     setSelectedItem(null);
     setOptionSelections(emptyOptionSelections());
     setRefineLevel(0);
-    setCardSlots(0);
     setRecognitionNote(null);
   }
 
@@ -129,7 +124,6 @@ export function NewPublicationForm({
 
         setSelectedItem(result.item);
         setRefineLevel(result.refineLevel);
-        setCardSlots(result.cardSlots);
         setOptionSelections(buildOptionSelectionsFromDetected(result.options));
         setRecognitionNote(t("recognitionDetected", { item: result.item.name }));
       } catch (err) {
@@ -292,20 +286,6 @@ export function NewPublicationForm({
         </div>
       )}
 
-      {maxCardSlots > 0 && (
-        <div>
-          <label className={labelClass}>{tField("cardSlots")}</label>
-          <input
-            type="number"
-            name="cardSlots"
-            min={0}
-            max={maxCardSlots}
-            value={cardSlots}
-            onChange={(e) => setCardSlots(e.target.value === "" ? 0 : Number(e.target.value))}
-            className={inputClass}
-          />
-        </div>
-      )}
 
       {(type === "SALE" || type === "BUY") && (
         <div>
