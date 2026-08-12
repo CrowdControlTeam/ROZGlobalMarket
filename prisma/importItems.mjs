@@ -55,7 +55,7 @@ function toRow(i) {
     slotCount: Number.isInteger(i.slotCount) ? i.slotCount : 0,
     cardSlot: i.cardSlot ?? null,
     position: i.position ?? null,
-    iconUrl: `/icons/items/${i.id}.gif`,
+    iconUrl: `/icons/items/${i.id}.png`,
     tradeable: tradeableOf(i),
     restrictions: i.move ?? null,
     costume: i.costume === true,
@@ -78,27 +78,31 @@ async function main() {
   const items = JSON.parse(fs.readFileSync(SRC, "utf8"));
   const rows = items.map(toRow);
 
-  // Reemplazo total: la nueva DB es la verdad, lo que no esté desaparece. Los
-  // listings/BiS que apunten a un id inexistente se borran (dev/testing). Como
-  // Listing.itemId es requerido con onDelete por defecto, se limpia antes.
-  const validIds = new Set(rows.map((r) => r.id));
-  await prisma.$transaction(async (tx) => {
-    const orphanListings = await tx.listing.findMany({
-      where: { itemId: { notIn: [...validIds] } },
-      select: { id: true },
-    });
-    if (orphanListings.length) {
-      await tx.listing.deleteMany({ where: { id: { in: orphanListings.map((l) => l.id) } } });
-    }
-    await tx.bisEntry.deleteMany({ where: { itemId: { notIn: [...validIds] } } });
-    await tx.item.deleteMany({});
-  });
+  // Reemplazo idempotente y FK-safe (la nueva DB es la verdad, lo que no esté
+  // desaparece). NO se borran todos los items y se recrean, porque los que
+  // siguen existiendo pueden estar referenciados por listings/BiS/deals; se hace
+  // UPSERT y luego se borran solo los que ya no están:
+  const validIds = [...new Set(rows.map((r) => r.id))];
 
-  // Inserta por lotes (createMany no admite relaciones, solo escalares/JSON/arrays).
-  const CHUNK = 500;
+  // 1) Limpiar referencias a items que desaparecen (Listing.itemId es requerido;
+  //    BisEntry.itemId opcional; Deal.offeredItemId opcional → SetNull solo).
+  await prisma.listing.deleteMany({ where: { itemId: { notIn: validIds } } });
+  await prisma.bisEntry.deleteMany({ where: { itemId: { notIn: validIds } } });
+
+  // 2) Upsert de todos los items (actualiza los existentes, crea los nuevos), por
+  //    lotes en paralelo (Prisma no tiene upsert masivo).
+  const CHUNK = 100;
   for (let n = 0; n < rows.length; n += CHUNK) {
-    await prisma.item.createMany({ data: rows.slice(n, n + CHUNK) });
+    await Promise.all(
+      rows.slice(n, n + CHUNK).map((r) => {
+        const { id, ...data } = r;
+        return prisma.item.upsert({ where: { id }, update: data, create: r });
+      }),
+    );
   }
+
+  // 3) Borrar los items que ya no están (sus referencias ya se limpiaron).
+  await prisma.item.deleteMany({ where: { id: { notIn: validIds } } });
 
   const total = await prisma.item.count();
   const tradeable = await prisma.item.count({ where: { tradeable: true } });

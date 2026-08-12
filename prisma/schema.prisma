@@ -169,8 +169,8 @@ model Item {
   // Posición(es) de casco como metadato ("Upper", "Upper, Middle", …); no se usa
   // para slotear (headgear va unificado).
   position         String?
-  // Icono propio por id (convención /icons/items/<id>.gif; el import siempre lo
-  // rellena, se sustituye por los sets reales cuando se carguen).
+  // Icono propio por id (convención /icons/items/<id>.png; el import siempre lo
+  // rellena).
   iconUrl          String
   // ¿Comerciable entre jugadores? = restrictions.trade !== false. Se precalcula
   // para filtrar rápido el catálogo de publicación.
