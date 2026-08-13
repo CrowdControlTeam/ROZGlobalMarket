@@ -290,6 +290,59 @@ function EntryCard({
   );
 }
 
+// Vista compacta y NO interactiva de una entrada, para el modal de borrado (que
+// se vea qué se elimina). Mismo icono/nombre/options/etiquetas que la card.
+function EntryPreview({ entry }: { entry: BisEntryView }) {
+  const t = useTranslations("bis");
+  const tMarket = useTranslations("market");
+  const title = entry.item
+    ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
+    : entry.weaponType
+      ? weaponTypeLabel(tMarket, entry.weaponType)
+      : t("anyItem");
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
+      {entry.item ? (
+        <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
+          <Image src={entry.item.iconUrl} alt={entry.item.name} width={26} height={26} />
+        </div>
+      ) : (
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed border-ro-panel-border bg-ro-panel text-ro-text-muted">
+          <Boxes size={15} aria-hidden />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className={`truncate text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>
+          {title}
+        </p>
+        {entry.options.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {entry.options.map((o) => (
+              <span
+                key={o.slotIndex}
+                className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1 py-px text-[0.6rem] text-ro-accent"
+              >
+                {o.label}
+                {o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}
+              </span>
+            ))}
+          </div>
+        )}
+        {(entry.roles.length > 0 || entry.jobs.length > 0) && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {entry.roles.map((r) => (
+              <TagBadge key={r.id} label={r.label} variant="role" />
+            ))}
+            {entry.jobs.map((j) => (
+              <TagBadge key={j.id} label={j.label} variant="job" />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Card arrastrable (drag & drop de reordenación). Activación por DISTANCIA
 // (ver PointerSensor abajo), así un click sin arrastrar sigue abriendo el
 // detalle; arrastrar reordena.
@@ -727,6 +780,9 @@ export function BisBoard({
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-sm text-ro-text">{t("deleteConfirm")}</p>
+            <div className="mt-3">
+              <EntryPreview entry={deleting} />
+            </div>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
