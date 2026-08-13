@@ -144,10 +144,8 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
 
   const options = parseBisOptions(formData, t);
 
-  // Regla: al menos uno de item, tipo de arma (solo arma) u options.
-  if (!hasItem && weaponType === null && options.length === 0) {
-    throw new Error(t("bisNeedItemOrOption"));
-  }
+  // Un BiS puede ser totalmente genérico ("cualquiera" de un slot): basta con
+  // ≥1 etiqueta (validado arriba). Item, tipo de arma u options son opcionales.
 
   if (options.length > 0) {
     if (!group) {

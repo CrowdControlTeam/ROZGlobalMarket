@@ -127,10 +127,10 @@ export function BisEntryForm({
     set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   }
 
+  // Solo hace falta ≥1 tag: un BiS puede ser genérico ("cualquiera" de un slot)
+  // sin item, tipo de arma ni options.
   const hasTag = roleIds.length + jobIds.length > 0;
-  const hasOption = options.some((o) => o.defId !== "");
-  // Hace falta ≥1 tag y al menos uno de: item, tipo de arma u options.
-  const canSubmit = hasTag && (selectedItem !== null || weaponType !== "" || hasOption);
+  const canSubmit = hasTag;
 
   function submit() {
     setError(null);

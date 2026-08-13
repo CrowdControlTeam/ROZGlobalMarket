@@ -194,9 +194,8 @@ function EntryCard({
       ? weaponTypeLabel(tMarket, entry.weaponType)
       : t("anyItem");
 
-  // La card abre el detalle (panel/bottom sheet). La nota ya no va inline: se
-  // señala con el icono de bocadillo en la esquina (como en los listings) y su
-  // texto completo se ve en el detalle.
+  // La card abre el detalle (panel/bottom sheet). Bajo el icono del item van las
+  // acciones: buscar en el mercado y el indicador de nota (tooltip con el texto).
   return (
     <div className="group relative flex h-full min-h-[3.5rem] rounded-lg border border-ro-panel-border bg-ro-panel-alt transition-colors hover:border-ro-accent">
       {draggable && (
@@ -207,47 +206,71 @@ function EntryCard({
           <GripVertical size={14} />
         </span>
       )}
-      <button
-      type="button"
-      onClick={onOpen}
-      className="relative flex min-w-0 flex-1 cursor-pointer gap-2 p-2 text-left"
-    >
-      {iconBox}
-      <div className="min-w-0 flex-1">
-        <p
-          title={title}
-          className={`truncate pr-4 text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}
-        >
-          {title}
-        </p>
 
-        {entry.options.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {entry.options.map((o) => (
-              <span
-                key={o.slotIndex}
-                className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1 py-px text-[0.6rem] text-ro-accent"
-              >
-                {o.label}
-                {o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {(entry.roles.length > 0 || entry.jobs.length > 0) && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {entry.roles.map((r) => (
-              <TagBadge key={r.id} label={r.label} variant="role" />
-            ))}
-            {entry.jobs.map((j) => (
-              <TagBadge key={j.id} label={j.label} variant="job" />
-            ))}
-          </div>
-        )}
+      {/* Columna izquierda: icono del item y, debajo, las acciones (buscar en el
+          mercado y la nota). Las acciones no van dentro del botón que abre el
+          detalle (no se pueden anidar botones/enlaces). */}
+      <div className="flex shrink-0 flex-col items-center gap-1 py-2 pl-2">
+        <button type="button" onClick={onOpen} aria-label={title} className="cursor-pointer">
+          {iconBox}
+        </button>
+        <div className="flex items-center gap-0.5" onPointerDown={(e) => e.stopPropagation()}>
+          <Link
+            href={`/market?${bisEntryMarketQuery(entry)}`}
+            prefetch={false}
+            aria-label={t("searchInMarket")}
+            title={t("searchInMarket")}
+            className="grid h-5 w-5 place-items-center rounded text-ro-text-muted transition-colors hover:bg-ro-panel-border/40 hover:text-ro-accent"
+          >
+            <Search size={13} aria-hidden />
+          </Link>
+          {entry.note && (
+            // El tooltip muestra el texto de la nota (no un "tiene notas" genérico).
+            <NoteIndicator label={entry.note} size={13} className="grid h-5 w-5 place-items-center" />
+          )}
+        </div>
       </div>
 
+      <button
+        type="button"
+        onClick={onOpen}
+        className="relative flex min-w-0 flex-1 cursor-pointer py-2 pl-1 pr-2 text-left"
+      >
+        <div className="min-w-0 flex-1">
+          <p
+            title={title}
+            className={`truncate pr-4 text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}
+          >
+            {title}
+          </p>
+
+          {entry.options.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {entry.options.map((o) => (
+                <span
+                  key={o.slotIndex}
+                  className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1 py-px text-[0.6rem] text-ro-accent"
+                >
+                  {o.label}
+                  {o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {(entry.roles.length > 0 || entry.jobs.length > 0) && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {entry.roles.map((r) => (
+                <TagBadge key={r.id} label={r.label} variant="role" />
+              ))}
+              {entry.jobs.map((j) => (
+                <TagBadge key={j.id} label={j.label} variant="job" />
+              ))}
+            </div>
+          )}
+        </div>
       </button>
+
       {canEdit && (
         <div
           className="absolute right-1 top-1"
@@ -263,30 +286,6 @@ function EntryCard({
           />
         </div>
       )}
-      {entry.note && (
-        <NoteIndicator
-          label={t("hasNotes")}
-          size={13}
-          className="absolute grid h-5 w-5 place-items-center"
-          // Snug under the kebab icon on tiny BiS cards (kebab is at top-1),
-          // or top-right when there is no kebab.
-          style={{ top: canEdit ? "1.9rem" : "0.4rem", right: "0.45rem" }}
-        />
-      )}
-      {/* Buscar en el mercado: abre el mercado con este item/slot/options como
-          filtro, en una pestaña nueva. Para cualquier usuario (esquina inferior
-          para no chocar con kebab/nota). stopPropagation en el pointer para no
-          arrancar el drag de la card al pulsarlo. */}
-      <Link
-        href={`/market?${bisEntryMarketQuery(entry)}`}
-        prefetch={false}
-        aria-label={t("searchInMarket")}
-        title={t("searchInMarket")}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="absolute bottom-1 right-1 grid h-6 w-6 place-items-center rounded-md text-ro-text-muted transition-colors hover:bg-ro-panel-border/40 hover:text-ro-accent"
-      >
-        <Search size={14} aria-hidden />
-      </Link>
     </div>
   );
 }
