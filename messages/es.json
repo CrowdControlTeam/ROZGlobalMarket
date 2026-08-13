@@ -739,6 +739,8 @@
     "noStages": "Todavía no hay etapas configuradas.",
     "add": "Añadir",
     "edit": "Editar",
+    "kebabLabel": "Opciones",
+    "deleteConfirm": "¿Borrar este BiS?",
     "form": {
       "addTitle": "Añadir BiS",
       "editTitle": "Editar BiS",

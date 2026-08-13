@@ -16,6 +16,8 @@ import {
   ChevronDown,
   MessageSquareText,
   Plus,
+  Pencil,
+  Trash2,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -32,7 +34,9 @@ import { CSS } from "@dnd-kit/utilities";
 import type { EquipSlot, ItemCategory, ItemOptionGroup, WeaponType } from "@prisma/client";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount } from "@/lib/market-labels";
-import { reorderBisEntries } from "@/lib/bis-actions";
+import { reorderBisEntries, deleteBisEntry } from "@/lib/bis-actions";
+import { buttonClass } from "@/lib/ui";
+import { KebabMenu } from "@/components/KebabMenu";
 import { BisDetail, type BisDetailData } from "./BisDetail";
 import { BisEntryForm } from "./BisEntryForm";
 
@@ -148,7 +152,19 @@ function TagBadge({ label, variant }: { label: string; variant: "role" | "job" }
   );
 }
 
-function EntryCard({ entry, onOpen }: { entry: BisEntryView; onOpen: () => void }) {
+function EntryCard({
+  entry,
+  onOpen,
+  canEdit,
+  onEdit,
+  onDelete,
+}: {
+  entry: BisEntryView;
+  onOpen: () => void;
+  canEdit: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const t = useTranslations("bis");
 
   const iconBox = entry.item ? (
@@ -169,7 +185,8 @@ function EntryCard({ entry, onOpen }: { entry: BisEntryView; onOpen: () => void 
   // señala con el icono de bocadillo en la esquina (como en los listings) y su
   // texto completo se ve en el detalle.
   return (
-    <button
+    <div className="relative h-full">
+      <button
       type="button"
       onClick={onOpen}
       className="relative flex h-full min-h-[3.5rem] w-full gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2 text-left transition-colors hover:border-ro-accent"
@@ -209,19 +226,47 @@ function EntryCard({ entry, onOpen }: { entry: BisEntryView; onOpen: () => void 
       {entry.note && (
         <span
           aria-label={t("detail.note")}
-          className="absolute right-1.5 top-1.5 text-ro-text-muted"
+          className={`absolute top-1.5 text-ro-text-muted ${canEdit ? "right-9" : "right-1.5"}`}
         >
           <MessageSquareText size={13} aria-hidden />
         </span>
       )}
-    </button>
+      </button>
+      {canEdit && (
+        <div
+          className="absolute right-1 top-1"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <KebabMenu
+            label={t("kebabLabel")}
+            items={[
+              { label: t("edit"), icon: <Pencil size={14} aria-hidden />, onSelect: onEdit },
+              { label: t("form.delete"), icon: <Trash2 size={14} aria-hidden />, onSelect: onDelete },
+            ]}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
 // Card arrastrable (drag & drop de reordenación). Activación por DISTANCIA
 // (ver PointerSensor abajo), así un click sin arrastrar sigue abriendo el
 // detalle; arrastrar reordena.
-function SortableEntry({ entry, onOpen }: { entry: BisEntryView; onOpen: () => void }) {
+function SortableEntry({
+  entry,
+  onOpen,
+  canEdit,
+  onEdit,
+  onDelete,
+}: {
+  entry: BisEntryView;
+  onOpen: () => void;
+  canEdit: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({
     id: entry.id,
   });
@@ -239,7 +284,7 @@ function SortableEntry({ entry, onOpen }: { entry: BisEntryView; onOpen: () => v
       {...listeners}
       className="cursor-grab touch-none active:cursor-grabbing"
     >
-      <EntryCard entry={entry} onOpen={onOpen} />
+      <EntryCard entry={entry} onOpen={onOpen} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete} />
     </li>
   );
 }
@@ -254,6 +299,8 @@ function SlotCell({
   canEdit,
   sortable,
   onOpen,
+  onEditEntry,
+  onDeleteEntry,
   onAdd,
   onReorder,
 }: {
@@ -266,6 +313,8 @@ function SlotCell({
   // 3 slots distintos, reordenar entre ellos no tendría sentido).
   sortable: boolean;
   onOpen: (entry: BisEntryView) => void;
+  onEditEntry: (entry: BisEntryView) => void;
+  onDeleteEntry: (entry: BisEntryView) => void;
   onAdd: () => void;
   onReorder: (orderedIds: string[]) => void;
 }) {
@@ -336,7 +385,14 @@ function SlotCell({
               <SortableContext items={visible.map((e) => e.id)} strategy={rectSortingStrategy}>
                 <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
                   {visible.map((entry) => (
-                    <SortableEntry key={entry.id} entry={entry} onOpen={() => onOpen(entry)} />
+                    <SortableEntry
+                      key={entry.id}
+                      entry={entry}
+                      onOpen={() => onOpen(entry)}
+                      canEdit={canEdit}
+                      onEdit={() => onEditEntry(entry)}
+                      onDelete={() => onDeleteEntry(entry)}
+                    />
                   ))}
                 </ul>
               </SortableContext>
@@ -345,7 +401,13 @@ function SlotCell({
             <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
               {visible.map((entry) => (
                 <li key={entry.id}>
-                  <EntryCard entry={entry} onOpen={() => onOpen(entry)} />
+                  <EntryCard
+                    entry={entry}
+                    onOpen={() => onOpen(entry)}
+                    canEdit={canEdit}
+                    onEdit={() => onEditEntry(entry)}
+                    onDelete={() => onDeleteEntry(entry)}
+                  />
                 </li>
               ))}
             </ul>
@@ -390,6 +452,9 @@ export function BisBoard({
   // Modal de edición: al crear lleva los slots del cell (cabeza = 3) y entry
   // null; al editar, la entrada y su propio slot.
   const [editing, setEditing] = useState<{ slots: EquipSlot[]; entry: BisEntryView | null } | null>(null);
+  // Entrada pendiente de confirmar borrado (kebab → Borrar).
+  const [deleting, setDeleting] = useState<BisEntryView | null>(null);
+  const [isDeleting, startDelete] = useTransition();
 
   // Copia local de las entradas para el reorden OPTIMISTA (el DnD mueve al vuelo;
   // el servidor persiste y refresca). Se resetea cuando el server manda datos
@@ -440,6 +505,16 @@ export function BisBoard({
     });
   }
 
+  function confirmDelete() {
+    if (!deleting) return;
+    const id = deleting.id;
+    startDelete(async () => {
+      await deleteBisEntry(id);
+      setDeleting(null);
+      router.refresh();
+    });
+  }
+
   function renderCell(def: CellDef) {
     const label = t(`cells.${def.key}`);
     const all = items.filter((e) => def.slots.includes(e.slot));
@@ -454,6 +529,8 @@ export function BisBoard({
         canEdit={canEdit}
         sortable={canEdit && !hasFilters && def.slots.length === 1}
         onOpen={(entry) => setSelected({ entry, slotLabel: label, slotIcon: def.Icon })}
+        onEditEntry={(entry) => setEditing({ slots: [entry.slot], entry })}
+        onDeleteEntry={(entry) => setDeleting(entry)}
         onAdd={() => setEditing({ slots: def.slots, entry: null })}
         onReorder={(orderedIds) => handleReorder(def.slots[0], orderedIds)}
       />
@@ -520,6 +597,38 @@ export function BisBoard({
           jobs={jobs}
           onClose={() => setEditing(null)}
         />
+      )}
+
+      {deleting && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !isDeleting && setDeleting(null)}
+        >
+          <div
+            className="w-full max-w-xs rounded-lg border-2 border-ro-panel-border bg-ro-panel p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm text-ro-text">{t("deleteConfirm")}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                disabled={isDeleting}
+                className={`${buttonClass("outline")} h-9`}
+              >
+                {t("form.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className={`${buttonClass("danger")} h-9`}
+              >
+                {t("form.delete")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
