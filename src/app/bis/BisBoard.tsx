@@ -224,9 +224,13 @@ function EntryCard({
           >
             <Search size={13} aria-hidden />
           </Link>
-          {entry.note && (
-            // El tooltip muestra el texto de la nota (no un "tiene notas" genérico).
+          {/* El hueco de la nota se reserva siempre (placeholder si no hay) para
+              que la lupa quede fija en su sitio, con o sin nota. El tooltip de la
+              nota muestra su texto (no un "tiene notas" genérico). */}
+          {entry.note ? (
             <NoteIndicator label={entry.note} size={13} className="grid h-5 w-5 place-items-center" />
+          ) : (
+            <span className="h-5 w-5" aria-hidden />
           )}
         </div>
       </div>
