@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -343,8 +343,23 @@ function SlotCell({
 }) {
   const t = useTranslations("bis");
   const [expanded, setExpanded] = useState(false);
+  // Dirección del panel flotante: si la celda está pegada abajo (p. ej.
+  // accesorio) despliega hacia arriba para no salirse del board.
+  const [openUp, setOpenUp] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
   const { Icon } = def;
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  function openExpanded() {
+    const el = sectionRef.current;
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.top;
+      const spaceAbove = rect.bottom;
+      setOpenUp(spaceAbove > spaceBelow);
+    }
+    setExpanded(true);
+  }
 
   // @dnd-kit genera ids (aria-describedby) que no cuadran entre SSR y cliente;
   // se activa solo tras montar para evitar el mismatch de hidratación (en SSR y
@@ -452,7 +467,10 @@ function SlotCell({
   );
 
   return (
-    <section className="relative flex h-full flex-col rounded-xl border border-ro-panel-border bg-ro-panel p-3">
+    <section
+      ref={sectionRef}
+      className="relative flex h-full flex-col rounded-xl border border-ro-panel-border bg-ro-panel p-3"
+    >
       {header}
 
       {shown.length === 0 ? (
@@ -465,7 +483,16 @@ function SlotCell({
               interactivo detrás del panel flotante, para que la rejilla no
               cambie de alto (las filas son 1fr y se igualan entre sí). */}
           {renderCards(collapsed, dndEnabled && !isExpanded)}
-          {overLimit && toggle(() => setExpanded((v) => !v))}
+          {overLimit && (
+            <button
+              type="button"
+              onClick={openExpanded}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-ro-accent hover:underline"
+            >
+              <ChevronDown size={13} className="transition-transform" aria-hidden />
+              {t("showAll", { count: shown.length })}
+            </button>
+          )}
 
           {isExpanded && (
             <>
@@ -477,8 +504,14 @@ function SlotCell({
                 className="fixed inset-0 z-20 cursor-default"
               />
               {/* Panel flotante con la lista completa: se superpone a los slots
-                  vecinos en lugar de empujar el layout. */}
-              <div className="absolute inset-x-0 top-0 z-30 flex flex-col rounded-xl border border-ro-accent/50 bg-ro-panel p-3 shadow-2xl">
+                  vecinos en lugar de empujar el layout. Se ancla arriba o abajo
+                  según dónde haya más hueco (celdas de abajo despliegan hacia
+                  arriba). */}
+              <div
+                className={`absolute inset-x-0 z-30 flex flex-col rounded-xl border border-ro-accent/50 bg-ro-panel p-3 shadow-2xl ${
+                  openUp ? "bottom-0" : "top-0"
+                }`}
+              >
                 {header}
                 {renderCards(shown, dndEnabled)}
                 {toggle(() => setExpanded(false))}
