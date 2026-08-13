@@ -273,10 +273,11 @@ export function PublishForm({
           return;
         }
         // Acción única para todos los tipos. Solo el regalo DIRECTO (con
-        // destinatario) vuelve a /my/gifts; el resto —incluido el reclamable—
-        // vuelve al mercado (ya hay preview antes, así que no abrimos el detalle).
+        // destinatario) vuelve a /market/activity/gifts; el resto —incluido el
+        // reclamable— vuelve al mercado (ya hay preview antes, así que no abrimos
+        // el detalle).
         const { directGift } = await createListing(fd);
-        router.push(directGift ? "/my/gifts" : "/market");
+        router.push(directGift ? "/market/activity/gifts" : "/market");
       } catch (err) {
         submittingRef.current = false;
         setError(getErrorMessage(err));

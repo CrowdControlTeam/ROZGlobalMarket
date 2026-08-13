@@ -7,9 +7,8 @@ import { useTranslations } from "next-intl";
 // Navegación de alto nivel del header: los dos pilares del sitio (Mercado y
 // BiS). Es el switch de sección global; la navegación interna del mercado
 // (Mi actividad, Estadísticas, Publicar) sigue viviendo en MarketNav, no aquí.
-// Todo lo "del mercado" (/market, /my, /admin/stats) resalta el pilar Mercado.
-const MARKET_PREFIXES = ["/market", "/my", "/admin/stats"];
-
+// Todo lo "del mercado" cuelga ya de /market (incluye /market/activity y
+// /market/statistics), así que basta ese prefijo para resaltar el pilar.
 function isUnder(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
@@ -22,7 +21,7 @@ export function HeaderNav() {
     {
       href: "/market",
       label: t("market"),
-      active: MARKET_PREFIXES.some((p) => isUnder(pathname, p)),
+      active: isUnder(pathname, "/market"),
     },
     { href: "/bis", label: t("bis"), active: isUnder(pathname, "/bis") },
   ];

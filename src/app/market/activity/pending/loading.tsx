@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/Skeleton";
 
-// Sin <main>/título propios: my/layout.tsx ya los pinta.
+// Sin <main>/hub/pestañas propios: los pintan el layout de /market y activity/layout.
 export default function Loading() {
   return (
     <ul className="flex flex-col gap-3">

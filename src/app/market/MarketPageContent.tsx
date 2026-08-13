@@ -3,7 +3,6 @@ import { z } from "zod";
 import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@prisma/client";
 import { isMarketSort, type MarketFilters as MarketFiltersType } from "@/lib/market";
 import { requireSession } from "@/lib/guard";
-import { MarketNav } from "./MarketNav";
 import { MarketFilters } from "./MarketFilters";
 import { SearchTabs } from "./SearchTabs";
 import { SegmentedTypeSelector } from "./SegmentedTypeSelector";
@@ -113,45 +112,42 @@ export async function MarketPageContent({
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8">
-      {/* Hub superior (fuera de las pestañas). El resto —pestañas, selector de
-          tipo, filtros y resultados— vive DENTRO del store de búsqueda: cada
-          pestaña tiene su propio objeto de filtros (fuente de verdad) que se
-          serializa a la URL, y la URL es lo que lee el servidor. */}
-      <MarketNav isAdmin={session.user.isAdmin} />
-      <MarketSearchProvider initialFilters={initialFilters}>
-        {/* Pestañas de "Mis búsquedas": función de power-user; solo en desktop
-            (en móvil quitan espacio vertical sin aportar lo suficiente). */}
-        <div className="mb-3 hidden sm:block">
-          <SearchTabs />
-        </div>
-        {/* El selector de tipo queda DENTRO del contexto de la pestaña activa
-            (cada búsqueda tiene su propio tipo), así que va debajo de las
-            pestañas. */}
-        <div className="mb-4">
-          <SegmentedTypeSelector />
-        </div>
+    // El hub + contenedor los pone el layout de /market. Aquí solo el contenido
+    // del índice, dentro del store de búsqueda: cada pestaña tiene su propio
+    // objeto de filtros (fuente de verdad) que se serializa a la URL, y la URL es
+    // lo que lee el servidor.
+    <MarketSearchProvider initialFilters={initialFilters}>
+      {/* Pestañas de "Mis búsquedas": función de power-user; solo en desktop
+          (en móvil quitan espacio vertical sin aportar lo suficiente). */}
+      <div className="mb-3 hidden sm:block">
+        <SearchTabs />
+      </div>
+      {/* El selector de tipo queda DENTRO del contexto de la pestaña activa
+          (cada búsqueda tiene su propio tipo), así que va debajo de las
+          pestañas. */}
+      <div className="mb-4">
+        <SegmentedTypeSelector />
+      </div>
 
-        {/* Los filtros se auto-posicionan (fijos en el margen izquierdo en
-            desktop; botón "Filtros" + bottom-sheet en móvil), así que los
-            resultados ocupan el ancho completo del contenedor. */}
-        <MarketFilters />
+      {/* Los filtros se auto-posicionan (fijos en el margen izquierdo en
+          desktop; botón "Filtros" + bottom-sheet en móvil), así que los
+          resultados ocupan el ancho completo del contenedor. */}
+      <MarketFilters />
 
-        {/* key en el propio Suspense: al cambiar cualquier filtro/orden, React
-            trata la sección como nueva y muestra el skeleton mientras llega el
-            resultado. Excluimos `q` de la key a propósito: el buscador aplica al
-            vuelo, así que si `q` remontara la sección, el input perdería el foco
-            en cada tecla. Al dejarlo fuera, la búsqueda actualiza los resultados
-            en su sitio (sin skeleton) y el foco se conserva. */}
-        <Suspense key={suspenseKey} fallback={<MarketResultsSkeleton />}>
-          <MarketListingsSection
-            filters={filters}
-            currentUserId={session.user.discordId}
-            isAdmin={session.user.isAdmin}
-          />
-        </Suspense>
-      </MarketSearchProvider>
-    </main>
+      {/* key en el propio Suspense: al cambiar cualquier filtro/orden, React
+          trata la sección como nueva y muestra el skeleton mientras llega el
+          resultado. Excluimos `q` de la key a propósito: el buscador aplica al
+          vuelo, así que si `q` remontara la sección, el input perdería el foco
+          en cada tecla. Al dejarlo fuera, la búsqueda actualiza los resultados
+          en su sitio (sin skeleton) y el foco se conserva. */}
+      <Suspense key={suspenseKey} fallback={<MarketResultsSkeleton />}>
+        <MarketListingsSection
+          filters={filters}
+          currentUserId={session.user.discordId}
+          isAdmin={session.user.isAdmin}
+        />
+      </Suspense>
+    </MarketSearchProvider>
   );
 }
 

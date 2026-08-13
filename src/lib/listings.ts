@@ -96,8 +96,8 @@ export async function getMyListings() {
   return listings.map((l) => ({ ...l, sold: soldMap.get(l.id) ?? 0 }));
 }
 
-// Para la página de gestión (/my/pending): todo lo que tengo pendiente de
-// resolver, sin entrar listing por listing.
+// Para la página de gestión (/market/activity/pending): todo lo que tengo
+// pendiente de resolver, sin entrar listing por listing.
 //   - entrantes: Deal PENDING sobre MIS listings (reservas/ofertas/reclamaciones
 //     por confirmar) — los acepto/rechazo.
 //   - salientes: MIS Deal PENDING (donde soy la contraparte) — puedo cancelarlos.
@@ -323,14 +323,14 @@ export async function createListing(formData: FormData) {
   const appUrl = getAppUrl();
 
   // Regalo directo: DM al destinatario (la entrega ya está hecha) y punto —no se
-  // anuncia por webhook—; se vuelve a /my/gifts (ahí aparece, tiene Deal).
+  // anuncia por webhook—; se vuelve a /market/activity/gifts (ahí aparece, tiene Deal).
   if (isDirectGift) {
     const tDiscord = await getTranslations("discord");
     const tField = await getTranslations("market.field");
     const itemName = formatItemDisplayName(item.name, refineLevel, item.slotCount);
     await sendDirectMessage(recipientId!, {
       title: tDiscord("dm.gifted", { username: session.user.username, item: itemName }),
-      url: `${appUrl}/my/gifts`,
+      url: `${appUrl}/market/activity/gifts`,
       color: DISCORD_EMBED_COLOR.GIFT,
       itemIconUrl: `${appUrl}${item.iconUrl}`,
       fields: [
@@ -349,7 +349,7 @@ export async function createListing(formData: FormData) {
         { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
       ],
     });
-    revalidatePath("/my/gifts");
+    revalidatePath("/market/activity/gifts");
     revalidatePath("/market");
     return { id: listing.id, directGift: true };
   }
