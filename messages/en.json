@@ -741,6 +741,7 @@
     "edit": "Edit",
     "kebabLabel": "Options",
     "deleteConfirm": "Delete this BiS?",
+    "hasNotes": "Has notes",
     "form": {
       "addTitle": "Add BiS",
       "editTitle": "Edit BiS",

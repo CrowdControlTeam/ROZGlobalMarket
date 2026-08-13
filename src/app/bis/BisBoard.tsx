@@ -14,7 +14,6 @@ import {
   ShieldHalf,
   Footprints,
   ChevronDown,
-  MessageSquareText,
   Plus,
   Pencil,
   Trash2,
@@ -37,6 +36,7 @@ import { formatOptionAmount, weaponTypeLabel } from "@/lib/market-labels";
 import { reorderBisEntries, deleteBisEntry } from "@/lib/bis-actions";
 import { buttonClass } from "@/lib/ui";
 import { KebabMenu } from "@/components/KebabMenu";
+import { NoteIndicator } from "@/components/NoteIndicator";
 import { BisDetail, type BisDetailData } from "./BisDetail";
 import { BisEntryForm } from "./BisEntryForm";
 
@@ -231,30 +231,25 @@ function EntryCard({
         )}
       </div>
 
-      {entry.note && (
-        <span
-          aria-label={t("detail.note")}
-          className={`absolute right-1 grid h-7 w-7 place-items-center text-ro-text-muted ${
-            canEdit ? "top-8" : "top-1"
-          }`}
-        >
-          <MessageSquareText size={13} aria-hidden />
-        </span>
-      )}
       </button>
-      {canEdit && (
+      {(canEdit || entry.note) && (
         <div
-          className="absolute right-1 top-1"
+          className="absolute right-1 top-1 flex flex-col items-center gap-1"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <KebabMenu
-            label={t("kebabLabel")}
-            items={[
-              { label: t("edit"), icon: <Pencil size={14} aria-hidden />, onSelect: onEdit },
-              { label: t("form.delete"), icon: <Trash2 size={14} aria-hidden />, onSelect: onDelete },
-            ]}
-          />
+          {canEdit && (
+            <KebabMenu
+              label={t("kebabLabel")}
+              items={[
+                { label: t("edit"), icon: <Pencil size={14} aria-hidden />, onSelect: onEdit },
+                { label: t("form.delete"), icon: <Trash2 size={14} aria-hidden />, onSelect: onDelete },
+              ]}
+            />
+          )}
+          {entry.note && (
+            <NoteIndicator label={t("hasNotes")} size={13} className="grid h-6 w-6 place-items-center" />
+          )}
         </div>
       )}
     </div>
