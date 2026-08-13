@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { ListingLink } from "@/components/ListingLink";
 import type { ListingType } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { getMyPendingDeals } from "@/lib/listings";
@@ -85,12 +85,12 @@ export default async function MyPendingPage() {
               >
                 <Image src={deal.listing.item.iconUrl} alt={deal.listing.item.name} width={40} height={40} />
                 <div className="min-w-0 flex-1">
-                  <Link href={`/market/${deal.listingId}`} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
+                  <ListingLink listingId={deal.listingId} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
                     {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount)}
                     <span className={`rounded border px-1.5 py-0.5 text-xs font-normal ${LISTING_TYPE_BADGE_CLASS[deal.listing.type]}`}>
                       {listingTypeLabel(t, deal.listing.type)}
                     </span>
-                  </Link>
+                  </ListingLink>
                   <p className="text-sm text-ro-text-muted">
                     {dealSummary(deal)} · @{deal.user.username}
                   </p>
@@ -113,12 +113,12 @@ export default async function MyPendingPage() {
               >
                 <Image src={deal.listing.item.iconUrl} alt={deal.listing.item.name} width={40} height={40} />
                 <div className="min-w-0 flex-1">
-                  <Link href={`/market/${deal.listingId}`} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
+                  <ListingLink listingId={deal.listingId} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
                     {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount)}
                     <span className={`rounded border px-1.5 py-0.5 text-xs font-normal ${LISTING_TYPE_BADGE_CLASS[deal.listing.type]}`}>
                       {listingTypeLabel(t, deal.listing.type)}
                     </span>
-                  </Link>
+                  </ListingLink>
                   <p className="text-sm text-ro-text-muted">
                     {dealSummary(deal)} · @{deal.listing.poster.username}
                   </p>
