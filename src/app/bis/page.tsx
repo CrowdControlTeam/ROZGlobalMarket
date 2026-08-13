@@ -54,7 +54,7 @@ export default async function BisPage({
         },
         options: {
           orderBy: { slotIndex: "asc" },
-          select: { slotIndex: true, defId: true, minValue: true, def: { select: { label: true, group: true } } },
+          select: { slotIndex: true, defId: true, minValue: true, def: { select: { label: true, group: true, statCode: true } } },
         },
         roles: { orderBy: { order: "asc" }, select: { id: true, label: true } },
         jobs: { orderBy: { order: "asc" }, select: { id: true, label: true } },
@@ -100,6 +100,7 @@ export default async function BisPage({
       defId: o.defId,
       minValue: o.minValue,
       label: o.def.label,
+      statCode: o.def.statCode,
     })),
     roles: e.roles,
     jobs: e.jobs,

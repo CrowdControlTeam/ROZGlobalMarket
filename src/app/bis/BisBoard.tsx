@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -17,6 +18,7 @@ import {
   GripVertical,
   Plus,
   Pencil,
+  Search,
   Trash2,
   X,
   type LucideIcon,
@@ -38,6 +40,7 @@ import { reorderBisEntries, deleteBisEntry } from "@/lib/bis-actions";
 import { buttonClass } from "@/lib/ui";
 import { KebabMenu } from "@/components/KebabMenu";
 import { NoteIndicator } from "@/components/NoteIndicator";
+import { bisEntryMarketQuery } from "./bis-market-link";
 import { BisDetail, type BisDetailData } from "./BisDetail";
 import { BisEntryForm } from "./BisEntryForm";
 
@@ -68,7 +71,7 @@ export type BisEntryView = {
   // Grupo de options de un BiS genérico (null en los concretos). Sirve al editor
   // para recargar el pool correcto y, en arma, saber si es físico o mágico.
   optionGroup: ItemOptionGroup | null;
-  options: { slotIndex: number; defId: string; minValue: number | null; label: string }[];
+  options: { slotIndex: number; defId: string; minValue: number | null; label: string; statCode: string }[];
   roles: Tag[];
   jobs: Tag[];
 };
@@ -270,6 +273,20 @@ function EntryCard({
           style={{ top: canEdit ? "1.9rem" : "0.4rem", right: "0.45rem" }}
         />
       )}
+      {/* Buscar en el mercado: abre el mercado con este item/slot/options como
+          filtro, en una pestaña nueva. Para cualquier usuario (esquina inferior
+          para no chocar con kebab/nota). stopPropagation en el pointer para no
+          arrancar el drag de la card al pulsarlo. */}
+      <Link
+        href={`/market?${bisEntryMarketQuery(entry)}`}
+        prefetch={false}
+        aria-label={t("searchInMarket")}
+        title={t("searchInMarket")}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute bottom-1 right-1 grid h-6 w-6 place-items-center rounded-md text-ro-text-muted transition-colors hover:bg-ro-panel-border/40 hover:text-ro-accent"
+      >
+        <Search size={14} aria-hidden />
+      </Link>
     </div>
   );
 }

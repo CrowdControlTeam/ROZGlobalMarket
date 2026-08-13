@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Boxes, Pencil, type LucideIcon } from "lucide-react";
+import { Boxes, Pencil, Search, type LucideIcon } from "lucide-react";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount, weaponTypeLabel } from "@/lib/market-labels";
+import { bisEntryMarketQuery } from "./bis-market-link";
 import type { BisEntryView } from "./BisBoard";
 
 export type BisDetailData = { entry: BisEntryView; slotLabel: string; slotIcon: LucideIcon };
@@ -100,16 +102,26 @@ export function BisDetail({
         >
           ✕
         </button>
-        {canEdit && (
-          <button
-            type="button"
-            onClick={onEdit}
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/market?${bisEntryMarketQuery(data.entry)}`}
+            prefetch={false}
             className="inline-flex items-center gap-1.5 rounded-md border border-ro-panel-border px-2.5 py-1 text-xs font-medium text-ro-text transition-colors hover:border-ro-accent hover:text-ro-accent"
           >
-            <Pencil size={13} aria-hidden />
-            {t("edit")}
-          </button>
-        )}
+            <Search size={13} aria-hidden />
+            {t("searchInMarket")}
+          </Link>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="inline-flex items-center gap-1.5 rounded-md border border-ro-panel-border px-2.5 py-1 text-xs font-medium text-ro-text transition-colors hover:border-ro-accent hover:text-ro-accent"
+            >
+              <Pencil size={13} aria-hidden />
+              {t("edit")}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-5 overflow-y-auto px-4 pb-6">

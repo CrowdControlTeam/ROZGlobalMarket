@@ -31,6 +31,11 @@ export const FILTER_KEYS: string[] = [
 
 export type Filters = Record<string, string>;
 
+// Param NO-filtro: señala que el mercado debe abrir estos filtros en una PESTAÑA
+// NUEVA (append) en vez de reemplazar la activa. Lo pone el enlace desde BiS y lo
+// consume marketSearchStore al montar; nunca forma parte de FILTER_KEYS.
+export const NEW_TAB_PARAM = "newTab";
+
 // Nº de filtros ACTIVOS de una búsqueda (para el contador de la pestaña). Los
 // pares mín/máx (precio, refino, slots) cuentan como 1, cada slot de opción con
 // stat cuenta 1, y `poster` cuenta 1. Los filtros MULTI-VALOR (categoría, slot,
