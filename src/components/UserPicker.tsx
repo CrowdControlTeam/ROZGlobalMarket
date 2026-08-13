@@ -23,9 +23,8 @@ export function UserPicker({
   // Modo controlado (mismo patrón que ItemPicker): con un usuario ya
   // elegido, el input queda bloqueado y el único modo de cambiarlo es el
   // botón de limpiar — evita que se pueda editar el texto libre sin que
-  // eso quite la selección del padre. Opcional para no romper el uso
-  // existente (NewPublicationForm, sin selected/onClear): ahí sigue
-  // comportándose igual que antes.
+  // eso quite la selección del padre. Opcional para no romper usos más
+  // simples (sin selected/onClear): ahí sigue comportándose igual que antes.
   selected?: UserResult | null;
   onClear?: () => void;
 }) {

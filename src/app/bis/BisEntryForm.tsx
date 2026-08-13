@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { EquipSlot, ItemOptionGroup, type ItemOptionDef } from "@prisma/client";
-import { ItemPicker, type ItemResult } from "@/app/market/new/ItemPicker";
+import { ItemPicker, type ItemResult } from "@/app/market/ItemPicker";
 import { getOptionChoices } from "@/lib/listings";
 import { createBisEntry, updateBisEntry, deleteBisEntry } from "@/lib/bis-actions";
 import { optionGroupForSlot } from "@/lib/bis-constants";

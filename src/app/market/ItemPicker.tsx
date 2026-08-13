@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { EquipSlot } from "@prisma/client";
@@ -50,17 +50,27 @@ export function ItemPicker({
   const t = useTranslations("market");
   const tCommon = useTranslations("common");
 
+  // Debounce: no lanzar una búsqueda (server action) por cada tecla; se espera a
+  // una pausa breve. Además evita que el indicador de carga parpadee sin parar.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+  }, []);
+
   function handleChange(value: string) {
     setQuery(value);
     setError(null);
-    startTransition(async () => {
-      try {
-        const found = await searchItems(value, slotFilter);
-        setResults(found);
-      } catch (err) {
-        setError(getErrorMessage(err, tCommon("searchError")));
-      }
-    });
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      startTransition(async () => {
+        try {
+          const found = await searchItems(value, slotFilter);
+          setResults(found);
+        } catch (err) {
+          setError(getErrorMessage(err, tCommon("searchError")));
+        }
+      });
+    }, 250);
   }
 
   function handleClear() {
@@ -99,10 +109,21 @@ export function ItemPicker({
         value={query}
         onChange={(e) => handleChange(e.target.value)}
         placeholder={t("itemPicker.placeholder")}
-        className={`${inputClass} h-12`}
+        className={`${inputClass} h-12 ${isPending ? "pr-10" : ""}`}
       />
-      {isPending && <p className="mt-1 text-sm text-ro-text-muted">{tCommon("searching")}</p>}
-      {error && <p className="mt-1 text-sm text-red-700">{error}</p>}
+      {/* Spinner e indicador de estado SUPERPUESTOS (posición absoluta): no
+          entran en el flujo, así que no empujan el contenido de abajo ni
+          provocan el temblor al aparecer/desaparecer en cada tecleo. */}
+      {isPending && (
+        <span
+          role="status"
+          aria-label={tCommon("searching")}
+          className="absolute right-3 top-6 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-ro-text-muted/30 border-t-ro-accent"
+        />
+      )}
+      {error && (
+        <p className="absolute inset-x-0 top-full z-20 mt-1 text-sm text-red-700">{error}</p>
+      )}
       {results.length > 0 && (
         // Desplegable FLOTANTE (absoluto) para no empujar el contenido del modal
         // ni generar scroll: se superpone sobre lo de debajo.

@@ -23,10 +23,10 @@ import {
 import { isRefineEligible, formatRefinedName, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { MAX_LISTING_NOTES_LENGTH } from "@/lib/listing-notes-constants";
 import { getErrorMessage, rethrowFrameworkErrors } from "@/lib/errors";
-import { ItemPicker, type ItemResult } from "./new/ItemPicker";
-import { ScreenshotDropzone } from "./new/ScreenshotDropzone";
+import { ItemPicker, type ItemResult } from "./ItemPicker";
+import { ScreenshotDropzone } from "./ScreenshotDropzone";
 import { UserPicker, type UserResult } from "@/components/UserPicker";
-import type { PublicationType } from "./new/NewPublicationForm";
+import type { PublicationType } from "./publication-type";
 
 type TypeSegment = { value: PublicationType; Icon: LucideIcon; activeBg: string; iconColor: string };
 const TYPE_SEGMENTS: TypeSegment[] = [
@@ -37,9 +37,9 @@ const TYPE_SEGMENTS: TypeSegment[] = [
 ];
 
 // Formulario de publicar del rediseño (2 columnas: escaneo · O · formulario;
-// una sola columna si el reconocimiento no está disponible). Reutiliza íntegra
-// la lógica del NewPublicationForm de página; el contrato de FormData hacia
-// createListing es idéntico. Con `editListing` funciona en modo EDICIÓN: precarga
+// una sola columna si el reconocimiento no está disponible). Es el único
+// formulario de publicar; el contrato de FormData hacia createListing lo
+// consumen createListing/updateListing. Con `editListing` funciona en modo EDICIÓN: precarga
 // los campos, bloquea tipo e item, oculta el escáner y el destinatario, y envía
 // a updateListing en vez de createListing.
 
@@ -177,7 +177,7 @@ export function PublishForm({
 
   // En SALE/TRADE/GIFT (instancia real, sin huecos) limpiar una fila limpia
   // también las siguientes; en BUY (mínimo deseado, huecos permitidos) solo la
-  // suya. Ver NewPublicationForm y parseOptionsFromFormData (servidor).
+  // suya. Ver parseOptionsFromFormData (servidor).
   function handleSelectChange(index: number, defId: string) {
     setOptionSelections((prev) => {
       const next = [...prev];

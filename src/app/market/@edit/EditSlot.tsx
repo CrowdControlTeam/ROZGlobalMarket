@@ -4,7 +4,7 @@ import { getItemOptionGroup, loadMagicalWeaponTypes, isOptionsFeatureAvailable }
 import { buildOptionSelectionsFromDetected } from "@/lib/item-options-constants";
 import { PublishModal } from "../PublishModal";
 import type { EditListingData } from "../PublishForm";
-import type { ItemResult } from "../new/ItemPicker";
+import type { ItemResult } from "../ItemPicker";
 
 // Slot @edit: modal de EDITAR publicación interceptado sobre el mercado, por el
 // query param ?edit=<listingId> (mismo patrón que @publish/@detail). Carga el

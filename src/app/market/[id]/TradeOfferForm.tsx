@@ -9,7 +9,7 @@ import { buttonClass, inputClass, labelClass } from "@/lib/ui";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { getErrorMessage } from "@/lib/errors";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
-import { ItemPicker, type ItemResult } from "../new/ItemPicker";
+import { ItemPicker, type ItemResult } from "../ItemPicker";
 
 export function TradeOfferForm({ listingId }: { listingId: string }) {
   const sync = useListingSync();
@@ -21,7 +21,7 @@ export function TradeOfferForm({ listingId }: { listingId: string }) {
   const [isPending, startTransition] = useTransition();
   // useTransition por sí solo no basta: disabled={isPending} solo se
   // refleja en el DOM tras el siguiente render, y clics muy seguidos
-  // pueden dispararse antes de ese commit — ver NewPublicationForm.tsx.
+  // pueden dispararse antes de ese commit — ver PublishForm.tsx.
   const submittingRef = useRef(false);
   const t = useTranslations("market.detail.tradeForm");
   const tField = useTranslations("market.field");

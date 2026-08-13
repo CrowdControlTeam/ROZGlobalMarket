@@ -1,13 +1,11 @@
 import { isImageRecognitionAvailable } from "@/lib/item-recognition";
 import { PublishModal } from "../PublishModal";
-import type { PublicationType } from "../new/NewPublicationForm";
-
-const VALID_TYPES: PublicationType[] = ["SALE", "BUY", "TRADE", "GIFT"];
+import { isPublicationType } from "../publication-type";
 
 // Slot @publish: modal de "Publicar" interceptado sobre el mercado, activado
 // por el query param ?publish=<tipo> (mismo patrón que @detail/?listing, para
-// no depender del segmento de ruta). El mercado queda montado detrás; el acceso
-// directo /market/new sigue siendo la página completa de respaldo.
+// no depender del segmento de ruta). El mercado queda montado detrás. Es la
+// única vía de publicar: no hay página /market/new independiente.
 export async function PublishSlot({
   searchParams,
 }: {
@@ -18,7 +16,7 @@ export async function PublishSlot({
   if (!value) return null;
 
   const recognitionEnabled = await isImageRecognitionAvailable();
-  const initialType = VALID_TYPES.includes(value as PublicationType) ? (value as PublicationType) : "SALE";
+  const initialType = isPublicationType(value) ? value : "SALE";
 
   return <PublishModal recognitionEnabled={recognitionEnabled} initialType={initialType} />;
 }
