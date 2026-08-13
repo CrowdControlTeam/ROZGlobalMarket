@@ -41,9 +41,6 @@ export function SkillPlanner() {
   const trees = useMemo(() => buildTrees(jobId), [jobId]);
   const usage = useMemo(() => poolUsage(levels, ctx), [levels, ctx]);
 
-  const firstJob = trees.find((tr) => tr.tier === "first")?.job;
-  const secondJob = trees.find((tr) => tr.tier === "second")?.job;
-
   function selectJob(value: string) {
     setJobId(value ? Number(value) : null);
     setLevels({});
@@ -95,21 +92,15 @@ export function SkillPlanner() {
           </optgroup>
         </select>
 
-        {jobId != null && firstJob && (
-          <>
-            <PoolChip label={titleCase(firstJob.name)} used={usage.pool1stUsed} total={ctx.P1} />
-            {secondJob && ctx.P2 > 0 && (
-              <PoolChip label={titleCase(secondJob.name)} used={usage.pool2ndUsed} total={ctx.P2} />
-            )}
-            <button
-              type="button"
-              onClick={() => setLevels({})}
-              className={`${buttonClass("outline")} ml-auto flex h-9 items-center gap-1.5`}
-            >
-              <RotateCcw size={14} />
-              {t("reset")}
-            </button>
-          </>
+        {jobId != null && (
+          <button
+            type="button"
+            onClick={() => setLevels({})}
+            className={`${buttonClass("outline")} ml-auto flex h-9 items-center gap-1.5`}
+          >
+            <RotateCcw size={14} />
+            {t("reset")}
+          </button>
         )}
       </div>
 
@@ -119,9 +110,17 @@ export function SkillPlanner() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {trees.map((tree) => (
+          {trees.map((tree) => {
+            const used = tree.tier === "first" ? usage.pool1stUsed : usage.pool2ndUsed;
+            const total = tree.tier === "first" ? ctx.P1 : ctx.P2;
+            return (
             <div key={tree.job.id} className="rounded-lg border-2 border-ro-panel-border bg-ro-panel/50 p-4">
-              <h3 className="mb-3 font-heading text-sm text-ro-text">{titleCase(tree.job.name)}</h3>
+              <div className="mb-3 flex items-baseline gap-2">
+                <h3 className="font-heading text-sm text-ro-text">{titleCase(tree.job.name)}</h3>
+                <span className="text-xs font-semibold text-ro-text-muted">
+                  <span className="tabular-nums text-ro-accent">{used}</span> / {total}
+                </span>
+              </div>
               <div className="overflow-x-auto">
                 <SkillTree
                   tree={tree}
@@ -136,7 +135,8 @@ export function SkillPlanner() {
                 />
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -153,12 +153,3 @@ export function SkillPlanner() {
   );
 }
 
-// Puntos ASIGNADOS por pool (empieza en 0), etiquetados con el nombre del job.
-function PoolChip({ label, used, total }: { label: string; used: number; total: number }) {
-  return (
-    <span className="rounded-md border-2 border-ro-panel-border bg-ro-panel px-3 py-1.5 text-xs font-semibold text-ro-text">
-      {label}: <span className="tabular-nums text-ro-accent">{used}</span>
-      <span className="text-ro-text-muted"> / {total}</span>
-    </span>
-  );
-}
