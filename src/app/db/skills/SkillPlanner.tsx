@@ -8,6 +8,8 @@ import {
   buildCtx,
   buildTrees,
   effLevel,
+  getSkill,
+  learnCost,
   poolUsage,
   prereqClosure,
   selectableJobs,
@@ -28,6 +30,9 @@ export function SkillPlanner() {
   const [modalSkill, setModalSkill] = useState<number | null>(null);
   // Cadena de prereqs a resaltar (la skill en hover + todos sus prereqs).
   const [highlight, setHighlight] = useState<Set<number>>(() => new Set());
+  // Coste por skill para aprender la que está en hover (solo si no está
+  // aprendida): la propia a 1 + prereqs a su nivel requerido.
+  const [needed, setNeeded] = useState<Map<number, number>>(() => new Map());
 
   const { first, second } = useMemo(() => selectableJobs(), []);
   const ctx = useMemo(() => buildCtx(jobId), [jobId]);
@@ -54,7 +59,16 @@ export function SkillPlanner() {
   }
 
   function hover(id: number | null) {
-    setHighlight(id == null ? new Set() : prereqClosure(id, ctx));
+    if (id == null) {
+      setHighlight(new Set());
+      setNeeded(new Map());
+      return;
+    }
+    setHighlight(prereqClosure(id, ctx));
+    // El coste solo se muestra sobre skills NO aprendidas (ni pre).
+    const skill = getSkill(id);
+    const notLearned = skill != null && !skill.pre && effLevel(id, levels) === 0;
+    setNeeded(notLearned ? learnCost(id, ctx) : new Map());
   }
 
   return (
@@ -111,6 +125,7 @@ export function SkillPlanner() {
                   levels={levels}
                   ctx={ctx}
                   highlight={highlight}
+                  needed={needed}
                   onSelect={setModalSkill}
                   onWheel={wheel}
                   onHover={hover}

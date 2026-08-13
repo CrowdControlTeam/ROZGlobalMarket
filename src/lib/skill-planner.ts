@@ -123,6 +123,21 @@ export function prereqClosure(id: number, ctx: PlannerCtx): Set<number> {
   return set;
 }
 
+// Puntos/nivel que necesita cada skill de la cadena para poder APRENDER `id`
+// (nivel 1): la propia a 1 y cada prerequisito a su nivel requerido (en cascada,
+// tomando el máximo si varias rutas lo piden). Para el badge de "coste" al hover.
+export function learnCost(id: number, ctx: PlannerCtx): Map<number, number> {
+  const needed = new Map<number, number>();
+  function visit(sid: number, lv: number) {
+    const cur = needed.get(sid) ?? 0;
+    if (lv <= cur && cur > 0) return;
+    needed.set(sid, Math.max(cur, lv));
+    for (const p of prereqsOf(sid, ctx)) visit(p.id, p.lv);
+  }
+  visit(id, 1);
+  return needed;
+}
+
 // --- Pools ---
 // Skills de 1st gastan primero del pool 1st (P1) y, si se agota, del 2nd (P2).
 // Skills de 2nd gastan solo del 2nd. Un build de 2nd job = 49 atados a 1st + 69

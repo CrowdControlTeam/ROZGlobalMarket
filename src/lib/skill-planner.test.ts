@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { buildCtx, setLevel, poolUsage, isValid, prereqClosure, type Levels } from "./skill-planner";
+import {
+  buildCtx,
+  setLevel,
+  poolUsage,
+  isValid,
+  prereqClosure,
+  learnCost,
+  type Levels,
+} from "./skill-planner";
 
 // Swordman (job 1): Bash = id 5, Magnum Break = id 7 (requiere Bash 5).
 const SWORDMAN = 1;
@@ -38,6 +46,13 @@ describe("skill-planner prereqClosure", () => {
     // Peco Peco Ride → Endure (8); Endure → Provoke (6).
     const chain = prereqClosure(398, ctx);
     expect(chain).toEqual(new Set([398, 55, 63, 8, 6]));
+  });
+
+  it("learnCost: la propia a 1 y cada prereq a su nivel requerido", () => {
+    const ctx = buildCtx(KNIGHT);
+    // Traumatic Blow→1; Spear Mastery→9; Peco Peco Ride→1; Endure→1; Provoke→5.
+    const cost = learnCost(398, ctx);
+    expect(Object.fromEntries(cost)).toEqual({ 398: 1, 55: 9, 63: 1, 8: 1, 6: 5 });
   });
 });
 

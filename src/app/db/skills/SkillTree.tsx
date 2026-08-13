@@ -37,6 +37,7 @@ export function SkillTree({
   levels,
   ctx,
   highlight,
+  needed,
   onSelect,
   onWheel,
   onHover,
@@ -45,6 +46,7 @@ export function SkillTree({
   levels: Levels;
   ctx: PlannerCtx;
   highlight: Set<number>;
+  needed: Map<number, number>;
   onSelect: (id: number) => void;
   onWheel: (id: number, delta: number) => void;
   onHover: (id: number | null) => void;
@@ -88,6 +90,7 @@ export function SkillTree({
         const learned = lv > 0;
         const unavailable = !skill.pre && lv === 0 && !prereqsMet(cell.id, levels, ctx);
         const highlighted = highlight.has(cell.id);
+        const need = needed.get(cell.id);
 
         return (
           <button
@@ -134,6 +137,11 @@ export function SkillTree({
               style={{ width: BOX, height: BOX }}
             >
               <Image src={`/icons/skills/${cell.id}.png`} alt="" width={ICON} height={ICON} />
+              {need != null && (
+                <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border border-ro-panel bg-ro-accent px-1 text-[10px] font-bold tabular-nums text-white shadow">
+                  {need}
+                </span>
+              )}
               {(learned || skill.pre) && (
                 <span
                   className={`absolute bottom-0 right-0 rounded-tl rounded-br-[3px] px-1 text-[10px] font-bold leading-tight tabular-nums ${
