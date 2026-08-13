@@ -22,7 +22,7 @@ export function ListingStatusFilter() {
     if (isOn(next, key)) next.set(key, "0");
     else next.delete(key);
     const qs = next.toString();
-    router.replace(qs ? `/my/listings?${qs}` : "/my/listings", { scroll: false });
+    router.replace(qs ? `/market/activity/listings?${qs}` : "/market/activity/listings", { scroll: false });
   }
 
   return (

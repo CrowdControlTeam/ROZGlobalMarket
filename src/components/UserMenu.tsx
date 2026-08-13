@@ -113,7 +113,7 @@ export function UserMenu({
 
         <div className="mt-6 flex flex-col gap-2">
           <Link
-            href="/my/listings"
+            href="/market/activity/listings"
             onClick={() => setOpen(false)}
             className={`w-full ${buttonClass("outline")}`}
           >

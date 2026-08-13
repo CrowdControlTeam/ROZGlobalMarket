@@ -4,7 +4,6 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { getMarketStats } from "@/lib/admin-stats";
 import { isStatsPeriod, type StatsPeriod } from "@/lib/admin-stats-constants";
 import { Panel } from "@/components/Panel";
-import { BackLink } from "@/components/BackLink";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { listingTypeLabel, offerStatusLabel } from "@/lib/market-labels";
 import { AdminStatsPeriodSelect } from "./AdminStatsPeriodSelect";
@@ -82,10 +81,10 @@ export default async function AdminStatsPage({
   const tMarket = await getTranslations("market");
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
-      <BackLink href="/market" label={tMarket("nav.backToMarket")} />
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="font-heading text-lg text-ro-text">{t("title")}</h1>
+    <>
+      {/* El título ("Estadísticas") lo da el hub del layout; aquí solo el
+          selector de periodo, alineado a la derecha. */}
+      <div className="mb-4 flex justify-end">
         <AdminStatsPeriodSelect />
       </div>
 
@@ -202,6 +201,6 @@ export default async function AdminStatsPage({
           />
         </Panel>
       </div>
-    </main>
+    </>
   );
 }

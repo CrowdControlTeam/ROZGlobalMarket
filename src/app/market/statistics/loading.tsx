@@ -15,10 +15,10 @@ function PanelSkeleton({ className, rows = 3 }: { className?: string; rows?: num
 
 export default function Loading() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
-      <Skeleton className="mb-3 h-4 w-24" />
-      <div className="mb-4 flex items-center justify-between">
-        <Skeleton className="h-6 w-32" />
+    <>
+      {/* El <main> + hub los pinta el layout de /market. Solo el selector de
+          periodo (derecha) + los paneles. */}
+      <div className="mb-4 flex justify-end">
         <Skeleton className="h-8 w-32" />
       </div>
       <PanelSkeleton className="mb-6" rows={1} />
@@ -33,6 +33,6 @@ export default function Loading() {
         <PanelSkeleton rows={4} />
         <PanelSkeleton rows={4} />
       </div>
-    </main>
+    </>
   );
 }

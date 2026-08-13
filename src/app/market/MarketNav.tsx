@@ -17,27 +17,33 @@ export function MarketNav({ isAdmin }: { isAdmin: boolean }) {
   const t = useTranslations();
   const type = searchParams.get("type");
   const onMarket = pathname === "/market";
-  // Publicar abre el modal interceptado (?publish=<tipo>) sobre el mercado,
-  // preservando los filtros actuales; preselecciona el tipo por el que se esté
-  // filtrando (Venta por defecto). Es la única vía de publicar.
-  const publishParams = new URLSearchParams(searchParams.toString());
+  // Publicar abre el modal interceptado (?publish=<tipo>) sobre el índice del
+  // mercado; preselecciona el tipo por el que se esté filtrando (Venta por
+  // defecto). Solo hereda los filtros actuales si estamos en el índice — desde
+  // activity/statistics no hay filtros que arrastrar.
+  const publishParams = new URLSearchParams(onMarket ? searchParams.toString() : "");
   publishParams.set("publish", type || "SALE");
   publishParams.delete("listing");
   const publishHref = `/market?${publishParams.toString()}`;
 
   const items: NavItem[] = [
     { href: "/market", labelKey: "home.tiles.market.label", Icon: Store, active: onMarket },
-    { href: "/my/listings", labelKey: "nav.account.myActivity", Icon: User, active: pathname.startsWith("/my") },
-    // Estadísticas solo para admins (la ruta /admin/stats ya está protegida con
-    // requireAdmin). Sustituye al antiguo botón de Regalos (Regalo es un tipo
+    {
+      href: "/market/activity/listings",
+      labelKey: "nav.account.myActivity",
+      Icon: User,
+      active: pathname.startsWith("/market/activity"),
+    },
+    // Estadísticas solo para admins (la ruta /market/statistics ya está protegida
+    // con requireAdmin). Sustituye al antiguo botón de Regalos (Regalo es un tipo
     // del selector del mercado, no una sección aparte).
     ...(isAdmin
       ? [
           {
-            href: "/admin/stats",
+            href: "/market/statistics",
             labelKey: "home.tiles.stats.label",
             Icon: BarChart3,
-            active: pathname.startsWith("/admin/stats"),
+            active: pathname.startsWith("/market/statistics"),
           } as NavItem,
         ]
       : []),

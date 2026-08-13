@@ -13,7 +13,7 @@ export function AdminStatsPeriodSelect() {
   function handleChange(value: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("period", value);
-    router.push(`/admin/stats?${params.toString()}`);
+    router.push(`/market/statistics?${params.toString()}`);
   }
 
   return (

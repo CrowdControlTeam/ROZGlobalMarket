@@ -79,7 +79,7 @@ export async function Hub({
           <TileText label={t("tiles.market.label")} desc={t("tiles.market.desc")} />
         </Link>
 
-        <Link href="/my/listings" className={TILE_LINK}>
+        <Link href="/market/activity/listings" className={TILE_LINK}>
           <TileIcon Icon={Package} />
           <TileText label={t("tiles.activity.label")} desc={t("tiles.activity.desc")} />
         </Link>
@@ -97,7 +97,7 @@ export async function Hub({
         {/* Estadísticas + Ajustes: solo admins, en una fila de dos columnas. */}
         {isAdmin && (
           <>
-            <Link href="/admin/stats" className={TILE_LINK}>
+            <Link href="/market/statistics" className={TILE_LINK}>
               <TileIcon Icon={BarChart3} />
               <TileText label={t("tiles.stats.label")} desc={t("tiles.stats.desc")} />
             </Link>
