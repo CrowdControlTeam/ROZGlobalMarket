@@ -357,45 +357,103 @@ function SlotCell({
   const dndEnabled = sortable && mounted;
 
   const overLimit = shown.length > CELL_LIMIT;
-  const visible = expanded ? shown : shown.slice(0, CELL_LIMIT);
+  const isExpanded = expanded && overLimit;
+  const collapsed = shown.slice(0, CELL_LIMIT);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const ids = visible.map((e) => e.id);
+    // Expandida se reordena sobre toda la lista; colapsada, solo las visibles
+    // (las ocultas se reanexan al final para no perder su orden).
+    const list = isExpanded ? shown : collapsed;
+    const ids = list.map((e) => e.id);
     const oldIndex = ids.indexOf(active.id as string);
     const newIndex = ids.indexOf(over.id as string);
     if (oldIndex < 0 || newIndex < 0) return;
-    const newVisible = arrayMove(ids, oldIndex, newIndex);
-    // El orden completo del slot = visibles reordenadas + las ocultas (colapso).
-    const hidden = shown.slice(CELL_LIMIT).map((e) => e.id);
-    onReorder([...newVisible, ...hidden]);
+    const reordered = arrayMove(ids, oldIndex, newIndex);
+    const hidden = isExpanded ? [] : shown.slice(CELL_LIMIT).map((e) => e.id);
+    onReorder([...reordered, ...hidden]);
   }
 
+  const gridClass = "grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2";
+
+  function renderCards(entries: BisEntryView[], interactive: boolean) {
+    if (interactive) {
+      return (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={entries.map((e) => e.id)} strategy={rectSortingStrategy}>
+            <ul className={gridClass}>
+              {entries.map((entry) => (
+                <SortableEntry
+                  key={entry.id}
+                  entry={entry}
+                  onOpen={() => onOpen(entry)}
+                  canEdit={canEdit}
+                  onEdit={() => onEditEntry(entry)}
+                  onDelete={() => onDeleteEntry(entry)}
+                />
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
+      );
+    }
+    return (
+      <ul className={gridClass}>
+        {entries.map((entry) => (
+          <li key={entry.id}>
+            <EntryCard
+              entry={entry}
+              onOpen={() => onOpen(entry)}
+              canEdit={canEdit}
+              onEdit={() => onEditEntry(entry)}
+              onDelete={() => onDeleteEntry(entry)}
+            />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  const header = (
+    <header className="mb-2 flex items-center gap-2">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-ro-accent/10 text-ro-accent">
+        <Icon size={16} aria-hidden />
+      </span>
+      <h3 className="font-heading text-xs tracking-wide text-ro-text">{label}</h3>
+      <div className="ml-auto flex items-center gap-1.5">
+        {shown.length > 0 && (
+          <span className="text-[0.65rem] font-semibold text-ro-text-muted">{shown.length}</span>
+        )}
+        {canEdit && (
+          <button
+            type="button"
+            onClick={onAdd}
+            aria-label={t("add")}
+            title={t("add")}
+            className="grid h-6 w-6 place-items-center rounded-md border border-ro-panel-border text-ro-text-muted transition-colors hover:border-ro-accent hover:text-ro-accent"
+          >
+            <Plus size={14} aria-hidden />
+          </button>
+        )}
+      </div>
+    </header>
+  );
+
+  const toggle = (onToggle: () => void) => (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-ro-accent hover:underline"
+    >
+      <ChevronDown size={13} className={isExpanded ? "rotate-180 transition-transform" : "transition-transform"} aria-hidden />
+      {isExpanded ? t("showLess") : t("showAll", { count: shown.length })}
+    </button>
+  );
+
   return (
-    <section className="flex h-full flex-col rounded-xl border border-ro-panel-border bg-ro-panel p-3">
-      <header className="mb-2 flex items-center gap-2">
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-ro-accent/10 text-ro-accent">
-          <Icon size={16} aria-hidden />
-        </span>
-        <h3 className="font-heading text-xs tracking-wide text-ro-text">{label}</h3>
-        <div className="ml-auto flex items-center gap-1.5">
-          {shown.length > 0 && (
-            <span className="text-[0.65rem] font-semibold text-ro-text-muted">{shown.length}</span>
-          )}
-          {canEdit && (
-            <button
-              type="button"
-              onClick={onAdd}
-              aria-label={t("add")}
-              title={t("add")}
-              className="grid h-6 w-6 place-items-center rounded-md border border-ro-panel-border text-ro-text-muted transition-colors hover:border-ro-accent hover:text-ro-accent"
-            >
-              <Plus size={14} aria-hidden />
-            </button>
-          )}
-        </div>
-      </header>
+    <section className="relative flex h-full flex-col rounded-xl border border-ro-panel-border bg-ro-panel p-3">
+      {header}
 
       {shown.length === 0 ? (
         <p className="py-1 text-xs italic text-ro-text-muted">
@@ -403,47 +461,29 @@ function SlotCell({
         </p>
       ) : (
         <>
-          {dndEnabled ? (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={visible.map((e) => e.id)} strategy={rectSortingStrategy}>
-                <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
-                  {visible.map((entry) => (
-                    <SortableEntry
-                      key={entry.id}
-                      entry={entry}
-                      onOpen={() => onOpen(entry)}
-                      canEdit={canEdit}
-                      onEdit={() => onEditEntry(entry)}
-                      onDelete={() => onDeleteEntry(entry)}
-                    />
-                  ))}
-                </ul>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
-              {visible.map((entry) => (
-                <li key={entry.id}>
-                  <EntryCard
-                    entry={entry}
-                    onOpen={() => onOpen(entry)}
-                    canEdit={canEdit}
-                    onEdit={() => onEditEntry(entry)}
-                    onDelete={() => onDeleteEntry(entry)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-          {overLimit && (
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-ro-accent hover:underline"
-            >
-              <ChevronDown size={13} className={expanded ? "rotate-180 transition-transform" : "transition-transform"} aria-hidden />
-              {expanded ? t("showLess") : t("showAll", { count: shown.length })}
-            </button>
+          {/* Vista base (colapsada). Al expandir queda como placeholder no
+              interactivo detrás del panel flotante, para que la rejilla no
+              cambie de alto (las filas son 1fr y se igualan entre sí). */}
+          {renderCards(collapsed, dndEnabled && !isExpanded)}
+          {overLimit && toggle(() => setExpanded((v) => !v))}
+
+          {isExpanded && (
+            <>
+              {/* Backdrop invisible: cerrar al hacer clic fuera del panel. */}
+              <button
+                type="button"
+                aria-label={t("showLess")}
+                onClick={() => setExpanded(false)}
+                className="fixed inset-0 z-20 cursor-default"
+              />
+              {/* Panel flotante con la lista completa: se superpone a los slots
+                  vecinos en lugar de empujar el layout. */}
+              <div className="absolute inset-x-0 top-0 z-30 flex flex-col rounded-xl border border-ro-accent/50 bg-ro-panel p-3 shadow-2xl">
+                {header}
+                {renderCards(shown, dndEnabled)}
+                {toggle(() => setExpanded(false))}
+              </div>
+            </>
           )}
         </>
       )}
