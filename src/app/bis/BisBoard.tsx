@@ -232,25 +232,30 @@ function EntryCard({
       </div>
 
       </button>
-      {(canEdit || entry.note) && (
+      {canEdit && (
         <div
-          className="absolute right-1 top-1 flex flex-col items-center gap-1"
+          className="absolute right-1 top-1"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          {canEdit && (
-            <KebabMenu
-              label={t("kebabLabel")}
-              items={[
-                { label: t("edit"), icon: <Pencil size={14} aria-hidden />, onSelect: onEdit },
-                { label: t("form.delete"), icon: <Trash2 size={14} aria-hidden />, onSelect: onDelete },
-              ]}
-            />
-          )}
-          {entry.note && (
-            <NoteIndicator label={t("hasNotes")} size={13} className="grid h-6 w-6 place-items-center" />
-          )}
+          <KebabMenu
+            label={t("kebabLabel")}
+            items={[
+              { label: t("edit"), icon: <Pencil size={14} aria-hidden />, onSelect: onEdit },
+              { label: t("form.delete"), icon: <Trash2 size={14} aria-hidden />, onSelect: onDelete },
+            ]}
+          />
         </div>
+      )}
+      {entry.note && (
+        <NoteIndicator
+          label={t("hasNotes")}
+          size={13}
+          className="absolute grid h-5 w-5 place-items-center"
+          // Snug under the kebab icon on tiny BiS cards (kebab is at top-1),
+          // or top-right when there is no kebab.
+          style={{ top: canEdit ? "1.9rem" : "0.4rem", right: "0.45rem" }}
+        />
       )}
     </div>
   );
