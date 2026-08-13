@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { RoDescription } from "@/components/RoDescription";
 import {
   GRID_COLS,
   effLevel,
@@ -20,7 +21,6 @@ function center(pos: number) {
   return { x: (pos % GRID_COLS) * STEP + CELL / 2, y: Math.floor(pos / GRID_COLS) * STEP + CELL / 2 };
 }
 
-// ¿Cumple una skill todos sus prerequisitos (al nivel pedido)?
 function prereqsMet(id: number, levels: Levels, ctx: PlannerCtx): boolean {
   return prereqsOf(id, ctx).every((p) => effLevel(p.id, levels) >= p.lv);
 }
@@ -29,14 +29,12 @@ export function SkillTree({
   tree,
   levels,
   ctx,
-  selectedId,
   onSelect,
   onWheel,
 }: {
   tree: TreeView;
   levels: Levels;
   ctx: PlannerCtx;
-  selectedId: number | null;
   onSelect: (id: number) => void;
   onWheel: (id: number, delta: number) => void;
 }) {
@@ -61,14 +59,14 @@ export function SkillTree({
     return () => el.removeEventListener("wheel", handler);
   }, []);
 
+  // Tooltip de descripción al pasar el ratón (posición fija, sigue al cursor).
+  const [hover, setHover] = useState<{ id: number; x: number; y: number } | null>(null);
+
   const maxPos = Math.max(0, ...tree.cells.map((c) => c.pos));
   const rows = Math.floor(maxPos / GRID_COLS) + 1;
   const width = GRID_COLS * CELL + (GRID_COLS - 1) * GAP;
   const height = rows * CELL + (rows - 1) * GAP;
 
-  // Posiciones por skillId para trazar las flechas (solo prereqs dentro de este
-  // mismo árbol; los cruzados —2nd que pide 1st— quedan en el otro grid, como
-  // en las pestañas del juego).
   const posById = new Map(tree.cells.map((c) => [c.id, c.pos]));
   const arrows: { from: number; to: number }[] = [];
   for (const cell of tree.cells) {
@@ -77,14 +75,11 @@ export function SkillTree({
     }
   }
 
+  const hoverSkill = hover != null ? getSkill(hover.id) : undefined;
+
   return (
     <div ref={containerRef} className="relative" style={{ width, height }}>
-      <svg
-        className="pointer-events-none absolute inset-0"
-        width={width}
-        height={height}
-        aria-hidden
-      >
+      <svg className="pointer-events-none absolute inset-0" width={width} height={height} aria-hidden>
         <defs>
           <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
             <path d="M0,0 L6,3 L0,6 Z" fill="var(--color-ro-accent, #4a90d9)" />
@@ -114,10 +109,8 @@ export function SkillTree({
         if (!skill) return null;
         const { x, y } = center(cell.pos);
         const lv = effLevel(cell.id, levels);
-        const met = prereqsMet(cell.id, levels, ctx);
         const learned = lv > 0;
-        const unavailable = !skill.pre && lv === 0 && !met;
-        const selected = selectedId === cell.id;
+        const unavailable = !skill.pre && lv === 0 && !prereqsMet(cell.id, levels, ctx);
 
         return (
           <button
@@ -127,24 +120,19 @@ export function SkillTree({
             data-skill-id={cell.id}
             data-pre={skill.pre ? "1" : "0"}
             onClick={() => onSelect(cell.id)}
+            onMouseEnter={(e) => setHover({ id: cell.id, x: e.clientX, y: e.clientY })}
+            onMouseMove={(e) => setHover({ id: cell.id, x: e.clientX, y: e.clientY })}
+            onMouseLeave={() => setHover((h) => (h?.id === cell.id ? null : h))}
             style={{ left: x - CELL / 2, top: y - CELL / 2, width: CELL, height: CELL }}
             className={`absolute flex items-center justify-center rounded-md border-2 bg-ro-panel transition-colors ${
-              selected
-                ? "border-ro-accent ring-2 ring-ro-accent"
-                : skill.pre
-                  ? "border-amber-400/70"
-                  : learned
-                    ? "border-ro-accent"
-                    : "border-ro-panel-border hover:border-ro-accent"
+              skill.pre
+                ? "border-amber-400/70"
+                : learned
+                  ? "border-ro-accent"
+                  : "border-ro-panel-border hover:border-ro-accent"
             } ${unavailable ? "opacity-40 grayscale" : ""}`}
           >
-            <Image
-              src={`/icons/skills/${cell.id}.png`}
-              alt=""
-              width={32}
-              height={32}
-              className="h-8 w-8"
-            />
+            <Image src={`/icons/skills/${cell.id}.png`} alt="" width={32} height={32} className="h-8 w-8" />
             {(learned || skill.pre) && (
               <span
                 className={`absolute bottom-0 right-0 rounded-tl rounded-br-[3px] px-1 text-[10px] font-bold leading-tight tabular-nums ${
@@ -157,6 +145,15 @@ export function SkillTree({
           </button>
         );
       })}
+
+      {hover && hoverSkill && hoverSkill.desc.length > 0 && (
+        <div
+          className="pointer-events-none fixed z-50 w-72 max-w-[80vw] rounded-md border-2 border-ro-panel-border bg-ro-panel p-3 shadow-xl"
+          style={{ left: hover.x + 14, top: hover.y + 14 }}
+        >
+          <RoDescription lines={hoverSkill.desc} format="caret" />
+        </div>
+      )}
     </div>
   );
 }

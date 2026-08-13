@@ -29,7 +29,8 @@
       "decrease": "Bajar nivel",
       "increase": "Subir nivel",
       "requires": "Requiere",
-      "lvShort": "Nv"
+      "lvShort": "Nv",
+      "close": "Cerrar"
     }
   },
   "common": {
