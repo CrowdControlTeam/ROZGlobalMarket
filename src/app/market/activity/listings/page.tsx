@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { getMyListings } from "@/lib/listings";
@@ -11,6 +10,7 @@ import {
   formatOptionAmount,
 } from "@/lib/market-labels";
 import { ListingStatusFilter } from "@/components/ListingStatusFilter";
+import { ListingLink } from "@/components/ListingLink";
 
 export default async function MyListingsPage({
   searchParams,
@@ -44,8 +44,8 @@ export default async function MyListingsPage({
         const isBuy = listing.type === "BUY";
         return (
           <li key={listing.id}>
-            <Link
-              href={`/market/${listing.id}`}
+            <ListingLink
+              listingId={listing.id}
               className="flex items-center gap-4 rounded-lg border-2 border-ro-panel-border bg-ro-panel p-4 text-ro-text transition-colors hover:border-ro-accent"
             >
               <Image src={listing.item.iconUrl} alt={listing.item.name} width={40} height={40} />
@@ -93,7 +93,7 @@ export default async function MyListingsPage({
               <span className="text-xs text-ro-text-muted">
                 {listing.createdAt.toLocaleDateString()}
               </span>
-            </Link>
+            </ListingLink>
           </li>
             );
           })}
