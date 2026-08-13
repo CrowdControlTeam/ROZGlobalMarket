@@ -33,6 +33,8 @@ export function SkillPlanner() {
   // Coste por skill para aprender la que está en hover (solo si no está
   // aprendida): la propia a 1 + prereqs a su nivel requerido.
   const [needed, setNeeded] = useState<Map<number, number>>(() => new Map());
+  // Skill en hover (muestra el TOTAL de puntos en vez de su coste individual).
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   const { first, second } = useMemo(() => selectableJobs(), []);
   const ctx = useMemo(() => buildCtx(jobId), [jobId]);
@@ -59,6 +61,7 @@ export function SkillPlanner() {
   }
 
   function hover(id: number | null) {
+    setHoveredId(id);
     if (id == null) {
       setHighlight(new Set());
       setNeeded(new Map());
@@ -126,6 +129,7 @@ export function SkillPlanner() {
                   ctx={ctx}
                   highlight={highlight}
                   needed={needed}
+                  hoveredId={hoveredId}
                   onSelect={setModalSkill}
                   onWheel={wheel}
                   onHover={hover}

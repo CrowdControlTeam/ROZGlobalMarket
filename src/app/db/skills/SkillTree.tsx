@@ -38,6 +38,7 @@ export function SkillTree({
   ctx,
   highlight,
   needed,
+  hoveredId,
   onSelect,
   onWheel,
   onHover,
@@ -47,6 +48,7 @@ export function SkillTree({
   ctx: PlannerCtx;
   highlight: Set<number>;
   needed: Map<number, number>;
+  hoveredId: number | null;
   onSelect: (id: number) => void;
   onWheel: (id: number, delta: number) => void;
   onHover: (id: number | null) => void;
@@ -79,6 +81,9 @@ export function SkillTree({
   const height = (rows - 1) * STEP_Y + SLOT_H;
 
   const hoverSkill = hover != null ? getSkill(hover.id) : undefined;
+  // Total de puntos de la cadena (se muestra sobre la skill en hover).
+  let neededTotal = 0;
+  for (const v of needed.values()) neededTotal += v;
 
   return (
     <div ref={containerRef} className="relative" style={{ width, height }}>
@@ -90,7 +95,9 @@ export function SkillTree({
         const learned = lv > 0;
         const unavailable = !skill.pre && lv === 0 && !prereqsMet(cell.id, levels, ctx);
         const highlighted = highlight.has(cell.id);
-        const need = needed.get(cell.id);
+        // La skill en hover muestra el TOTAL de la cadena; los prereqs, su coste.
+        const rawNeed = needed.get(cell.id);
+        const need = rawNeed == null ? null : cell.id === hoveredId ? neededTotal : rawNeed;
 
         return (
           <button
@@ -138,7 +145,13 @@ export function SkillTree({
             >
               <Image src={`/icons/skills/${cell.id}.png`} alt="" width={ICON} height={ICON} />
               {need != null && (
-                <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border border-ro-panel bg-ro-accent px-1 text-[10px] font-bold tabular-nums text-white shadow">
+                <span
+                  className={`absolute -right-2 -top-2 flex items-center justify-center rounded-full border border-ro-panel bg-ro-accent px-1 font-bold tabular-nums text-white shadow ${
+                    cell.id === hoveredId
+                      ? "h-6 min-w-6 text-[11px] ring-2 ring-ro-accent/40"
+                      : "h-5 min-w-5 text-[10px]"
+                  }`}
+                >
                   {need}
                 </span>
               )}
