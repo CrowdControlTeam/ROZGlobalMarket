@@ -234,7 +234,9 @@ function EntryCard({
       {entry.note && (
         <span
           aria-label={t("detail.note")}
-          className={`absolute right-1.5 text-ro-text-muted ${canEdit ? "top-8" : "top-1.5"}`}
+          className={`absolute right-1 grid h-7 w-7 place-items-center text-ro-text-muted ${
+            canEdit ? "top-8" : "top-1"
+          }`}
         >
           <MessageSquareText size={13} aria-hidden />
         </span>
