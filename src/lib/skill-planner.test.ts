@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCtx, setLevel, poolUsage, isValid, type Levels } from "./skill-planner";
+import { buildCtx, setLevel, poolUsage, isValid, prereqClosure, type Levels } from "./skill-planner";
 
 // Swordman (job 1): Bash = id 5, Magnum Break = id 7 (requiere Bash 5).
 const SWORDMAN = 1;
@@ -28,6 +28,16 @@ describe("skill-planner prereqs", () => {
     const ctx = buildCtx(SWORDMAN);
     const next = setLevel({}, BASH, 999, ctx)!;
     expect(next[BASH]).toBe(10); // maxLevel de Bash
+  });
+});
+
+describe("skill-planner prereqClosure", () => {
+  it("incluye la skill y toda su cadena de prereqs (cruzando árboles)", () => {
+    const ctx = buildCtx(KNIGHT);
+    // Traumatic Blow (398) → Spear Mastery (55), Peco Peco Ride (63);
+    // Peco Peco Ride → Endure (8); Endure → Provoke (6).
+    const chain = prereqClosure(398, ctx);
+    expect(chain).toEqual(new Set([398, 55, 63, 8, 6]));
   });
 });
 

@@ -109,6 +109,20 @@ export function prereqsOf(id: number, ctx: PlannerCtx): SkillReq[] {
   return byJob ?? s.reqDefault;
 }
 
+// Cierre transitivo de prerequisitos: la skill dada + todos sus prereqs en
+// cadena (para resaltarlos al hover). Incluye la propia skill.
+export function prereqClosure(id: number, ctx: PlannerCtx): Set<number> {
+  const set = new Set<number>();
+  const stack = [id];
+  while (stack.length > 0) {
+    const cur = stack.pop()!;
+    if (set.has(cur)) continue;
+    set.add(cur);
+    for (const p of prereqsOf(cur, ctx)) stack.push(p.id);
+  }
+  return set;
+}
+
 // --- Pools ---
 // Skills de 1st gastan primero del pool 1st (P1) y, si se agota, del 2nd (P2).
 // Skills de 2nd gastan solo del 2nd. Un build de 2nd job = 49 atados a 1st + 69

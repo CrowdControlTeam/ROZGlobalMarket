@@ -27,11 +27,6 @@ const STEP_Y = SLOT_H + 16;
 function slotPos(pos: number) {
   return { x: (pos % GRID_COLS) * STEP_X, y: Math.floor(pos / GRID_COLS) * STEP_Y };
 }
-// Centro de la CAJA del icono (para las flechas): debajo del caption, centrado.
-function iconCenter(pos: number) {
-  const s = slotPos(pos);
-  return { x: s.x + SLOT_W / 2, y: s.y + CAPTION_H + 2 + BOX / 2 };
-}
 
 function prereqsMet(id: number, levels: Levels, ctx: PlannerCtx): boolean {
   return prereqsOf(id, ctx).every((p) => effLevel(p.id, levels) >= p.lv);
@@ -41,14 +36,18 @@ export function SkillTree({
   tree,
   levels,
   ctx,
+  highlight,
   onSelect,
   onWheel,
+  onHover,
 }: {
   tree: TreeView;
   levels: Levels;
   ctx: PlannerCtx;
+  highlight: Set<number>;
   onSelect: (id: number) => void;
   onWheel: (id: number, delta: number) => void;
+  onHover: (id: number | null) => void;
 }) {
   // Rueda: listener nativo no-pasivo (React lo registra passive → preventDefault
   // no frenaría el scroll de página). Resuelve la celda por data-skill-id.
@@ -77,43 +76,10 @@ export function SkillTree({
   const width = (GRID_COLS - 1) * STEP_X + SLOT_W;
   const height = (rows - 1) * STEP_Y + SLOT_H;
 
-  const posById = new Map(tree.cells.map((c) => [c.id, c.pos]));
-  const arrows: { from: number; to: number }[] = [];
-  for (const cell of tree.cells) {
-    for (const p of prereqsOf(cell.id, ctx)) {
-      if (posById.has(p.id)) arrows.push({ from: posById.get(p.id)!, to: cell.pos });
-    }
-  }
-
   const hoverSkill = hover != null ? getSkill(hover.id) : undefined;
 
   return (
     <div ref={containerRef} className="relative" style={{ width, height }}>
-      <svg className="pointer-events-none absolute inset-0" width={width} height={height} aria-hidden>
-        <defs>
-          <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" fill="var(--color-ro-accent, #4a90d9)" />
-          </marker>
-        </defs>
-        {arrows.map((a, i) => {
-          const from = iconCenter(a.from);
-          const to = iconCenter(a.to);
-          return (
-            <line
-              key={i}
-              x1={from.x}
-              y1={from.y}
-              x2={to.x}
-              y2={to.y}
-              stroke="var(--color-ro-accent, #4a90d9)"
-              strokeOpacity={0.4}
-              strokeWidth={1.5}
-              markerEnd="url(#arrow)"
-            />
-          );
-        })}
-      </svg>
-
       {tree.cells.map((cell) => {
         const skill = getSkill(cell.id);
         if (!skill) return null;
@@ -121,6 +87,7 @@ export function SkillTree({
         const lv = effLevel(cell.id, levels);
         const learned = lv > 0;
         const unavailable = !skill.pre && lv === 0 && !prereqsMet(cell.id, levels, ctx);
+        const highlighted = highlight.has(cell.id);
 
         return (
           <button
@@ -130,11 +97,19 @@ export function SkillTree({
             data-skill-id={cell.id}
             data-pre={skill.pre ? "1" : "0"}
             onClick={() => onSelect(cell.id)}
-            onMouseEnter={(e) => setHover({ id: cell.id, x: e.clientX, y: e.clientY })}
+            onMouseEnter={(e) => {
+              setHover({ id: cell.id, x: e.clientX, y: e.clientY });
+              onHover(cell.id);
+            }}
             onMouseMove={(e) => setHover({ id: cell.id, x: e.clientX, y: e.clientY })}
-            onMouseLeave={() => setHover((h) => (h?.id === cell.id ? null : h))}
+            onMouseLeave={() => {
+              setHover((h) => (h?.id === cell.id ? null : h));
+              onHover(null);
+            }}
             style={{ left: s.x, top: s.y, width: SLOT_W, height: SLOT_H }}
-            className={`group absolute flex flex-col items-center ${unavailable ? "opacity-40 grayscale" : ""}`}
+            className={`group absolute flex flex-col items-center ${
+              unavailable && !highlighted ? "opacity-40 grayscale" : ""
+            }`}
           >
             <span
               className="flex w-full items-end justify-center"
@@ -149,13 +124,13 @@ export function SkillTree({
               </span>
             </span>
             <span
-              className={`relative mt-0.5 flex items-center justify-center rounded-md border-2 bg-ro-panel transition-colors ${
+              className={`relative mt-0.5 flex items-center justify-center rounded-md border-2 bg-ro-panel transition-all ${
                 skill.pre
                   ? "border-amber-400/70"
                   : learned
                     ? "border-ro-accent"
                     : "border-ro-panel-border group-hover:border-ro-accent"
-              }`}
+              } ${highlighted ? "ring-2 ring-ro-accent ring-offset-1 ring-offset-ro-panel" : ""}`}
               style={{ width: BOX, height: BOX }}
             >
               <Image src={`/icons/skills/${cell.id}.png`} alt="" width={ICON} height={ICON} />

@@ -9,6 +9,7 @@ import {
   buildTrees,
   effLevel,
   poolUsage,
+  prereqClosure,
   selectableJobs,
   setLevel,
   type Levels,
@@ -25,6 +26,8 @@ export function SkillPlanner() {
   const [jobId, setJobId] = useState<number | null>(null);
   const [levels, setLevels] = useState<Levels>({});
   const [modalSkill, setModalSkill] = useState<number | null>(null);
+  // Cadena de prereqs a resaltar (la skill en hover + todos sus prereqs).
+  const [highlight, setHighlight] = useState<Set<number>>(() => new Set());
 
   const { first, second } = useMemo(() => selectableJobs(), []);
   const ctx = useMemo(() => buildCtx(jobId), [jobId]);
@@ -48,6 +51,10 @@ export function SkillPlanner() {
 
   function wheel(id: number, delta: number) {
     applyLevel(id, effLevel(id, levels) + delta);
+  }
+
+  function hover(id: number | null) {
+    setHighlight(id == null ? new Set() : prereqClosure(id, ctx));
   }
 
   return (
@@ -99,7 +106,15 @@ export function SkillPlanner() {
             <div key={tree.job.id} className="rounded-lg border-2 border-ro-panel-border bg-ro-panel/50 p-4">
               <h3 className="mb-3 font-heading text-sm text-ro-text">{titleCase(tree.job.name)}</h3>
               <div className="overflow-x-auto">
-                <SkillTree tree={tree} levels={levels} ctx={ctx} onSelect={setModalSkill} onWheel={wheel} />
+                <SkillTree
+                  tree={tree}
+                  levels={levels}
+                  ctx={ctx}
+                  highlight={highlight}
+                  onSelect={setModalSkill}
+                  onWheel={wheel}
+                  onHover={hover}
+                />
               </div>
             </div>
           ))}
