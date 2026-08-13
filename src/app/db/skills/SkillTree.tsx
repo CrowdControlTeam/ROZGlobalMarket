@@ -13,12 +13,24 @@ import {
   type TreeView,
 } from "@/lib/skill-planner";
 
-const CELL = 44;
-const GAP = 6;
-const STEP = CELL + GAP;
+// Geometría del slot: caption (nombre, a modo de título) ARRIBA con altura fija
+// + caja del icono debajo, con separación holgada entre slots. La altura fija
+// del caption mantiene el icono a una Y constante (para trazar bien las flechas).
+const BOX = 46; // caja del icono (con borde)
+const ICON = 36;
+const CAPTION_H = 26; // hasta 2 líneas de nombre
+const SLOT_W = 84; // ancho del slot (deja sitio al nombre)
+const SLOT_H = CAPTION_H + 2 + BOX;
+const STEP_X = SLOT_W + 12;
+const STEP_Y = SLOT_H + 16;
 
-function center(pos: number) {
-  return { x: (pos % GRID_COLS) * STEP + CELL / 2, y: Math.floor(pos / GRID_COLS) * STEP + CELL / 2 };
+function slotPos(pos: number) {
+  return { x: (pos % GRID_COLS) * STEP_X, y: Math.floor(pos / GRID_COLS) * STEP_Y };
+}
+// Centro de la CAJA del icono (para las flechas): debajo del caption, centrado.
+function iconCenter(pos: number) {
+  const s = slotPos(pos);
+  return { x: s.x + SLOT_W / 2, y: s.y + CAPTION_H + 2 + BOX / 2 };
 }
 
 function prereqsMet(id: number, levels: Levels, ctx: PlannerCtx): boolean {
@@ -38,9 +50,8 @@ export function SkillTree({
   onSelect: (id: number) => void;
   onWheel: (id: number, delta: number) => void;
 }) {
-  // La rueda cambia el nivel. React registra onWheel como passive, así que
-  // preventDefault no frenaría el scroll de página → listener nativo no-pasivo
-  // en el contenedor, resolviendo la celda por data-skill-id.
+  // Rueda: listener nativo no-pasivo (React lo registra passive → preventDefault
+  // no frenaría el scroll de página). Resuelve la celda por data-skill-id.
   const onWheelRef = useRef(onWheel);
   useEffect(() => {
     onWheelRef.current = onWheel;
@@ -59,13 +70,12 @@ export function SkillTree({
     return () => el.removeEventListener("wheel", handler);
   }, []);
 
-  // Tooltip de descripción al pasar el ratón (posición fija, sigue al cursor).
   const [hover, setHover] = useState<{ id: number; x: number; y: number } | null>(null);
 
   const maxPos = Math.max(0, ...tree.cells.map((c) => c.pos));
   const rows = Math.floor(maxPos / GRID_COLS) + 1;
-  const width = GRID_COLS * CELL + (GRID_COLS - 1) * GAP;
-  const height = rows * CELL + (rows - 1) * GAP;
+  const width = (GRID_COLS - 1) * STEP_X + SLOT_W;
+  const height = (rows - 1) * STEP_Y + SLOT_H;
 
   const posById = new Map(tree.cells.map((c) => [c.id, c.pos]));
   const arrows: { from: number; to: number }[] = [];
@@ -86,8 +96,8 @@ export function SkillTree({
           </marker>
         </defs>
         {arrows.map((a, i) => {
-          const from = center(a.from);
-          const to = center(a.to);
+          const from = iconCenter(a.from);
+          const to = iconCenter(a.to);
           return (
             <line
               key={i}
@@ -107,7 +117,7 @@ export function SkillTree({
       {tree.cells.map((cell) => {
         const skill = getSkill(cell.id);
         if (!skill) return null;
-        const { x, y } = center(cell.pos);
+        const s = slotPos(cell.pos);
         const lv = effLevel(cell.id, levels);
         const learned = lv > 0;
         const unavailable = !skill.pre && lv === 0 && !prereqsMet(cell.id, levels, ctx);
@@ -123,25 +133,42 @@ export function SkillTree({
             onMouseEnter={(e) => setHover({ id: cell.id, x: e.clientX, y: e.clientY })}
             onMouseMove={(e) => setHover({ id: cell.id, x: e.clientX, y: e.clientY })}
             onMouseLeave={() => setHover((h) => (h?.id === cell.id ? null : h))}
-            style={{ left: x - CELL / 2, top: y - CELL / 2, width: CELL, height: CELL }}
-            className={`absolute flex items-center justify-center rounded-md border-2 bg-ro-panel transition-colors ${
-              skill.pre
-                ? "border-amber-400/70"
-                : learned
-                  ? "border-ro-accent"
-                  : "border-ro-panel-border hover:border-ro-accent"
-            } ${unavailable ? "opacity-40 grayscale" : ""}`}
+            style={{ left: s.x, top: s.y, width: SLOT_W, height: SLOT_H }}
+            className={`group absolute flex flex-col items-center ${unavailable ? "opacity-40 grayscale" : ""}`}
           >
-            <Image src={`/icons/skills/${cell.id}.png`} alt="" width={32} height={32} className="h-8 w-8" />
-            {(learned || skill.pre) && (
+            <span
+              className="flex w-full items-end justify-center"
+              style={{ height: CAPTION_H }}
+            >
               <span
-                className={`absolute bottom-0 right-0 rounded-tl rounded-br-[3px] px-1 text-[10px] font-bold leading-tight tabular-nums ${
-                  skill.pre ? "bg-amber-500 text-black" : "bg-ro-accent text-white"
+                className={`line-clamp-2 px-0.5 text-center text-[9px] leading-tight ${
+                  learned ? "text-ro-text" : "text-ro-text-muted"
                 }`}
               >
-                {lv}
+                {skill.name}
               </span>
-            )}
+            </span>
+            <span
+              className={`relative mt-0.5 flex items-center justify-center rounded-md border-2 bg-ro-panel transition-colors ${
+                skill.pre
+                  ? "border-amber-400/70"
+                  : learned
+                    ? "border-ro-accent"
+                    : "border-ro-panel-border group-hover:border-ro-accent"
+              }`}
+              style={{ width: BOX, height: BOX }}
+            >
+              <Image src={`/icons/skills/${cell.id}.png`} alt="" width={ICON} height={ICON} />
+              {(learned || skill.pre) && (
+                <span
+                  className={`absolute bottom-0 right-0 rounded-tl rounded-br-[3px] px-1 text-[10px] font-bold leading-tight tabular-nums ${
+                    skill.pre ? "bg-amber-500 text-black" : "bg-ro-accent text-white"
+                  }`}
+                >
+                  {lv}
+                </span>
+              )}
+            </span>
           </button>
         );
       })}
