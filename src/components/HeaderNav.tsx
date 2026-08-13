@@ -24,6 +24,7 @@ export function HeaderNav() {
       active: isUnder(pathname, "/market"),
     },
     { href: "/bis", label: t("bis"), active: isUnder(pathname, "/bis") },
+    { href: "/db", label: t("db"), active: isUnder(pathname, "/db") },
   ];
 
   return (
