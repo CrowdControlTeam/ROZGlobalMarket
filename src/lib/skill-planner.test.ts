@@ -48,11 +48,18 @@ describe("skill-planner prereqClosure", () => {
     expect(chain).toEqual(new Set([398, 55, 63, 8, 6]));
   });
 
-  it("learnCost: la propia a 1 y cada prereq a su nivel requerido", () => {
+  it("learnCost: sin nada subido, la propia a 1 y cada prereq a su nivel", () => {
     const ctx = buildCtx(KNIGHT);
     // Traumatic Blow→1; Spear Mastery→9; Peco Peco Ride→1; Endure→1; Provoke→5.
-    const cost = learnCost(398, ctx);
+    const cost = learnCost(398, ctx, {});
     expect(Object.fromEntries(cost)).toEqual({ 398: 1, 55: 9, 63: 1, 8: 1, 6: 5 });
+  });
+
+  it("learnCost: descuenta lo ya subido (0 → sin badge; parcial → diferencia)", () => {
+    const ctx = buildCtx(KNIGHT);
+    // Provoke ya a 5 (requiere 5) → fuera; Spear Mastery a 3 (requiere 9) → 6.
+    const cost = learnCost(398, ctx, { 6: 5, 55: 3 });
+    expect(Object.fromEntries(cost)).toEqual({ 398: 1, 55: 6, 63: 1, 8: 1 });
   });
 });
 

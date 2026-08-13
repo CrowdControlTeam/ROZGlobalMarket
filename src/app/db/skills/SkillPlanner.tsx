@@ -69,7 +69,7 @@ export function SkillPlanner() {
     // El coste solo se muestra sobre skills NO aprendidas (ni pre).
     const skill = getSkill(id);
     const notLearned = skill != null && !skill.pre && effLevel(id, levels) === 0;
-    setNeeded(notLearned ? learnCost(id, ctx) : new Map());
+    setNeeded(notLearned ? learnCost(id, ctx, levels) : new Map());
   }
 
   return (

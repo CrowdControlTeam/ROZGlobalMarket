@@ -123,19 +123,27 @@ export function prereqClosure(id: number, ctx: PlannerCtx): Set<number> {
   return set;
 }
 
-// Puntos/nivel que necesita cada skill de la cadena para poder APRENDER `id`
-// (nivel 1): la propia a 1 y cada prerequisito a su nivel requerido (en cascada,
-// tomando el máximo si varias rutas lo piden). Para el badge de "coste" al hover.
-export function learnCost(id: number, ctx: PlannerCtx): Map<number, number> {
-  const needed = new Map<number, number>();
+// Puntos ADICIONALES que necesita cada skill de la cadena para poder APRENDER
+// `id` (nivel 1), teniendo en cuenta lo ya subido: para cada skill, su nivel
+// requerido en la cadena (la propia a 1, prereqs a su nivel; máximo si varias
+// rutas lo piden) MENOS su nivel actual. Se descartan las ya cubiertas (0). El
+// total (suma) es el coste real restante. Para los badges de "coste" al hover.
+export function learnCost(id: number, ctx: PlannerCtx, levels: Levels): Map<number, number> {
+  const level = new Map<number, number>();
   function visit(sid: number, lv: number) {
-    const cur = needed.get(sid) ?? 0;
+    const cur = level.get(sid) ?? 0;
     if (lv <= cur && cur > 0) return;
-    needed.set(sid, Math.max(cur, lv));
+    level.set(sid, Math.max(cur, lv));
     for (const p of prereqsOf(sid, ctx)) visit(p.id, p.lv);
   }
   visit(id, 1);
-  return needed;
+
+  const cost = new Map<number, number>();
+  for (const [sid, lv] of level) {
+    const add = lv - effLevel(sid, levels);
+    if (add > 0) cost.set(sid, add);
+  }
+  return cost;
 }
 
 // --- Pools ---
