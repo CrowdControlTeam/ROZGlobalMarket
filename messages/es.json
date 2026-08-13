@@ -16,7 +16,22 @@
       "close": "Cerrar"
     },
     "skills": {
-      "comingSoon": "El skill planner llega en breve."
+      "chooseJob": "Elige un job…",
+      "firstJobs": "1st jobs",
+      "secondJobs": "2nd jobs",
+      "firstPoints": "Puntos 1ª",
+      "secondPoints": "Puntos 2ª",
+      "reset": "Reiniciar",
+      "emptyHint": "Elige un job para empezar a planificar sus skills.",
+      "selectHint": "Selecciona una skill para ver su información.",
+      "level": "Nivel",
+      "platinum": "Platinum",
+      "decrease": "Bajar nivel",
+      "increase": "Subir nivel",
+      "requires": "Requiere",
+      "lvShort": "Nv",
+      "close": "Cerrar",
+      "showTooltip": "Mostrar descripción"
     }
   },
   "common": {

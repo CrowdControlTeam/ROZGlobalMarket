@@ -1,11 +1,7 @@
-import { getTranslations } from "next-intl/server";
+import { SkillPlanner } from "./SkillPlanner";
 
-// Placeholder de la pestaña Skills (skill planner) — se construye en la Fase 2.
-export default async function DbSkillsPage() {
-  const t = await getTranslations("db.skills");
-  return (
-    <div className="rounded-lg border-2 border-dashed border-ro-panel-border p-12 text-center">
-      <p className="text-sm text-ro-text-muted">{t("comingSoon")}</p>
-    </div>
-  );
+// Skill planner (Fase 2): simula la ventana de skills del juego. requireSession
+// lo aplica el layout de /db.
+export default function DbSkillsPage() {
+  return <SkillPlanner />;
 }
