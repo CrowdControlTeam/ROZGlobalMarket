@@ -193,7 +193,10 @@ function EntryCard({
     >
       {iconBox}
       <div className="min-w-0 flex-1">
-        <p className={`truncate pr-4 text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>
+        <p
+          title={title}
+          className={`truncate pr-4 text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}
+        >
           {title}
         </p>
 
