@@ -508,8 +508,11 @@ function SlotCell({
                   según dónde haya más hueco (celdas de abajo despliegan hacia
                   arriba). */}
               <div
-                className={`absolute inset-x-0 z-30 flex flex-col rounded-xl border border-ro-accent/50 bg-ro-panel p-3 shadow-2xl ${
-                  openUp ? "bottom-0" : "top-0"
+                // Insets negativos de 1px: el borde del panel se solapa sobre el
+                // de la celda (mismo box) en vez de sumarse por dentro, así el
+                // contenido no se desplaza al expandir (el ellipsis no cambia).
+                className={`absolute -inset-x-px z-30 flex flex-col rounded-xl border border-ro-accent/50 bg-ro-panel p-3 shadow-2xl ${
+                  openUp ? "-bottom-px" : "-top-px"
                 }`}
               >
                 {header}
