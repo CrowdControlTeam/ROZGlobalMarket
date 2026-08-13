@@ -89,6 +89,9 @@ export default async function BisPage({
           cardSlots: e.item.slotCount,
         }
       : null,
+    // Tipo de arma de un BiS genérico de arma ("cualquier Daga"); null en el
+    // resto. Determina el pool físico/mágico en el editor y el texto de la card.
+    weaponType: e.weaponType,
     // Grupo del pool de sus options (todas comparten pool); null si no lleva
     // options. Un item concreto también puede tener options.
     optionGroup: e.options[0]?.def.group ?? null,
@@ -115,6 +118,7 @@ export default async function BisPage({
         entries={entries}
         roles={roles}
         jobs={jobs}
+        magicalTypes={Array.from(magicalTypes)}
         canEdit={canEdit}
         stageId={selectedStage.id}
       />

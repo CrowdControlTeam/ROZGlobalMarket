@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Boxes, Pencil, type LucideIcon } from "lucide-react";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
-import { formatOptionAmount } from "@/lib/market-labels";
+import { formatOptionAmount, weaponTypeLabel } from "@/lib/market-labels";
 import type { BisEntryView } from "./BisBoard";
 
 export type BisDetailData = { entry: BisEntryView; slotLabel: string; slotIcon: LucideIcon };
@@ -27,6 +27,7 @@ export function BisDetail({
   onClose: () => void;
 }) {
   const t = useTranslations("bis");
+  const tMarket = useTranslations("market");
   const [mounted, setMounted] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -69,7 +70,9 @@ export function BisDetail({
   const { entry, slotLabel, slotIcon: SlotIcon } = data;
   const name = entry.item
     ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
-    : t("anyItem");
+    : entry.weaponType
+      ? weaponTypeLabel(tMarket, entry.weaponType)
+      : t("anyItem");
 
   return (
     <div
