@@ -31,7 +31,17 @@
       "requires": "Requiere",
       "lvShort": "Nv",
       "close": "Cerrar",
-      "showTooltip": "Mostrar descripción"
+      "showTooltip": "Mostrar descripción",
+      "import": "Importar",
+      "export": "Exportar",
+      "share": "Compartir",
+      "copy": "Copiar",
+      "copied": "¡Copiado!",
+      "exportTitle": "Exportar build",
+      "exportHint": "Copia este código para guardar o compartir tu build.",
+      "importTitle": "Importar build",
+      "importPlaceholder": "Pega aquí el código del build…",
+      "importError": "Código no válido."
     }
   },
   "common": {

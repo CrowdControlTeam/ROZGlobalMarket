@@ -109,6 +109,68 @@ export function prereqsOf(id: number, ctx: PlannerCtx): SkillReq[] {
   return byJob ?? s.reqDefault;
 }
 
+// --- Códec del build (export/import/share) ---
+// Formato binario compacto: [ver=1][jobId u16][ (skillId u16)(level u8) × n ],
+// codificado en base64url. Solo se guardan skills con nivel > 0 (las pre y las
+// de nivel 0 se derivan). Robusto a reordenar datos (guarda ids explícitos) y se
+// valida al importar.
+const BUILD_VERSION = 1;
+
+function base64urlEncode(bytes: Uint8Array): string {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64urlDecode(s: string): Uint8Array {
+  const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+export function encodeBuild(jobId: number, levels: Levels): string {
+  const entries = Object.entries(levels)
+    .map(([id, lv]) => [Number(id), lv] as const)
+    .filter(([, lv]) => lv > 0);
+  const buf = new Uint8Array(3 + entries.length * 3);
+  const dv = new DataView(buf.buffer);
+  buf[0] = BUILD_VERSION;
+  dv.setUint16(1, jobId);
+  let off = 3;
+  for (const [id, lv] of entries) {
+    dv.setUint16(off, id);
+    dv.setUint8(off + 2, lv);
+    off += 3;
+  }
+  return base64urlEncode(buf);
+}
+
+// Devuelve el build validado contra los datos (job existente, skills editables
+// del árbol, nivel acotado a su máximo) o null si el código es inválido.
+export function decodeBuild(code: string): { jobId: number; levels: Levels } | null {
+  try {
+    const buf = base64urlDecode(code);
+    if (buf.length < 3 || buf[0] !== BUILD_VERSION || (buf.length - 3) % 3 !== 0) return null;
+    const dv = new DataView(buf.buffer);
+    const jobId = dv.getUint16(1);
+    if (!getJob(jobId)) return null;
+    const ctx = buildCtx(jobId);
+    const editable = new Set(ctx.editableIds);
+    const levels: Levels = {};
+    for (let off = 3; off < buf.length; off += 3) {
+      const id = dv.getUint16(off);
+      const lv = dv.getUint8(off + 2);
+      const skill = getSkill(id);
+      if (skill && editable.has(id) && lv > 0) levels[id] = Math.min(lv, skill.max);
+    }
+    return { jobId, levels };
+  } catch {
+    return null;
+  }
+}
+
 // Cierre transitivo de prerequisitos: la skill dada + todos sus prereqs en
 // cadena (para resaltarlos al hover). Incluye la propia skill.
 export function prereqClosure(id: number, ctx: PlannerCtx): Set<number> {

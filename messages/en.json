@@ -31,7 +31,17 @@
       "requires": "Requires",
       "lvShort": "Lv",
       "close": "Close",
-      "showTooltip": "Show description"
+      "showTooltip": "Show description",
+      "import": "Import",
+      "export": "Export",
+      "share": "Share",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "exportTitle": "Export build",
+      "exportHint": "Copy this code to save or share your build.",
+      "importTitle": "Import build",
+      "importPlaceholder": "Paste the build code here…",
+      "importError": "Invalid code."
     }
   },
   "common": {
