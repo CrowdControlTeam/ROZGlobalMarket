@@ -138,7 +138,7 @@ export function SkillTree({
             <span
               className={`relative mt-0.5 flex items-center justify-center rounded-md border-2 bg-ro-panel transition-all ${
                 skill.pre
-                  ? "border-amber-400/70"
+                  ? "border-violet-400/70"
                   : learned
                     ? "border-ro-accent"
                     : "border-ro-panel-border group-hover:border-ro-accent"
@@ -160,7 +160,7 @@ export function SkillTree({
               {(learned || skill.pre) && (
                 <span
                   className={`absolute bottom-0 right-0 rounded-tl rounded-br-[3px] px-1 text-[10px] font-bold leading-tight tabular-nums ${
-                    skill.pre ? "bg-amber-500 text-black" : "bg-ro-accent text-white"
+                    skill.pre ? "bg-violet-500 text-white" : "bg-ro-accent text-white"
                   }`}
                 >
                   {lv}

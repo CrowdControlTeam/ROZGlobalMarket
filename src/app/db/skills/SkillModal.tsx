@@ -71,7 +71,7 @@ export function SkillModal({
             {t("level")} <span className="tabular-nums text-ro-text">{lv}</span> / {skill.max}
           </span>
           {skill.pre ? (
-            <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-400">
+            <span className="rounded bg-violet-500/20 px-2 py-0.5 text-[11px] font-semibold text-violet-400">
               {t("platinum")}
             </span>
           ) : (
