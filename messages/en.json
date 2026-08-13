@@ -736,7 +736,6 @@
     "showAll": "Show all ({count})",
     "showLess": "Show less",
     "anyItem": "Any item",
-    "anyOfType": "Any {type}",
     "noStages": "No stages configured yet.",
     "add": "Add",
     "edit": "Edit",

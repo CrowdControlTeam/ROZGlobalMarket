@@ -71,7 +71,7 @@ export function BisDetail({
   const name = entry.item
     ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
     : entry.weaponType
-      ? t("anyOfType", { type: weaponTypeLabel(tMarket, entry.weaponType) })
+      ? weaponTypeLabel(tMarket, entry.weaponType)
       : t("anyItem");
 
   return (

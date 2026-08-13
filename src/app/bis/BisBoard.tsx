@@ -183,7 +183,7 @@ function EntryCard({
   const title = entry.item
     ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
     : entry.weaponType
-      ? t("anyOfType", { type: weaponTypeLabel(tMarket, entry.weaponType) })
+      ? weaponTypeLabel(tMarket, entry.weaponType)
       : t("anyItem");
 
   // La card abre el detalle (panel/bottom sheet). La nota ya no va inline: se
@@ -234,7 +234,7 @@ function EntryCard({
       {entry.note && (
         <span
           aria-label={t("detail.note")}
-          className={`absolute top-1.5 text-ro-text-muted ${canEdit ? "right-9" : "right-1.5"}`}
+          className={`absolute right-1.5 text-ro-text-muted ${canEdit ? "top-8" : "top-1.5"}`}
         >
           <MessageSquareText size={13} aria-hidden />
         </span>

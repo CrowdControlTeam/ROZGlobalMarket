@@ -736,7 +736,6 @@
     "showAll": "Ver todas ({count})",
     "showLess": "Ver menos",
     "anyItem": "Cualquiera",
-    "anyOfType": "Cualquier {type}",
     "noStages": "Todavía no hay etapas configuradas.",
     "add": "Añadir",
     "edit": "Editar",
