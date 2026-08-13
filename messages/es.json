@@ -748,7 +748,7 @@
       "editTitle": "Editar BiS",
       "slotLabel": "Slot",
       "itemLabel": "Item",
-      "itemOrOptionHint": "Opcional. Sin item, el BiS vale para cualquiera del slot; también puedes añadir options.",
+      "itemOrOptionHint": "Opcional. Elige un item, unas options, o ambos (item con options concretas).",
       "refine": "Refine",
       "cardSlots": "Slots",
       "weaponType": "Tipo de arma",
