@@ -6,6 +6,8 @@ import {
   isValid,
   prereqClosure,
   learnCost,
+  encodeBuild,
+  decodeBuild,
   type Levels,
 } from "./skill-planner";
 
@@ -60,6 +62,27 @@ describe("skill-planner prereqClosure", () => {
     // Provoke ya a 5 (requiere 5) → fuera; Spear Mastery a 3 (requiere 9) → 6.
     const cost = learnCost(398, ctx, { 6: 5, 55: 3 });
     expect(Object.fromEntries(cost)).toEqual({ 398: 1, 55: 6, 63: 1, 8: 1 });
+  });
+});
+
+describe("skill-planner build codec", () => {
+  it("roundtrip: encode → decode devuelve el mismo build", () => {
+    const levels: Levels = { 5: 10, 7: 3, 55: 9 }; // Bash 10, Magnum 3, Spear Mastery 9
+    const code = encodeBuild(SWORDMAN, levels);
+    const decoded = decodeBuild(code);
+    expect(decoded).toEqual({ jobId: SWORDMAN, levels });
+  });
+
+  it("acota niveles al máximo y descarta skills no editables/inexistentes", () => {
+    // Bash a 99 (max 10); 999999 no existe → se descartan/acotan.
+    const code = encodeBuild(SWORDMAN, { 5: 99, 999999: 5 });
+    const decoded = decodeBuild(code);
+    expect(decoded).toEqual({ jobId: SWORDMAN, levels: { 5: 10 } });
+  });
+
+  it("código inválido → null", () => {
+    expect(decodeBuild("no-es-base64-válido-!!")).toBeNull();
+    expect(decodeBuild("")).toBeNull();
   });
 });
 

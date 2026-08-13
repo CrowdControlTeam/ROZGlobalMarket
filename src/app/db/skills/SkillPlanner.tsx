@@ -18,15 +18,22 @@ import {
 } from "@/lib/skill-planner";
 import { SkillTree } from "./SkillTree";
 import { SkillModal } from "./SkillModal";
+import { ShareBar } from "./ShareBar";
 
 export function titleCase(name: string): string {
   return name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function SkillPlanner() {
+export function SkillPlanner({
+  initialJobId = null,
+  initialLevels = {},
+}: {
+  initialJobId?: number | null;
+  initialLevels?: Levels;
+}) {
   const t = useTranslations("db.skills");
-  const [jobId, setJobId] = useState<number | null>(null);
-  const [levels, setLevels] = useState<Levels>({});
+  const [jobId, setJobId] = useState<number | null>(initialJobId);
+  const [levels, setLevels] = useState<Levels>(initialLevels);
   const [modalSkill, setModalSkill] = useState<number | null>(null);
   // Cadena de prereqs a resaltar (la skill en hover + todos sus prereqs).
   const [highlight, setHighlight] = useState<Set<number>>(() => new Set());
@@ -41,6 +48,12 @@ export function SkillPlanner() {
   const ctx = useMemo(() => buildCtx(jobId), [jobId]);
   const trees = useMemo(() => buildTrees(jobId), [jobId]);
   const usage = useMemo(() => poolUsage(levels, ctx), [levels, ctx]);
+
+  function importBuild(newJobId: number, newLevels: Levels) {
+    setJobId(newJobId);
+    setLevels(newLevels);
+    setModalSkill(null);
+  }
 
   function selectJob(value: string) {
     setJobId(value ? Number(value) : null);
@@ -103,16 +116,19 @@ export function SkillPlanner() {
           {t("showTooltip")}
         </label>
 
-        {jobId != null && (
-          <button
-            type="button"
-            onClick={() => setLevels({})}
-            className={`${buttonClass("outline")} ml-auto flex h-9 items-center gap-1.5`}
-          >
-            <RotateCcw size={14} />
-            {t("reset")}
-          </button>
-        )}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <ShareBar jobId={jobId} levels={levels} onImport={importBuild} />
+          {jobId != null && (
+            <button
+              type="button"
+              onClick={() => setLevels({})}
+              className={`${buttonClass("outline")} flex h-9 items-center gap-1.5`}
+            >
+              <RotateCcw size={14} />
+              {t("reset")}
+            </button>
+          )}
+        </div>
       </div>
 
       {jobId == null ? (
