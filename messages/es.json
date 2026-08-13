@@ -1,4 +1,24 @@
 {
+  "db": {
+    "nav": {
+      "items": "Items",
+      "skills": "Skills"
+    },
+    "items": {
+      "searchPlaceholder": "Buscar item por nombre…",
+      "allCategories": "Todas las categorías",
+      "count": "{total} items",
+      "empty": "Ningún item coincide con la búsqueda.",
+      "prev": "Anterior",
+      "next": "Siguiente",
+      "pageOf": "{page} / {pages}",
+      "loadingDetail": "Cargando…",
+      "close": "Cerrar"
+    },
+    "skills": {
+      "comingSoon": "El skill planner llega en breve."
+    }
+  },
   "common": {
     "cancel": "Cancelar",
     "close": "Cerrar",
@@ -19,7 +39,8 @@
     "sections": {
       "label": "Secciones",
       "market": "Mercado",
-      "bis": "BiS"
+      "bis": "BiS",
+      "db": "DB"
     },
     "account": {
       "title": "Tu cuenta",
