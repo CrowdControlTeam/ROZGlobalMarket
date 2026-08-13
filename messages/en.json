@@ -191,7 +191,7 @@
     "bisNeedTag": "Pick at least one role or job",
     "bisNeedItemOrOption": "Pick an item or at least one option",
     "bisNoOptionsForSlot": "This slot doesn't allow random options",
-    "bisWeaponClassRequired": "Choose whether the weapon is physical or magical",
+    "bisWeaponTypeRequired": "Choose a weapon type for the options",
     "bisItemSlotMismatch": "The item doesn't match this equipment slot"
   },
   "admin": {
@@ -736,6 +736,7 @@
     "showAll": "Show all ({count})",
     "showLess": "Show less",
     "anyItem": "Any item",
+    "anyOfType": "Any {type}",
     "noStages": "No stages configured yet.",
     "add": "Add",
     "edit": "Edit",
@@ -749,9 +750,8 @@
       "itemOrOptionHint": "Optional. Pick an item, some options, or both (a specific item with options).",
       "refine": "Refine",
       "cardSlots": "Slots",
-      "weaponClass": "Weapon type",
-      "physical": "Physical",
-      "magical": "Magical",
+      "weaponType": "Weapon type",
+      "weaponTypeNone": "Unspecified",
       "optionsLabel": "Options",
       "optionNone": "— No option —",
       "optionsHint": "The value is an optional minimum; empty = any value.",

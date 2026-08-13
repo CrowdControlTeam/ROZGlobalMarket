@@ -191,7 +191,7 @@
     "bisNeedTag": "Selecciona al menos un rol o un job",
     "bisNeedItemOrOption": "Elige un item o al menos una option",
     "bisNoOptionsForSlot": "Este slot no admite random options",
-    "bisWeaponClassRequired": "Elige si el arma es física o mágica",
+    "bisWeaponTypeRequired": "Elige un tipo de arma para las options",
     "bisItemSlotMismatch": "El item no corresponde a este slot de equipo"
   },
   "admin": {
@@ -736,6 +736,7 @@
     "showAll": "Ver todas ({count})",
     "showLess": "Ver menos",
     "anyItem": "Cualquiera",
+    "anyOfType": "Cualquier {type}",
     "noStages": "Todavía no hay etapas configuradas.",
     "add": "Añadir",
     "edit": "Editar",
@@ -749,9 +750,8 @@
       "itemOrOptionHint": "Opcional. Elige un item, unas options, o ambos (item con options concretas).",
       "refine": "Refine",
       "cardSlots": "Slots",
-      "weaponClass": "Tipo de arma",
-      "physical": "Física",
-      "magical": "Mágica",
+      "weaponType": "Tipo de arma",
+      "weaponTypeNone": "Sin especificar",
       "optionsLabel": "Options",
       "optionNone": "— Sin option —",
       "optionsHint": "El valor es un mínimo opcional; vacío = cualquier valor.",

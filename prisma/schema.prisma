@@ -509,6 +509,10 @@ model BisEntry {
   itemId      String?
   refineLevel Int?
   // (cardSlots eliminado: sale de Item.slotCount.)
+  // Modo genérico de ARMA: en vez de un item concreto, un tipo de arma
+  // ("cualquier Daga"). Determina el pool de options (físico/mágico). Null en
+  // concretos y en slots que no son arma.
+  weaponType  WeaponType?
   // Modo genérico (options posicionales, ver BisEntryOption).
   options     BisEntryOption[]
   // Etiquetas (M2M implícito). >=1 entre roles y jobs (validado en la acción).

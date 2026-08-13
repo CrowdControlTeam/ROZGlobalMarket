@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { EquipSlot, ItemOptionGroup, type ItemOptionDef } from "@prisma/client";
+import { EquipSlot, ItemOptionGroup, WeaponType, type ItemOptionDef } from "@prisma/client";
 import { ItemPicker, type ItemResult } from "@/app/market/ItemPicker";
 import { getOptionChoices } from "@/lib/listings";
 import { createBisEntry, updateBisEntry, deleteBisEntry } from "@/lib/bis-actions";
 import { optionGroupForSlot } from "@/lib/bis-constants";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
 import { getErrorMessage } from "@/lib/errors";
-import { slotLabel } from "@/lib/market-labels";
+import { slotLabel, weaponTypeLabel } from "@/lib/market-labels";
 import { buttonClass, inputBaseClass, selectClass, labelClass } from "@/lib/ui";
 import type { Tag, BisEntryView, BisEntryItem } from "./BisBoard";
 
-type WeaponClass = "PHYSICAL" | "MAGICAL" | "";
 type OptionInput = { defId: string; minValue: string };
+
+const WEAPON_TYPES = Object.values(WeaponType);
 
 function toItemResult(item: BisEntryItem): ItemResult {
   return {
@@ -39,6 +40,7 @@ export function BisEntryForm({
   entry,
   roles,
   jobs,
+  magicalTypes,
   onClose,
 }: {
   stageId: string;
@@ -47,6 +49,7 @@ export function BisEntryForm({
   entry: BisEntryView | null;
   roles: Tag[];
   jobs: Tag[];
+  magicalTypes: WeaponType[];
   onClose: () => void;
 }) {
   const t = useTranslations("bis");
@@ -63,10 +66,7 @@ export function BisEntryForm({
   );
   const [refine, setRefine] = useState(entry?.item?.refineLevel ? String(entry.item.refineLevel) : "");
 
-  const initGroup = entry?.optionGroup ?? null;
-  const [weaponClass, setWeaponClass] = useState<WeaponClass>(
-    initGroup === "WEAPON_PHYSICAL" ? "PHYSICAL" : initGroup === "WEAPON_MAGICAL" ? "MAGICAL" : "",
-  );
+  const [weaponType, setWeaponType] = useState<WeaponType | "">(entry?.weaponType ?? "");
   const [options, setOptions] = useState<OptionInput[]>(() =>
     Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => {
       const o = entry?.options.find((op) => op.slotIndex === i + 1);
@@ -80,15 +80,17 @@ export function BisEntryForm({
   const [note, setNote] = useState(entry?.note ?? "");
 
   // Pool de options: del propio item si se elige uno (un item concreto también
-  // puede llevar options); si no hay item, por slot (o físico/mágico en arma).
+  // puede llevar options); si no, por slot, o —en arma— físico/mágico según el
+  // tipo de arma elegido.
+  const magicalSet = useMemo(() => new Set(magicalTypes), [magicalTypes]);
   const group: ItemOptionGroup | null = selectedItem
     ? selectedItem.optionGroup
     : slot === EquipSlot.WEAPON
-      ? weaponClass === "PHYSICAL"
-        ? ItemOptionGroup.WEAPON_PHYSICAL
-        : weaponClass === "MAGICAL"
+      ? weaponType
+        ? magicalSet.has(weaponType)
           ? ItemOptionGroup.WEAPON_MAGICAL
-          : null
+          : ItemOptionGroup.WEAPON_PHYSICAL
+        : null
       : optionGroupForSlot(slot);
 
   useEffect(() => {
@@ -113,6 +115,7 @@ export function BisEntryForm({
   // dejan de valer: se limpian.
   function chooseItem(item: ItemResult) {
     setSelectedItem(item);
+    setWeaponType("");
     setOptions(emptyOptions());
   }
   function clearItem() {
@@ -126,8 +129,8 @@ export function BisEntryForm({
 
   const hasTag = roleIds.length + jobIds.length > 0;
   const hasOption = options.some((o) => o.defId !== "");
-  // Item y options son opcionales, pero hace falta al menos uno (además de ≥1 tag).
-  const canSubmit = hasTag && (selectedItem !== null || hasOption);
+  // Hace falta ≥1 tag y al menos uno de: item, tipo de arma u options.
+  const canSubmit = hasTag && (selectedItem !== null || weaponType !== "" || hasOption);
 
   function submit() {
     setError(null);
@@ -141,8 +144,8 @@ export function BisEntryForm({
     if (selectedItem) {
       fd.set("itemId", selectedItem.id);
       if (refine.trim()) fd.set("refineLevel", refine.trim());
-    } else if (slot === EquipSlot.WEAPON && weaponClass) {
-      fd.set("weaponClass", weaponClass);
+    } else if (slot === EquipSlot.WEAPON && weaponType) {
+      fd.set("weaponType", weaponType);
     }
     options.forEach((o, i) => {
       if (o.defId) {
@@ -236,28 +239,28 @@ export function BisEntryForm({
             </div>
           )}
 
-          {/* Físico/mágico: solo para options SIN item en arma (con item, el pool
-              lo fija el propio item por su weaponType). */}
+          {/* Tipo de arma: solo para un BiS de arma SIN item concreto. Hace el
+              BiS específico ("cualquier Daga") y fija el pool de options
+              (físico/mágico) según el tipo. Con item elegido, el propio item lo
+              define. */}
           {!selectedItem && slot === EquipSlot.WEAPON && (
             <div>
-              <label className={labelClass}>{t("form.weaponClass")}</label>
-              <div className="flex gap-1.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-1">
-                {(["PHYSICAL", "MAGICAL"] as const).map((w) => (
-                  <button
-                    key={w}
-                    type="button"
-                    onClick={() => {
-                      setWeaponClass(w);
-                      setOptions(emptyOptions());
-                    }}
-                    className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
-                      weaponClass === w ? "bg-ro-accent/15 text-ro-accent" : "text-ro-text-muted hover:text-ro-text"
-                    }`}
-                  >
-                    {t(w === "PHYSICAL" ? "form.physical" : "form.magical")}
-                  </button>
+              <label className={labelClass}>{t("form.weaponType")}</label>
+              <select
+                value={weaponType}
+                onChange={(e) => {
+                  setWeaponType(e.target.value as WeaponType | "");
+                  setOptions(emptyOptions());
+                }}
+                className={`w-full ${selectClass}`}
+              >
+                <option value="">{t("form.weaponTypeNone")}</option>
+                {WEAPON_TYPES.map((wt) => (
+                  <option key={wt} value={wt}>
+                    {weaponTypeLabel((k) => tMarket(k), wt)}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
           )}
 

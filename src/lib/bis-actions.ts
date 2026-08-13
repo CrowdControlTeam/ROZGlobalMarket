@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
-import { EquipSlot, ItemOptionGroup } from "@prisma/client";
+import { EquipSlot, ItemOptionGroup, WeaponType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
 import { canEditBis, optionGroupForSlot } from "@/lib/bis";
@@ -15,7 +15,6 @@ import { MAX_OPTION_SLOTS, getItemOptionGroup } from "@/lib/item-options-constan
 const MAX_BIS_NOTE = 500;
 
 type Translator = Awaited<ReturnType<typeof getTranslations>>;
-type WeaponClass = "PHYSICAL" | "MAGICAL";
 type ParsedOption = { slotIndex: number; defId: string; minValue: number | null };
 
 function uniqueStrings(values: FormDataEntryValue[]): string[] {
@@ -27,17 +26,6 @@ function parseOptionalInt(value: FormDataEntryValue | null, t: Translator): numb
   const n = Number(value);
   if (!Number.isInteger(n)) throw new Error(t("invalidData"));
   return n;
-}
-
-// Grupo de options del BiS genérico: por slot (armadura/manto/calzado) o, en
-// arma, según el toggle físico/mágico del formulario.
-function resolveOptionGroup(slot: EquipSlot, weaponClass: WeaponClass | null): ItemOptionGroup | null {
-  if (slot === EquipSlot.WEAPON) {
-    if (weaponClass === "PHYSICAL") return ItemOptionGroup.WEAPON_PHYSICAL;
-    if (weaponClass === "MAGICAL") return ItemOptionGroup.WEAPON_MAGICAL;
-    return null;
-  }
-  return optionGroupForSlot(slot);
 }
 
 // Options posicionales del BiS genérico: campos planos option{1..3}DefId +
@@ -78,6 +66,7 @@ type NormalizedEntry = {
   roleIds: string[];
   jobIds: string[];
   itemId: string | null;
+  weaponType: WeaponType | null;
   refineLevel: number | null;
   options: ParsedOption[];
 };
@@ -109,12 +98,13 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
   const jobIds = uniqueStrings(formData.getAll("jobIds"));
   if (roleIds.length + jobIds.length === 0) throw new Error(t("bisNeedTag"));
 
-  // Item (opcional) y options (opcional), pero al menos uno de los dos. Un item
-  // concreto puede además llevar options concretas (de su propio pool).
+  // Un BiS es: item CONCRETO, o —en arma— un TIPO DE ARMA ("cualquier Daga"), o
+  // GENÉRICO por options; en todos ≥1 etiqueta. El pool de options sale del item,
+  // del tipo de arma (físico/mágico) o del slot. Un item o un tipo puede además
+  // llevar options concretas.
   let itemId: string | null = null;
+  let weaponType: WeaponType | null = null;
   let refineLevel: number | null = null;
-  // Grupo del pool de options: del propio item si hay uno; si no, por slot (o
-  // físico/mágico en arma).
   let group: ItemOptionGroup | null = null;
 
   const rawItemId = formData.get("itemId");
@@ -139,24 +129,32 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
       if (refineLevel > maxRefineLevel) throw new Error(t("refineTooHigh", { max: maxRefineLevel }));
     }
     // Las ranuras salen de Item.slotCount, no se piden.
+  } else if (slot === EquipSlot.WEAPON) {
+    // Arma genérica: tipo de arma opcional; determina el pool físico/mágico.
+    const rawWeaponType = formData.get("weaponType");
+    if (typeof rawWeaponType === "string" && rawWeaponType !== "") {
+      if (!(Object.values(WeaponType) as string[]).includes(rawWeaponType)) throw new Error(t("invalidData"));
+      weaponType = rawWeaponType as WeaponType;
+      const magicalTypes = await loadMagicalWeaponTypes();
+      group = magicalTypes.has(weaponType) ? ItemOptionGroup.WEAPON_MAGICAL : ItemOptionGroup.WEAPON_PHYSICAL;
+    }
   } else {
-    const rawWeaponClass = formData.get("weaponClass");
-    const weaponClass: WeaponClass | null =
-      rawWeaponClass === "PHYSICAL" || rawWeaponClass === "MAGICAL" ? rawWeaponClass : null;
-    group = resolveOptionGroup(slot, weaponClass);
+    group = optionGroupForSlot(slot);
   }
 
   const options = parseBisOptions(formData, t);
 
-  // Regla: al menos uno de item u options.
-  if (!hasItem && options.length === 0) throw new Error(t("bisNeedItemOrOption"));
+  // Regla: al menos uno de item, tipo de arma (solo arma) u options.
+  if (!hasItem && weaponType === null && options.length === 0) {
+    throw new Error(t("bisNeedItemOrOption"));
+  }
 
   if (options.length > 0) {
     if (!group) {
-      // Hay options pero no hay pool: item que no admite options, o arma
-      // genérica sin elegir físico/mágico, o slot sin options.
+      // Hay options pero no hay pool: item que no las admite, arma genérica sin
+      // tipo elegido, o slot sin options.
       throw new Error(
-        !hasItem && slot === EquipSlot.WEAPON ? t("bisWeaponClassRequired") : t("bisNoOptionsForSlot"),
+        !hasItem && slot === EquipSlot.WEAPON ? t("bisWeaponTypeRequired") : t("bisNoOptionsForSlot"),
       );
     }
     await validateBisOptions(options, group, t);
@@ -170,6 +168,7 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
     roleIds,
     jobIds,
     itemId,
+    weaponType,
     refineLevel,
     options,
   };
@@ -196,6 +195,7 @@ export async function createBisEntry(formData: FormData): Promise<void> {
         stageId: d.stageId,
         slot: d.slot,
         itemId: d.itemId,
+        weaponType: d.weaponType,
         refineLevel: d.refineLevel,
         note: d.note,
         position: (max._max.position ?? -1) + 1,
@@ -226,6 +226,7 @@ export async function updateBisEntry(entryId: string, formData: FormData): Promi
       where: { id: entryId },
       data: {
         itemId: d.itemId,
+        weaponType: d.weaponType,
         refineLevel: d.refineLevel,
         note: d.note,
         roles: { set: d.roleIds.map((id) => ({ id })) },

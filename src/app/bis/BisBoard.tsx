@@ -33,7 +33,7 @@ import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@d
 import { CSS } from "@dnd-kit/utilities";
 import type { EquipSlot, ItemCategory, ItemOptionGroup, WeaponType } from "@prisma/client";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
-import { formatOptionAmount } from "@/lib/market-labels";
+import { formatOptionAmount, weaponTypeLabel } from "@/lib/market-labels";
 import { reorderBisEntries, deleteBisEntry } from "@/lib/bis-actions";
 import { buttonClass } from "@/lib/ui";
 import { KebabMenu } from "@/components/KebabMenu";
@@ -62,6 +62,8 @@ export type BisEntryView = {
   slot: EquipSlot;
   note: string | null;
   item: BisEntryItem | null;
+  // Tipo de arma de un BiS genérico de arma ("cualquier Daga"); null en el resto.
+  weaponType: WeaponType | null;
   // Grupo de options de un BiS genérico (null en los concretos). Sirve al editor
   // para recargar el pool correcto y, en arma, saber si es físico o mágico.
   optionGroup: ItemOptionGroup | null;
@@ -166,6 +168,7 @@ function EntryCard({
   onDelete: () => void;
 }) {
   const t = useTranslations("bis");
+  const tMarket = useTranslations("market");
 
   const iconBox = entry.item ? (
     <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
@@ -179,7 +182,9 @@ function EntryCard({
 
   const title = entry.item
     ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
-    : t("anyItem");
+    : entry.weaponType
+      ? t("anyOfType", { type: weaponTypeLabel(tMarket, entry.weaponType) })
+      : t("anyItem");
 
   // La card abre el detalle (panel/bottom sheet). La nota ya no va inline: se
   // señala con el icono de bocadillo en la esquina (como en los listings) y su
@@ -435,12 +440,14 @@ export function BisBoard({
   entries,
   roles,
   jobs,
+  magicalTypes,
   canEdit,
   stageId,
 }: {
   entries: BisEntryView[];
   roles: Tag[];
   jobs: Tag[];
+  magicalTypes: WeaponType[];
   canEdit: boolean;
   stageId: string;
 }) {
@@ -598,6 +605,7 @@ export function BisBoard({
           entry={editing.entry}
           roles={roles}
           jobs={jobs}
+          magicalTypes={magicalTypes}
           onClose={() => setEditing(null)}
         />
       )}
