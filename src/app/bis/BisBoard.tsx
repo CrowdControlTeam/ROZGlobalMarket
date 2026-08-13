@@ -14,6 +14,7 @@ import {
   ShieldHalf,
   Footprints,
   ChevronDown,
+  GripVertical,
   Plus,
   Pencil,
   Trash2,
@@ -160,12 +161,16 @@ function EntryCard({
   canEdit,
   onEdit,
   onDelete,
+  draggable = false,
 }: {
   entry: BisEntryView;
   onOpen: () => void;
   canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  // Muestra el asa de arrastre (grip) a la izquierda. Solo en cards que de
+  // verdad se pueden reordenar (celda con DnD activo).
+  draggable?: boolean;
 }) {
   const t = useTranslations("bis");
   const tMarket = useTranslations("market");
@@ -190,11 +195,19 @@ function EntryCard({
   // señala con el icono de bocadillo en la esquina (como en los listings) y su
   // texto completo se ve en el detalle.
   return (
-    <div className="relative h-full">
+    <div className="group relative flex h-full min-h-[3.5rem] rounded-lg border border-ro-panel-border bg-ro-panel-alt transition-colors hover:border-ro-accent">
+      {draggable && (
+        <span
+          aria-hidden
+          className="flex shrink-0 cursor-grab items-center justify-center rounded-l-lg border-r border-ro-panel-border px-0.5 text-ro-text-muted/50 transition-colors group-hover:text-ro-text-muted active:cursor-grabbing"
+        >
+          <GripVertical size={14} />
+        </span>
+      )}
       <button
       type="button"
       onClick={onOpen}
-      className="relative flex h-full min-h-[3.5rem] w-full gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2 text-left transition-colors hover:border-ro-accent"
+      className="relative flex min-w-0 flex-1 cursor-pointer gap-2 p-2 text-left"
     >
       {iconBox}
       <div className="min-w-0 flex-1">
@@ -294,7 +307,7 @@ function SortableEntry({
       {...listeners}
       className="cursor-grab touch-none active:cursor-grabbing"
     >
-      <EntryCard entry={entry} onOpen={onOpen} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete} />
+      <EntryCard entry={entry} onOpen={onOpen} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete} draggable />
     </li>
   );
 }
