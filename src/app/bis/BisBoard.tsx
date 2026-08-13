@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -14,7 +14,7 @@ import {
   ShieldHalf,
   Footprints,
   ChevronDown,
-  MessageSquareText,
+  GripVertical,
   Plus,
   Pencil,
   Trash2,
@@ -37,6 +37,7 @@ import { formatOptionAmount, weaponTypeLabel } from "@/lib/market-labels";
 import { reorderBisEntries, deleteBisEntry } from "@/lib/bis-actions";
 import { buttonClass } from "@/lib/ui";
 import { KebabMenu } from "@/components/KebabMenu";
+import { NoteIndicator } from "@/components/NoteIndicator";
 import { BisDetail, type BisDetailData } from "./BisDetail";
 import { BisEntryForm } from "./BisEntryForm";
 
@@ -160,12 +161,16 @@ function EntryCard({
   canEdit,
   onEdit,
   onDelete,
+  draggable = false,
 }: {
   entry: BisEntryView;
   onOpen: () => void;
   canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  // Muestra el asa de arrastre (grip) a la izquierda. Solo en cards que de
+  // verdad se pueden reordenar (celda con DnD activo).
+  draggable?: boolean;
 }) {
   const t = useTranslations("bis");
   const tMarket = useTranslations("market");
@@ -190,11 +195,19 @@ function EntryCard({
   // señala con el icono de bocadillo en la esquina (como en los listings) y su
   // texto completo se ve en el detalle.
   return (
-    <div className="relative h-full">
+    <div className="group relative flex h-full min-h-[3.5rem] rounded-lg border border-ro-panel-border bg-ro-panel-alt transition-colors hover:border-ro-accent">
+      {draggable && (
+        <span
+          aria-hidden
+          className="flex shrink-0 cursor-grab items-center justify-center rounded-l-lg border-r border-ro-panel-border px-0.5 text-ro-text-muted/50 transition-colors group-hover:text-ro-text-muted active:cursor-grabbing"
+        >
+          <GripVertical size={14} />
+        </span>
+      )}
       <button
       type="button"
       onClick={onOpen}
-      className="relative flex h-full min-h-[3.5rem] w-full gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2 text-left transition-colors hover:border-ro-accent"
+      className="relative flex min-w-0 flex-1 cursor-pointer gap-2 p-2 text-left"
     >
       {iconBox}
       <div className="min-w-0 flex-1">
@@ -231,16 +244,6 @@ function EntryCard({
         )}
       </div>
 
-      {entry.note && (
-        <span
-          aria-label={t("detail.note")}
-          className={`absolute right-1 grid h-7 w-7 place-items-center text-ro-text-muted ${
-            canEdit ? "top-8" : "top-1"
-          }`}
-        >
-          <MessageSquareText size={13} aria-hidden />
-        </span>
-      )}
       </button>
       {canEdit && (
         <div
@@ -256,6 +259,16 @@ function EntryCard({
             ]}
           />
         </div>
+      )}
+      {entry.note && (
+        <NoteIndicator
+          label={t("hasNotes")}
+          size={13}
+          className="absolute grid h-5 w-5 place-items-center"
+          // Snug under the kebab icon on tiny BiS cards (kebab is at top-1),
+          // or top-right when there is no kebab.
+          style={{ top: canEdit ? "1.9rem" : "0.4rem", right: "0.45rem" }}
+        />
       )}
     </div>
   );
@@ -294,7 +307,7 @@ function SortableEntry({
       {...listeners}
       className="cursor-grab touch-none active:cursor-grabbing"
     >
-      <EntryCard entry={entry} onOpen={onOpen} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete} />
+      <EntryCard entry={entry} onOpen={onOpen} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete} draggable />
     </li>
   );
 }
@@ -330,8 +343,23 @@ function SlotCell({
 }) {
   const t = useTranslations("bis");
   const [expanded, setExpanded] = useState(false);
+  // Dirección del panel flotante: si la celda está pegada abajo (p. ej.
+  // accesorio) despliega hacia arriba para no salirse del board.
+  const [openUp, setOpenUp] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
   const { Icon } = def;
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  function openExpanded() {
+    const el = sectionRef.current;
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.top;
+      const spaceAbove = rect.bottom;
+      setOpenUp(spaceAbove > spaceBelow);
+    }
+    setExpanded(true);
+  }
 
   // @dnd-kit genera ids (aria-describedby) que no cuadran entre SSR y cliente;
   // se activa solo tras montar para evitar el mismatch de hidratación (en SSR y
@@ -344,45 +372,106 @@ function SlotCell({
   const dndEnabled = sortable && mounted;
 
   const overLimit = shown.length > CELL_LIMIT;
-  const visible = expanded ? shown : shown.slice(0, CELL_LIMIT);
+  const isExpanded = expanded && overLimit;
+  const collapsed = shown.slice(0, CELL_LIMIT);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const ids = visible.map((e) => e.id);
+    // Expandida se reordena sobre toda la lista; colapsada, solo las visibles
+    // (las ocultas se reanexan al final para no perder su orden).
+    const list = isExpanded ? shown : collapsed;
+    const ids = list.map((e) => e.id);
     const oldIndex = ids.indexOf(active.id as string);
     const newIndex = ids.indexOf(over.id as string);
     if (oldIndex < 0 || newIndex < 0) return;
-    const newVisible = arrayMove(ids, oldIndex, newIndex);
-    // El orden completo del slot = visibles reordenadas + las ocultas (colapso).
-    const hidden = shown.slice(CELL_LIMIT).map((e) => e.id);
-    onReorder([...newVisible, ...hidden]);
+    const reordered = arrayMove(ids, oldIndex, newIndex);
+    const hidden = isExpanded ? [] : shown.slice(CELL_LIMIT).map((e) => e.id);
+    onReorder([...reordered, ...hidden]);
   }
 
+  const gridClass = "grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2";
+
+  function renderCards(entries: BisEntryView[], interactive: boolean) {
+    if (interactive) {
+      return (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={entries.map((e) => e.id)} strategy={rectSortingStrategy}>
+            <ul className={gridClass}>
+              {entries.map((entry) => (
+                <SortableEntry
+                  key={entry.id}
+                  entry={entry}
+                  onOpen={() => onOpen(entry)}
+                  canEdit={canEdit}
+                  onEdit={() => onEditEntry(entry)}
+                  onDelete={() => onDeleteEntry(entry)}
+                />
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
+      );
+    }
+    return (
+      <ul className={gridClass}>
+        {entries.map((entry) => (
+          <li key={entry.id}>
+            <EntryCard
+              entry={entry}
+              onOpen={() => onOpen(entry)}
+              canEdit={canEdit}
+              onEdit={() => onEditEntry(entry)}
+              onDelete={() => onDeleteEntry(entry)}
+            />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  const header = (
+    <header className="mb-2 flex items-center gap-2">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-ro-accent/10 text-ro-accent">
+        <Icon size={16} aria-hidden />
+      </span>
+      <h3 className="font-heading text-xs tracking-wide text-ro-text">{label}</h3>
+      <div className="ml-auto flex items-center gap-1.5">
+        {shown.length > 0 && (
+          <span className="text-[0.65rem] font-semibold text-ro-text-muted">{shown.length}</span>
+        )}
+        {canEdit && (
+          <button
+            type="button"
+            onClick={onAdd}
+            aria-label={t("add")}
+            title={t("add")}
+            className="grid h-6 w-6 place-items-center rounded-md border border-ro-panel-border text-ro-text-muted transition-colors hover:border-ro-accent hover:text-ro-accent"
+          >
+            <Plus size={14} aria-hidden />
+          </button>
+        )}
+      </div>
+    </header>
+  );
+
+  const toggle = (onToggle: () => void) => (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-ro-accent hover:underline"
+    >
+      <ChevronDown size={13} className={isExpanded ? "rotate-180 transition-transform" : "transition-transform"} aria-hidden />
+      {isExpanded ? t("showLess") : t("showAll", { count: shown.length })}
+    </button>
+  );
+
   return (
-    <section className="flex h-full flex-col rounded-xl border border-ro-panel-border bg-ro-panel p-3">
-      <header className="mb-2 flex items-center gap-2">
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-ro-accent/10 text-ro-accent">
-          <Icon size={16} aria-hidden />
-        </span>
-        <h3 className="font-heading text-xs tracking-wide text-ro-text">{label}</h3>
-        <div className="ml-auto flex items-center gap-1.5">
-          {shown.length > 0 && (
-            <span className="text-[0.65rem] font-semibold text-ro-text-muted">{shown.length}</span>
-          )}
-          {canEdit && (
-            <button
-              type="button"
-              onClick={onAdd}
-              aria-label={t("add")}
-              title={t("add")}
-              className="grid h-6 w-6 place-items-center rounded-md border border-ro-panel-border text-ro-text-muted transition-colors hover:border-ro-accent hover:text-ro-accent"
-            >
-              <Plus size={14} aria-hidden />
-            </button>
-          )}
-        </div>
-      </header>
+    <section
+      ref={sectionRef}
+      className="relative flex h-full flex-col rounded-xl border border-ro-panel-border bg-ro-panel p-3"
+    >
+      {header}
 
       {shown.length === 0 ? (
         <p className="py-1 text-xs italic text-ro-text-muted">
@@ -390,47 +479,47 @@ function SlotCell({
         </p>
       ) : (
         <>
-          {dndEnabled ? (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={visible.map((e) => e.id)} strategy={rectSortingStrategy}>
-                <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
-                  {visible.map((entry) => (
-                    <SortableEntry
-                      key={entry.id}
-                      entry={entry}
-                      onOpen={() => onOpen(entry)}
-                      canEdit={canEdit}
-                      onEdit={() => onEditEntry(entry)}
-                      onDelete={() => onDeleteEntry(entry)}
-                    />
-                  ))}
-                </ul>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <ul className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2">
-              {visible.map((entry) => (
-                <li key={entry.id}>
-                  <EntryCard
-                    entry={entry}
-                    onOpen={() => onOpen(entry)}
-                    canEdit={canEdit}
-                    onEdit={() => onEditEntry(entry)}
-                    onDelete={() => onDeleteEntry(entry)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+          {/* Vista base (colapsada). Al expandir queda como placeholder no
+              interactivo detrás del panel flotante, para que la rejilla no
+              cambie de alto (las filas son 1fr y se igualan entre sí). */}
+          {renderCards(collapsed, dndEnabled && !isExpanded)}
           {overLimit && (
             <button
               type="button"
-              onClick={() => setExpanded((v) => !v)}
+              onClick={openExpanded}
               className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-ro-accent hover:underline"
             >
-              <ChevronDown size={13} className={expanded ? "rotate-180 transition-transform" : "transition-transform"} aria-hidden />
-              {expanded ? t("showLess") : t("showAll", { count: shown.length })}
+              <ChevronDown size={13} className="transition-transform" aria-hidden />
+              {t("showAll", { count: shown.length })}
             </button>
+          )}
+
+          {isExpanded && (
+            <>
+              {/* Backdrop invisible: cerrar al hacer clic fuera del panel. */}
+              <button
+                type="button"
+                aria-label={t("showLess")}
+                onClick={() => setExpanded(false)}
+                className="fixed inset-0 z-20 cursor-default"
+              />
+              {/* Panel flotante con la lista completa: se superpone a los slots
+                  vecinos en lugar de empujar el layout. Se ancla arriba o abajo
+                  según dónde haya más hueco (celdas de abajo despliegan hacia
+                  arriba). */}
+              <div
+                // Insets negativos de 1px: el borde del panel se solapa sobre el
+                // de la celda (mismo box) en vez de sumarse por dentro, así el
+                // contenido no se desplaza al expandir (el ellipsis no cambia).
+                className={`absolute -inset-x-px z-30 flex flex-col rounded-xl border border-ro-accent/50 bg-ro-panel p-3 shadow-2xl ${
+                  openUp ? "-bottom-px" : "-top-px"
+                }`}
+              >
+                {header}
+                {renderCards(shown, dndEnabled)}
+                {toggle(() => setExpanded(false))}
+              </div>
+            </>
           )}
         </>
       )}

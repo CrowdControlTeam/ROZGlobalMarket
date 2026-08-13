@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, MessageSquareText, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal } from "lucide-react";
 import { loadMoreListings } from "@/lib/market-actions";
 import type { MarketFilters } from "@/lib/market";
 import { buttonClass } from "@/lib/ui";
@@ -15,6 +15,7 @@ import { listingTypeLabel, LISTING_TYPE_BADGE_CLASS, formatOptionAmount } from "
 import { getErrorMessage } from "@/lib/errors";
 import { UserMention, ContactModal } from "@/components/UserMention";
 import { KebabMenu, type KebabItem } from "@/components/KebabMenu";
+import { NoteIndicator } from "@/components/NoteIndicator";
 import { SortSelect } from "./SortSelect";
 import { useMarketSearch } from "./marketSearchStore";
 import { useListingPatches, clearListingPatches } from "./listingStore";
@@ -214,13 +215,7 @@ function ListingCard({
     <div className="absolute right-1.5 top-1.5 flex flex-col items-center gap-1">
       <KebabMenu label={t("card.menu")} items={kebabItems} />
       {listing.notes && (
-        <span
-          title={t("card.hasNotes")}
-          aria-label={t("card.hasNotes")}
-          className="grid h-6 w-6 place-items-center text-ro-text-muted"
-        >
-          <MessageSquareText size={15} aria-hidden />
-        </span>
+        <NoteIndicator label={t("card.hasNotes")} className="grid h-6 w-6 place-items-center" />
       )}
     </div>
   );

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon, MessageSquareText } from "lucide-react";
+import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ItemOptionDef, ListingType } from "@prisma/client";
 import { createListing, updateListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
@@ -13,6 +13,7 @@ import { buttonClass, selectClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { listingTypeLabel, LISTING_TYPE_BADGE_CLASS, formatOptionAmount } from "@/lib/market-labels";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
+import { NoteIndicator } from "@/components/NoteIndicator";
 import { FloatingField, floatingControlClass } from "@/components/FloatingField";
 import {
   MAX_OPTION_SLOTS,
@@ -294,13 +295,7 @@ export function PublishForm({
     <div className="relative rounded-xl border border-ro-panel-border bg-ro-panel p-3">
       {/* Bocadillo de notas en la esquina, igual que en la card del mercado. */}
       {notes.trim() && (
-        <span
-          title={tMarket("card.hasNotes")}
-          aria-label={tMarket("card.hasNotes")}
-          className="absolute right-2 top-2 text-ro-text-muted"
-        >
-          <MessageSquareText size={15} aria-hidden />
-        </span>
+        <NoteIndicator label={tMarket("card.hasNotes")} className="absolute right-2 top-2" />
       )}
       <div className="flex gap-2.5">
         <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
