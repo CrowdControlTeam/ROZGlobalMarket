@@ -30,7 +30,8 @@
       "increase": "Increase level",
       "requires": "Requires",
       "lvShort": "Lv",
-      "close": "Close"
+      "close": "Close",
+      "showTooltip": "Show description"
     }
   },
   "common": {

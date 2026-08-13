@@ -35,6 +35,7 @@ export function SkillPlanner() {
   const [needed, setNeeded] = useState<Map<number, number>>(() => new Map());
   // Skill en hover (muestra el TOTAL de puntos en vez de su coste individual).
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [showTooltip, setShowTooltip] = useState(true);
 
   const { first, second } = useMemo(() => selectableJobs(), []);
   const ctx = useMemo(() => buildCtx(jobId), [jobId]);
@@ -92,6 +93,16 @@ export function SkillPlanner() {
           </optgroup>
         </select>
 
+        <label className="flex h-10 cursor-pointer items-center gap-2 text-sm text-ro-text-muted">
+          <input
+            type="checkbox"
+            checked={showTooltip}
+            onChange={(e) => setShowTooltip(e.target.checked)}
+            className="h-4 w-4 accent-ro-accent"
+          />
+          {t("showTooltip")}
+        </label>
+
         {jobId != null && (
           <button
             type="button"
@@ -129,6 +140,7 @@ export function SkillPlanner() {
                   highlight={highlight}
                   needed={needed}
                   hoveredId={hoveredId}
+                  showTooltip={showTooltip}
                   onSelect={setModalSkill}
                   onWheel={wheel}
                   onHover={hover}

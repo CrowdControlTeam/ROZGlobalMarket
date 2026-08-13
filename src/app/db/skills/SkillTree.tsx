@@ -39,6 +39,7 @@ export function SkillTree({
   highlight,
   needed,
   hoveredId,
+  showTooltip,
   onSelect,
   onWheel,
   onHover,
@@ -49,6 +50,7 @@ export function SkillTree({
   highlight: Set<number>;
   needed: Map<number, number>;
   hoveredId: number | null;
+  showTooltip: boolean;
   onSelect: (id: number) => void;
   onWheel: (id: number, delta: number) => void;
   onHover: (id: number | null) => void;
@@ -169,7 +171,7 @@ export function SkillTree({
         );
       })}
 
-      {hover && hoverSkill && hoverSkill.desc.length > 0 && (
+      {showTooltip && hover && hoverSkill && hoverSkill.desc.length > 0 && (
         <div
           className="pointer-events-none fixed z-50 w-72 max-w-[80vw] rounded-md border-2 border-ro-panel-border bg-ro-panel p-3 shadow-xl"
           style={{ left: hover.x + 14, top: hover.y + 14 }}
