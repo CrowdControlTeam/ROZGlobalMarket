@@ -16,7 +16,20 @@
       "close": "Close"
     },
     "skills": {
-      "comingSoon": "The skill planner is coming soon."
+      "chooseJob": "Choose a job…",
+      "firstJobs": "1st jobs",
+      "secondJobs": "2nd jobs",
+      "firstPoints": "1st points",
+      "secondPoints": "2nd points",
+      "reset": "Reset",
+      "emptyHint": "Choose a job to start planning its skills.",
+      "selectHint": "Select a skill to see its details.",
+      "level": "Level",
+      "platinum": "Platinum",
+      "decrease": "Decrease level",
+      "increase": "Increase level",
+      "requires": "Requires",
+      "lvShort": "Lv"
     }
   },
   "common": {
