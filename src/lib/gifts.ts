@@ -69,7 +69,7 @@ export async function getMyGifts() {
         item: l.item,
         options: l.options,
         refineLevel: l.refineLevel,
-        cardSlots: l.cardSlots,
+        cardSlots: l.item.slotCount,
         // Un GIFT siempre tiene tope (nunca es "ilimitado"), pero Listing.quantity
         // es nullable a nivel de esquema; el ?? 1 es solo para el tipo.
         quantity: l.quantity ?? 1,
@@ -133,7 +133,7 @@ export async function claimGift(listingId: string, formData: FormData) {
   await sendDirectMessage(listing.posterId, {
     title: tDiscord("dm.giftClaimRequested", {
       username: session.user.username,
-      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
+      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
@@ -204,7 +204,7 @@ export async function acceptGiftClaim(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.giftClaimAccepted", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
@@ -233,7 +233,7 @@ export async function rejectGiftClaim(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.giftClaimRejected", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,

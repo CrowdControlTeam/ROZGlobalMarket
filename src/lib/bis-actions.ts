@@ -7,8 +7,8 @@ import { EquipSlot, ItemOptionGroup } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
 import { canEditBis, optionGroupForSlot } from "@/lib/bis";
+import { itemFitsSlot } from "@/lib/bis-constants";
 import { loadMarketConfig } from "@/lib/market-config";
-import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { loadMagicalWeaponTypes } from "@/lib/item-options";
 import { MAX_OPTION_SLOTS, getItemOptionGroup } from "@/lib/item-options-constants";
 
@@ -79,7 +79,6 @@ type NormalizedEntry = {
   jobIds: string[];
   itemId: string | null;
   refineLevel: number | null;
-  cardSlots: number | null;
   options: ParsedOption[];
 };
 
@@ -114,7 +113,6 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
   // concreto puede además llevar options concretas (de su propio pool).
   let itemId: string | null = null;
   let refineLevel: number | null = null;
-  let cardSlots: number | null = null;
   // Grupo del pool de options: del propio item si hay uno; si no, por slot (o
   // físico/mágico en arma).
   let group: ItemOptionGroup | null = null;
@@ -128,10 +126,9 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
       select: { id: true, category: true, slot: true, weaponType: true },
     });
     if (!item) throw new Error(t("itemNotFound"));
-    // Integridad: el arma va en el slot WEAPON; el resto, el slot del item debe
-    // coincidir con el del BiS (no meter un casco en la armadura).
-    const slotOk = slot === EquipSlot.WEAPON ? item.category === "WEAPON" : item.slot === slot;
-    if (!slotOk) throw new Error(t("bisItemSlotMismatch"));
+    // Integridad: el item debe encajar en el slot del BiS (mismo criterio que el
+    // filtro del buscador). Defensa por si llega un itemId manipulado.
+    if (!itemFitsSlot(item, slot)) throw new Error(t("bisItemSlotMismatch"));
     itemId = item.id;
     group = getItemOptionGroup(item, await loadMagicalWeaponTypes());
 
@@ -141,12 +138,7 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
       if (refineLevel < 0) throw new Error(t("positiveRefine"));
       if (refineLevel > maxRefineLevel) throw new Error(t("refineTooHigh", { max: maxRefineLevel }));
     }
-    cardSlots = parseOptionalInt(formData.get("cardSlots"), t);
-    if (cardSlots !== null) {
-      const maxSlots = getMaxCardSlots(item);
-      if (cardSlots < 0) throw new Error(t("positiveCardSlots"));
-      if (cardSlots > maxSlots) throw new Error(t("cardSlotsTooHigh", { max: maxSlots }));
-    }
+    // Las ranuras salen de Item.slotCount, no se piden.
   } else {
     const rawWeaponClass = formData.get("weaponClass");
     const weaponClass: WeaponClass | null =
@@ -179,7 +171,6 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
     jobIds,
     itemId,
     refineLevel,
-    cardSlots,
     options,
   };
 }
@@ -206,7 +197,6 @@ export async function createBisEntry(formData: FormData): Promise<void> {
         slot: d.slot,
         itemId: d.itemId,
         refineLevel: d.refineLevel,
-        cardSlots: d.cardSlots,
         note: d.note,
         position: (max._max.position ?? -1) + 1,
         createdById: d.discordId,
@@ -237,7 +227,6 @@ export async function updateBisEntry(entryId: string, formData: FormData): Promi
       data: {
         itemId: d.itemId,
         refineLevel: d.refineLevel,
-        cardSlots: d.cardSlots,
         note: d.note,
         roles: { set: d.roleIds.map((id) => ({ id })) },
         jobs: { set: d.jobIds.map((id) => ({ id })) },

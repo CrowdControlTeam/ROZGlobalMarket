@@ -244,19 +244,20 @@ export async function getListings(filters: MarketFilters) {
           },
         }
       : {}),
-    ...(filters.cardSlotsMin !== undefined || filters.cardSlotsMax !== undefined
-      ? {
-          cardSlots: {
-            ...(filters.cardSlotsMin !== undefined ? { gte: filters.cardSlotsMin } : {}),
-            ...(filters.cardSlotsMax !== undefined ? { lte: filters.cardSlotsMax } : {}),
-          },
-        }
-      : {}),
     item: {
       ...(filters.q ? { name: { contains: filters.q, mode: "insensitive" } } : {}),
       ...(hasCategory ? { category: { in: filters.category } } : {}),
       ...(needsSlotFilter ? { slot: { in: filters.slot } } : {}),
       ...(needsWeaponTypeFilter ? { weaponType: { in: filters.weaponType } } : {}),
+      // Las ranuras son del item (Item.slotCount), no del listing.
+      ...(filters.cardSlotsMin !== undefined || filters.cardSlotsMax !== undefined
+        ? {
+            slotCount: {
+              ...(filters.cardSlotsMin !== undefined ? { gte: filters.cardSlotsMin } : {}),
+              ...(filters.cardSlotsMax !== undefined ? { lte: filters.cardSlotsMax } : {}),
+            },
+          }
+        : {}),
     },
   };
 

@@ -20,7 +20,7 @@ import { useMarketSearch } from "./marketSearchStore";
 import { useListingPatches, clearListingPatches } from "./listingStore";
 import type { ListingCardPatch } from "@/lib/listing-card";
 
-type Item = { id: string; name: string; iconUrl: string };
+type Item = { id: string; name: string; iconUrl: string; slotCount: number };
 type Poster = { id: string; username: string };
 type ListingOption = { slotIndex: number; value: number; def: { label: string } };
 type Listing = {
@@ -32,7 +32,6 @@ type Listing = {
   hasLiveDeals: boolean; // algún Deal PENDING/ACCEPTED (mode-independiente): gate de editar
   price: number | null;
   refineLevel: number;
-  cardSlots: number;
   notes: string | null;
   item: Item;
   poster: Poster;
@@ -150,7 +149,7 @@ function ListingCard({
       </span>
     );
 
-  const name = formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots);
+  const name = formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount);
   const iconBox = (
     <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
       <Image src={listing.item.iconUrl} alt={listing.item.name} width={32} height={32} />

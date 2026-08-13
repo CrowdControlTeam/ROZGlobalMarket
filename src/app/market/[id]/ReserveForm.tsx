@@ -34,7 +34,7 @@ export function ReserveForm({
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("market.detail.reserve");
   // Mismo guard que el resto de formularios contra el mash-click (ver
-  // NewPublicationForm.tsx).
+  // PublishForm.tsx).
   const submittingRef = useRef(false);
 
   const competitive = unitPrice === null;

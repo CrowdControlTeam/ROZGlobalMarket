@@ -41,10 +41,9 @@ function dealSummary(deal: {
   quantity: number;
   unitPrice: number | null;
   listing: { type: ListingType };
-  offeredItem: { name: string } | null;
+  offeredItem: { name: string; slotCount: number } | null;
   offeredQuantity: number | null;
   offeredRefine: number | null;
-  offeredCardSlots: number | null;
   zenyOffered: number;
 }): string {
   if (deal.listing.type === "TRADE") {
@@ -52,7 +51,7 @@ function dealSummary(deal: {
     const name = formatItemDisplayName(
       deal.offeredItem.name,
       deal.offeredRefine ?? 0,
-      deal.offeredCardSlots ?? 0,
+      deal.offeredItem.slotCount,
     );
     const qty = (deal.offeredQuantity ?? 1) > 1 ? ` x${deal.offeredQuantity}` : "";
     const zeny = deal.zenyOffered > 0 ? ` + ${formatPrice(deal.zenyOffered)}` : "";
@@ -87,7 +86,7 @@ export default async function MyPendingPage() {
                 <Image src={deal.listing.item.iconUrl} alt={deal.listing.item.name} width={40} height={40} />
                 <div className="min-w-0 flex-1">
                   <Link href={`/market/${deal.listingId}`} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
-                    {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots)}
+                    {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount)}
                     <span className={`rounded border px-1.5 py-0.5 text-xs font-normal ${LISTING_TYPE_BADGE_CLASS[deal.listing.type]}`}>
                       {listingTypeLabel(t, deal.listing.type)}
                     </span>
@@ -115,7 +114,7 @@ export default async function MyPendingPage() {
                 <Image src={deal.listing.item.iconUrl} alt={deal.listing.item.name} width={40} height={40} />
                 <div className="min-w-0 flex-1">
                   <Link href={`/market/${deal.listingId}`} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
-                    {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots)}
+                    {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount)}
                     <span className={`rounded border px-1.5 py-0.5 text-xs font-normal ${LISTING_TYPE_BADGE_CLASS[deal.listing.type]}`}>
                       {listingTypeLabel(t, deal.listing.type)}
                     </span>

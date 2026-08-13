@@ -4,11 +4,10 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { EquipSlot, ItemOptionGroup, type ItemOptionDef } from "@prisma/client";
-import { ItemPicker, type ItemResult } from "@/app/market/new/ItemPicker";
+import { ItemPicker, type ItemResult } from "@/app/market/ItemPicker";
 import { getOptionChoices } from "@/lib/listings";
 import { createBisEntry, updateBisEntry, deleteBisEntry } from "@/lib/bis-actions";
 import { optionGroupForSlot } from "@/lib/bis-constants";
-import { getMaxCardSlots } from "@/lib/card-slots-constants";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
 import { getErrorMessage } from "@/lib/errors";
 import { slotLabel } from "@/lib/market-labels";
@@ -26,6 +25,7 @@ function toItemResult(item: BisEntryItem): ItemResult {
     category: item.category,
     slot: item.slot,
     weaponType: item.weaponType,
+    slotCount: item.cardSlots,
     optionGroup: item.optionGroup,
   };
 }
@@ -62,7 +62,6 @@ export function BisEntryForm({
     entry?.item ? toItemResult(entry.item) : null,
   );
   const [refine, setRefine] = useState(entry?.item?.refineLevel ? String(entry.item.refineLevel) : "");
-  const [cardSlots, setCardSlots] = useState(entry?.item?.cardSlots ? String(entry.item.cardSlots) : "");
 
   const initGroup = entry?.optionGroup ?? null;
   const [weaponClass, setWeaponClass] = useState<WeaponClass>(
@@ -125,7 +124,6 @@ export function BisEntryForm({
     set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   }
 
-  const maxCardSlots = selectedItem ? getMaxCardSlots(selectedItem) : 0;
   const hasTag = roleIds.length + jobIds.length > 0;
   const hasOption = options.some((o) => o.defId !== "");
   // Item y options son opcionales, pero hace falta al menos uno (además de ≥1 tag).
@@ -143,7 +141,6 @@ export function BisEntryForm({
     if (selectedItem) {
       fd.set("itemId", selectedItem.id);
       if (refine.trim()) fd.set("refineLevel", refine.trim());
-      if (cardSlots.trim()) fd.set("cardSlots", cardSlots.trim());
     } else if (slot === EquipSlot.WEAPON && weaponClass) {
       fd.set("weaponClass", weaponClass);
     }
@@ -221,37 +218,21 @@ export function BisEntryForm({
               puede además llevar options concretas de su propio pool. */}
           <div>
             <label className={labelClass}>{t("form.itemLabel")}</label>
-            <ItemPicker selected={selectedItem} onSelect={chooseItem} onClear={clearItem} />
+            <ItemPicker selected={selectedItem} onSelect={chooseItem} onClear={clearItem} slotFilter={slot} />
             <p className="mt-1 text-[0.7rem] text-ro-text-muted">{t("form.itemOrOptionHint")}</p>
           </div>
 
           {selectedItem && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>{t("form.refine")}</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={refine}
-                  onChange={(e) => setRefine(e.target.value)}
-                  placeholder="0"
-                  className={`w-full ${inputBaseClass}`}
-                />
-              </div>
-              {maxCardSlots > 0 && (
-                <div>
-                  <label className={labelClass}>{t("form.cardSlots")}</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={maxCardSlots}
-                    value={cardSlots}
-                    onChange={(e) => setCardSlots(e.target.value)}
-                    placeholder="0"
-                    className={`w-full ${inputBaseClass}`}
-                  />
-                </div>
-              )}
+            <div className="w-1/2 pr-1.5">
+              <label className={labelClass}>{t("form.refine")}</label>
+              <input
+                type="number"
+                min={0}
+                value={refine}
+                onChange={(e) => setRefine(e.target.value)}
+                placeholder="0"
+                className={`w-full ${inputBaseClass}`}
+              />
             </div>
           )}
 

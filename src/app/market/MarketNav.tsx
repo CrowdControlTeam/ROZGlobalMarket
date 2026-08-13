@@ -19,8 +19,7 @@ export function MarketNav({ isAdmin }: { isAdmin: boolean }) {
   const onMarket = pathname === "/market";
   // Publicar abre el modal interceptado (?publish=<tipo>) sobre el mercado,
   // preservando los filtros actuales; preselecciona el tipo por el que se esté
-  // filtrando (Venta por defecto). El acceso directo /market/new sigue siendo la
-  // página completa de respaldo.
+  // filtrando (Venta por defecto). Es la única vía de publicar.
   const publishParams = new URLSearchParams(searchParams.toString());
   publishParams.set("publish", type || "SALE");
   publishParams.delete("listing");

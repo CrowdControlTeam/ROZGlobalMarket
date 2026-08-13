@@ -4,7 +4,7 @@ import { getItemOptionGroup, loadMagicalWeaponTypes, isOptionsFeatureAvailable }
 import { buildOptionSelectionsFromDetected } from "@/lib/item-options-constants";
 import { PublishModal } from "../PublishModal";
 import type { EditListingData } from "../PublishForm";
-import type { ItemResult } from "../new/ItemPicker";
+import type { ItemResult } from "../ItemPicker";
 
 // Slot @edit: modal de EDITAR publicación interceptado sobre el mercado, por el
 // query param ?edit=<listingId> (mismo patrón que @publish/@detail). Carga el
@@ -57,6 +57,7 @@ export async function EditSlot({
     category: listing.item.category,
     slot: listing.item.slot,
     weaponType: listing.item.weaponType,
+    slotCount: listing.item.slotCount,
     optionGroup: optionsAvailable ? getItemOptionGroup(listing.item, magicalTypes) : null,
   };
 
@@ -67,7 +68,6 @@ export async function EditSlot({
     quantity: listing.quantity, // null = ilimitado
     price: listing.price, // null = sin precio (SALE/BUY) o no aplica (TRADE/GIFT)
     refineLevel: listing.refineLevel,
-    cardSlots: listing.cardSlots,
     notes: listing.notes ?? "",
     optionSelections: buildOptionSelectionsFromDetected(
       listing.options.map((o) => ({ slotIndex: o.slotIndex, defId: o.defId, value: o.value })),

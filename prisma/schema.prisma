@@ -17,22 +17,31 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Categorías tal cual las clasifica el cliente del juego (nueva DB de items),
+// cada una propia (sin colapsar). Ver prisma/importItems.mjs para el mapeo.
 enum ItemCategory {
   WEAPON
   ARMOR
   CARD
-  CONSUMABLE
-  COSTUME
-  PET
   ENCHANT
+  COSTUME
+  HEALING
+  USABLE
+  DELAY_CONSUME
+  AMMO
   ETC
+  PET_EGG
+  PET_ARMOR
+  CASH
+  GET_PORING
 }
 
 // Slot que ocupa una armadura, o slot compatible de una carta.
 enum EquipSlot {
-  UPPER_HEADGEAR
-  MID_HEADGEAR
-  LOWER_HEADGEAR
+  // Cabeza unificada (upper/mid/lower colapsados): la nueva DB de items ya trae
+  // la posición concreta en `Item.position` como metadato; para slotear no se
+  // distinguen (igual que en BiS).
+  HEADGEAR
   ARMOR
   SHIELD
   GARMENT
@@ -130,31 +139,61 @@ model User {
   bisEntries BisEntry[]
 }
 
+// Catálogo de items extraído del cliente del juego (ver prisma/importItems.mjs).
+// El id es el id de item de RO (p.ej. "501"), estable: sirve en BD, bundle de
+// búsqueda, iconos y Listing/Deal/BiS.itemId. La app nunca crea Items (solo el
+// import), que hace upsert por id. Se guardan TODOS los campos para poder montar
+// una preview del item tal cual en el juego.
 model Item {
-  // ID estable del catálogo (el id de item de RO, p.ej. "501") — no un cuid
-  // generado: así el mismo id sirve en catálogo, BD, bundle de búsqueda y en
-  // Listing/TradeOffer/Gift.itemId, y el import puede hacer upsert idempotente
-  // por id. La app nunca crea Items (solo el import), así que no necesita default.
-  id          String       @id
-  name        String
-  description String?
-  category    ItemCategory
-  // Slot de equipo (armaduras) o slot en el que se puede montar (cartas).
-  slot        EquipSlot?
-  // Solo relevante para category = WEAPON — ver comentario del enum.
-  // Nullable: armas aún sin clasificar (o sin tipo, p.ej. munición) no
-  // muestran random options todavía.
-  weaponType WeaponType?
-  // Copia propia del icono (sin hotlink a la fuente externa).
-  iconUrl     String
-  // Ficha de origen de la carga de datos, para trazabilidad.
-  sourceUrl   String?
-  // false si el generador no pudo verificar el item (nombre duplicado o fallo
-  // de red al consultar la fuente) — se importa igual, es solo una marca de
-  // calidad del dato para repasarlo luego. Ver prisma/importCatalog.mjs.
-  verified    Boolean      @default(true)
-  importedAt  DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id               String       @id
+  name             String // identifiedName
+  unidentifiedName String?
+  // Líneas de la descripción del juego, con markup [color=hex]…[/color] para la
+  // preview (el resto de corchetes son literales: [Costume], [Event], etc.).
+  description      String[]
+  category         ItemCategory
+  // De dónde salió la clasificación de categoría (item_db/client/derived/…).
+  categorySource   String?
+  // Slot de equipo, DERIVADO de category+type (armaduras) o WEAPON (armas).
+  slot             EquipSlot?
+  // weaponType DERIVADO de subType (solo armas) — dirige el grupo de random
+  // options físico/mágico.
+  weaponType       WeaponType?
+  // Tokens crudos del cliente (subType máquina "1hSword"; itemType humano "Sword").
+  subType          String?
+  itemType         String?
+  // Nº de ranuras de carta del item — FUENTE DE VERDAD (ya no se pide al publicar).
+  slotCount        Int          @default(0)
+  // Para CARTAS: slot de equipo donde se monta (crudo del cliente).
+  cardSlot         String?
+  // Posición(es) de casco como metadato ("Upper", "Upper, Middle", …); no se usa
+  // para slotear (headgear va unificado).
+  position         String?
+  // Icono propio por id (convención /icons/items/<id>.png; el import siempre lo
+  // rellena).
+  iconUrl          String
+  // ¿Comerciable entre jugadores? = restrictions.trade !== false. Se precalcula
+  // para filtrar rápido el catálogo de publicación.
+  tradeable        Boolean      @default(true)
+  // Objeto de restricciones del cliente completo: { drop, trade, storage, cart,
+  // npcSell, mail, auction, guildStorage }. null = sin restricción.
+  restrictions     Json?
+  costume          Boolean      @default(false)
+  // Stats/metadata para tooltips y preview.
+  attack           Int?
+  defense          Int?
+  weight           Int?
+  weaponLevel      Int?
+  armorLevel       Int?
+  requiredLevel    Int?
+  jobs             String? // "Novice Class, Swordsman Class, …"
+  element          String?
+  classNum         Int?
+  effectId         Int?
+  cooldown         String?
+  petTarget        String?
+  importedAt       DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   listings       Listing[]
   // Deals en los que este item es la contraoferta de un trade (Deal.offeredItem).
@@ -164,6 +203,7 @@ model Item {
 
   @@index([category, slot])
   @@index([name])
+  @@index([tradeable])
 }
 
 // Fase 1 del plan original: solo venta directa. La Fase 3 añade el tipo TRADE (ver ListingType).
@@ -200,12 +240,8 @@ model Listing {
   // cualquier otro item, y no se muestra como prefijo "+N" hasta 1.
   refineLevel Int @default(0)
 
-  // Número de slots de carta del ejemplar concreto (no del catálogo: dos
-  // unidades del mismo item pueden tener distinto número) — arma hasta 4,
-  // armadura hasta 1 salvo casco inferior (0). Ver
-  // src/lib/card-slots-constants.ts. Se muestra como sufijo "[N]" pegado al
-  // nombre, nunca en 0.
-  cardSlots Int @default(0)
+  // (cardSlots eliminado: las ranuras son fijas por item y salen de
+  // Item.slotCount, ya no las indica el vendedor.)
 
   // Notas libres opcionales que escribe quien publica (cualquier tipo): detalles
   // del trato, horario de conexión, condiciones, etc. Se muestran en el detalle.
@@ -255,7 +291,8 @@ model Deal {
   offeredItemId    String?
   offeredQuantity  Int?
   offeredRefine    Int?
-  offeredCardSlots Int?
+  // (offeredCardSlots eliminado: las ranuras del item ofertado salen de
+  // offeredItem.slotCount.)
   zenyOffered      Int     @default(0)
 
   createdAt DateTime @default(now())
@@ -471,7 +508,7 @@ model BisEntry {
   item        Item?    @relation(fields: [itemId], references: [id])
   itemId      String?
   refineLevel Int?
-  cardSlots   Int?
+  // (cardSlots eliminado: sale de Item.slotCount.)
   // Modo genérico (options posicionales, ver BisEntryOption).
   options     BisEntryOption[]
   // Etiquetas (M2M implícito). >=1 entre roles y jobs (validado en la acción).

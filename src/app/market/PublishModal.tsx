@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { PublishForm, type EditListingData } from "./PublishForm";
-import type { PublicationType } from "./new/NewPublicationForm";
+import type { PublicationType } from "./publication-type";
 
 // Shell del modal de publicar: overlay centrado con backdrop oscuro sobre el
 // mercado (montado detrás). Se cierra con ✕, Escape o clic en el backdrop, vía
