@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -177,6 +176,7 @@ function EntryCard({
 }) {
   const t = useTranslations("bis");
   const tMarket = useTranslations("market");
+  const router = useRouter();
 
   const iconBox = entry.item ? (
     <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
@@ -194,8 +194,9 @@ function EntryCard({
       ? weaponTypeLabel(tMarket, entry.weaponType)
       : t("anyItem");
 
-  // La card abre el detalle (panel/bottom sheet). Bajo el icono del item van las
-  // acciones: buscar en el mercado y el indicador de nota (tooltip con el texto).
+  // La card abre el detalle (panel/bottom sheet). El kebab (para todos los
+  // usuarios) lleva "Buscar en el mercado"; Editar/Borrar solo con permiso. La
+  // nota se señala con el icono bajo el kebab (tooltip con su texto).
   return (
     <div className="group relative flex h-full min-h-[3.5rem] rounded-lg border border-ro-panel-border bg-ro-panel-alt transition-colors hover:border-ro-accent">
       {draggable && (
@@ -206,40 +207,12 @@ function EntryCard({
           <GripVertical size={14} />
         </span>
       )}
-
-      {/* Columna izquierda: icono del item y, debajo, las acciones (buscar en el
-          mercado y la nota). Las acciones no van dentro del botón que abre el
-          detalle (no se pueden anidar botones/enlaces). */}
-      <div className="flex shrink-0 flex-col items-center gap-1 py-2 pl-2">
-        <button type="button" onClick={onOpen} aria-label={title} className="cursor-pointer">
-          {iconBox}
-        </button>
-        <div className="flex items-center gap-0.5" onPointerDown={(e) => e.stopPropagation()}>
-          <Link
-            href={`/market?${bisEntryMarketQuery(entry)}`}
-            prefetch={false}
-            aria-label={t("searchInMarket")}
-            title={t("searchInMarket")}
-            className="grid h-5 w-5 place-items-center rounded text-ro-text-muted transition-colors hover:bg-ro-panel-border/40 hover:text-ro-accent"
-          >
-            <Search size={13} aria-hidden />
-          </Link>
-          {/* El hueco de la nota se reserva siempre (placeholder si no hay) para
-              que la lupa quede fija en su sitio, con o sin nota. El tooltip de la
-              nota muestra su texto (no un "tiene notas" genérico). */}
-          {entry.note ? (
-            <NoteIndicator label={entry.note} size={13} className="grid h-5 w-5 place-items-center" />
-          ) : (
-            <span className="h-5 w-5" aria-hidden />
-          )}
-        </div>
-      </div>
-
       <button
         type="button"
         onClick={onOpen}
-        className="relative flex min-w-0 flex-1 cursor-pointer py-2 pl-1 pr-2 text-left"
+        className="relative flex min-w-0 flex-1 cursor-pointer gap-2 p-2 text-left"
       >
+        {iconBox}
         <div className="min-w-0 flex-1">
           <p
             title={title}
@@ -275,20 +248,39 @@ function EntryCard({
         </div>
       </button>
 
-      {canEdit && (
-        <div
-          className="absolute right-1 top-1"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <KebabMenu
-            label={t("kebabLabel")}
-            items={[
-              { label: t("edit"), icon: <Pencil size={14} aria-hidden />, onSelect: onEdit },
-              { label: t("form.delete"), icon: <Trash2 size={14} aria-hidden />, onSelect: onDelete },
-            ]}
-          />
-        </div>
+      {/* Kebab para todos los usuarios logueados: "Buscar en el mercado" siempre;
+          Editar/Borrar solo con permiso de edición. */}
+      <div
+        className="absolute right-1 top-1"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <KebabMenu
+          label={t("kebabLabel")}
+          items={[
+            {
+              label: t("searchInMarket"),
+              icon: <Search size={14} aria-hidden />,
+              onSelect: () => router.push(`/market?${bisEntryMarketQuery(entry)}`),
+            },
+            ...(canEdit
+              ? [
+                  { label: t("edit"), icon: <Pencil size={14} aria-hidden />, onSelect: onEdit },
+                  { label: t("form.delete"), icon: <Trash2 size={14} aria-hidden />, onSelect: onDelete },
+                ]
+              : []),
+          ]}
+        />
+      </div>
+
+      {entry.note && (
+        <NoteIndicator
+          label={entry.note}
+          size={13}
+          className="absolute grid h-5 w-5 place-items-center"
+          // Bajo el kebab (siempre presente). El tooltip muestra el texto de la nota.
+          style={{ top: "1.9rem", right: "0.45rem" }}
+        />
       )}
     </div>
   );
