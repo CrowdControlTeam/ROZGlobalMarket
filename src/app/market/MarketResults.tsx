@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal } from "lucide-react";
@@ -153,7 +153,7 @@ function ListingCard({
   const name = formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount);
   const iconBox = (
     <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
-      <Image src={listing.item.iconUrl} alt={listing.item.name} width={32} height={32} />
+      <ItemIcon item={listing.item} width={32} height={32} />
     </div>
   );
   const meta = (

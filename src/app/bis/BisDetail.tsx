@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { ItemIcon } from "@/components/ItemIcon";
 import { useTranslations } from "next-intl";
 import { Boxes, Pencil, Search, type LucideIcon } from "lucide-react";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
@@ -137,7 +137,7 @@ export function BisDetail({
             <div className="relative shrink-0">
               {entry.item ? (
                 <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-xl border border-ro-panel-border bg-ro-panel shadow-sm">
-                  <Image src={entry.item.iconUrl} alt={entry.item.name} width={52} height={52} />
+                  <ItemIcon item={entry.item} width={52} height={52} />
                 </div>
               ) : (
                 <div className="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-ro-accent/40 bg-ro-panel text-ro-accent/70">

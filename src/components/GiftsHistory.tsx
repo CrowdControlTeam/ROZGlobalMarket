@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/lib/guard";
@@ -53,7 +53,7 @@ export async function GiftsHistory() {
                 <title>{t("receivedLabel")}</title>
               </ArrowDownLeft>
             )}
-            <Image src={gift.item.iconUrl} alt={gift.item.name} width={40} height={40} />
+            <ItemIcon item={gift.item} width={40} height={40} />
             <div className="flex-1">
               <p className="font-semibold">
                 {formatItemDisplayName(gift.item.name, gift.refineLevel, gift.cardSlots)}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ItemCategory } from "@prisma/client";
@@ -112,7 +112,7 @@ export function ItemsBrowser({
                 onClick={() => openDetail(item.id)}
                 className="flex h-full w-full flex-col items-center gap-1.5 rounded-lg border-2 border-ro-panel-border bg-ro-panel p-3 text-center transition-colors hover:border-ro-accent"
               >
-                <Image src={item.iconUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
+                <ItemIcon item={item} width={40} height={40} className="h-10 w-10 shrink-0" alt="" />
                 <span className="line-clamp-2 text-xs text-ro-text">
                   {item.slotCount > 0 ? `${item.name} [${item.slotCount}]` : item.name}
                 </span>

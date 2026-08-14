@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { ListingLink } from "@/components/ListingLink";
 import type { ListingType } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
@@ -83,7 +83,7 @@ export default async function MyPendingPage() {
                 key={deal.id}
                 className="flex items-center gap-4 rounded-lg border-2 border-ro-panel-border bg-ro-panel p-4 text-ro-text"
               >
-                <Image src={deal.listing.item.iconUrl} alt={deal.listing.item.name} width={40} height={40} />
+                <ItemIcon item={deal.listing.item} width={40} height={40} />
                 <div className="min-w-0 flex-1">
                   <ListingLink listingId={deal.listingId} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
                     {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount)}
@@ -111,7 +111,7 @@ export default async function MyPendingPage() {
                 key={deal.id}
                 className="flex items-center gap-4 rounded-lg border-2 border-ro-panel-border bg-ro-panel p-4 text-ro-text"
               >
-                <Image src={deal.listing.item.iconUrl} alt={deal.listing.item.name} width={40} height={40} />
+                <ItemIcon item={deal.listing.item} width={40} height={40} />
                 <div className="min-w-0 flex-1">
                   <ListingLink listingId={deal.listingId} className="flex items-center gap-2 font-semibold hover:text-ro-accent">
                     {formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount)}

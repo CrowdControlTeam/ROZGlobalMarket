@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { useTranslations } from "next-intl";
 import { sendContactMessage } from "@/lib/contact-messages";
 import { Drawer } from "./Drawer";
@@ -138,7 +138,7 @@ export function ContactModal({
     <Drawer side="right" mobileSheet open={open} onClose={handleClose} title={t("writeTo", { username: recipientUsername })}>
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 rounded-md border-2 border-ro-panel-border/30 p-2">
-          <Image src={item.iconUrl} alt={item.name} width={32} height={32} />
+          <ItemIcon item={item} width={32} height={32} />
           <span className="text-sm">{item.name}</span>
         </div>
         {sent ? (

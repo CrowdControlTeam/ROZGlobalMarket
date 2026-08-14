@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { useTranslations } from "next-intl";
 import type { EquipSlot } from "@prisma/client";
 import { searchItems } from "@/lib/listings";
@@ -84,7 +84,7 @@ export function ItemPicker({
   if (selected) {
     return (
       <div className="flex h-12 items-center gap-2.5 rounded-lg border border-ro-accent bg-ro-accent/10 px-2">
-        <Image src={selected.iconUrl} alt="" width={32} height={32} className="h-8 w-8 shrink-0" />
+        <ItemIcon item={selected} width={32} height={32} className="h-8 w-8 shrink-0" alt="" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-ro-text">{selected.name}</p>
           <p className="truncate text-xs text-ro-text-muted">{itemHint(t, selected)}</p>
@@ -138,7 +138,7 @@ export function ItemPicker({
                 }}
                 className="flex w-full items-center gap-2 rounded-md p-2 text-left text-ro-text hover:bg-ro-accent/15"
               >
-                <Image src={item.iconUrl} alt={item.name} width={24} height={24} />
+                <ItemIcon item={item} width={24} height={24} />
                 <span className="flex-1">
                   {item.name}
                   <span className="block text-xs text-ro-text-muted">{itemHint(t, item)}</span>
