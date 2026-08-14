@@ -19,6 +19,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { ItemCategory, EquipSlot, WeaponType, type ItemOptionDef } from "@prisma/client";
 import { categoryLabel, slotLabel, weaponTypeLabel } from "@/lib/market-labels";
+import { formatPrice } from "@/lib/price";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import {
@@ -55,7 +56,31 @@ function dedupeByStat(defs: ItemOptionDef[]): StatOption[] {
   return Array.from(byCode.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
-type Section = { id: string; Icon: LucideIcon; label: string; count: number; clear: () => void; content: ReactNode };
+type Section = {
+  id: string;
+  Icon: LucideIcon;
+  label: string;
+  count: number;
+  // Resumen de los valores ACTIVOS de la sección (p. ej. "Arma, Armadura" o
+  // "≥ +7"); vacío si no hay ninguno. Lo usa el rail colapsado para el tooltip.
+  summary: string;
+  clear: () => void;
+  content: ReactNode;
+};
+
+// Resumen de un rango min/max con el formateador dado; "" si no hay ninguno.
+function formatRange(
+  min: string | number | "",
+  max: string | number | "",
+  fmt: (v: string | number) => string,
+): string {
+  const hasMin = min !== "";
+  const hasMax = max !== "";
+  if (hasMin && hasMax) return `${fmt(min)} – ${fmt(max)}`;
+  if (hasMin) return `≥ ${fmt(min)}`;
+  if (hasMax) return `≤ ${fmt(max)}`;
+  return "";
+}
 
 export function MarketFilters() {
   const t = useTranslations("market");
@@ -209,12 +234,31 @@ export function MarketFilters() {
   }
 
   const optionsActive = optionSelections.filter((s) => s.statCode !== "").length;
+
+  // Resúmenes de valores activos por sección, para el tooltip del rail colapsado.
+  const priceSummary = formatRange(minPrice, maxPrice, (v) => formatPrice(Number(v)));
+  const categorySummary = categories.map((c) => categoryLabel(t, c as ItemCategory)).join(", ");
+  const slotSummary = slots.map((s) => slotLabel(t, s as EquipSlot)).join(", ");
+  const weaponTypeSummary = weaponTypes.map((w) => weaponTypeLabel(t, w as WeaponType)).join(", ");
+  const refineSummary = formatRange(refineMin, refineMax, (v) => `+${v}`);
+  const cardSlotsSummary = formatRange(cardSlotsMin, cardSlotsMax, (v) => String(v));
+  const optionsSummary = optionSelections
+    .map((s, i) => {
+      if (!s.statCode) return null;
+      const label = statsBySlot[i]?.find((o) => o.statCode === s.statCode)?.label ?? s.statCode;
+      return s.min !== "" ? `${label} ≥${s.min}` : label;
+    })
+    .filter(Boolean)
+    .join(", ");
+  const posterSummary = poster ? `@${poster.username}` : "";
+
   const sections: Section[] = [
     {
       id: "price",
       Icon: Coins,
       label: t("filters.priceSection"),
       count: (minPrice !== "" ? 1 : 0) + (maxPrice !== "" ? 1 : 0),
+      summary: priceSummary,
       clear: () => setFilters({ minPrice: "", maxPrice: "" }),
       content: (
         <MinMaxRow>
@@ -238,6 +282,7 @@ export function MarketFilters() {
       Icon: Boxes,
       label: t("filters.category"),
       count: categories.length,
+      summary: categorySummary,
       // No destructivo: limpiar categoría no toca slot/tipo de arma (el backend
       // los ignora fuera de contexto y reaparecen al volver la categoría).
       clear: () => setFilter("category", ""),
@@ -255,6 +300,7 @@ export function MarketFilters() {
       Icon: Shield,
       label: t("filters.slot"),
       count: slots.length,
+      summary: slotSummary,
       clear: () => setFilter("slot", ""),
       content: (
         <MultiSelectFilter
@@ -271,6 +317,7 @@ export function MarketFilters() {
       Icon: Sword,
       label: t("filters.weaponType"),
       count: weaponTypes.length,
+      summary: weaponTypeSummary,
       clear: () => setFilter("weaponType", ""),
       content: (
         <MultiSelectFilter
@@ -287,6 +334,7 @@ export function MarketFilters() {
       Icon: Sparkles,
       label: t("field.refine"),
       count: (refineMin !== "" ? 1 : 0) + (refineMax !== "" ? 1 : 0),
+      summary: refineSummary,
       clear: () => setFilters({ refineMin: "", refineMax: "" }),
       content: (
         <MinMaxRow>
@@ -302,6 +350,7 @@ export function MarketFilters() {
       Icon: SquareStack,
       label: t("field.cardSlots"),
       count: (cardSlotsMin !== "" ? 1 : 0) + (cardSlotsMax !== "" ? 1 : 0),
+      summary: cardSlotsSummary,
       clear: () => setFilters({ cardSlotsMin: "", cardSlotsMax: "" }),
       content: (
         <MinMaxRow>
@@ -319,6 +368,7 @@ export function MarketFilters() {
             Icon: SlidersHorizontal,
             label: t("field.options"),
             count: optionsActive,
+            summary: optionsSummary,
             clear: clearOptions,
             content: (
               <OptionsFilter
@@ -339,6 +389,7 @@ export function MarketFilters() {
       Icon: User,
       label: t("filters.poster"),
       count: poster ? 1 : 0,
+      summary: posterSummary,
       clear: () => setFilters({ posterId: "", posterName: "" }),
       content: (
         <UserPicker
@@ -537,13 +588,17 @@ function FilterRail({
 }) {
   return (
     <div className="flex w-14 flex-col items-center gap-2 rounded-xl border border-ro-panel-border bg-ro-panel py-2 shadow-sm">
-      {sections.map((s) => (
+      {sections.map((s) => {
+        // Con filtros activos, el tooltip muestra sus valores ("Categoría: Arma,
+        // Armadura"); si no, solo el nombre de la sección.
+        const tip = s.summary ? `${s.label}: ${s.summary}` : s.label;
+        return (
         <button
           key={s.id}
           type="button"
           onClick={() => onIcon(s.id)}
-          title={s.label}
-          aria-label={s.label}
+          title={tip}
+          aria-label={tip}
           className={`relative grid h-9 w-9 place-items-center rounded-lg border ${
             s.count > 0 ? "border-ro-accent bg-ro-accent/10 text-ro-accent" : "border-ro-panel-border bg-ro-panel-alt text-ro-text-muted"
           }`}
@@ -555,7 +610,8 @@ function FilterRail({
             </span>
           )}
         </button>
-      ))}
+        );
+      })}
       <button type="button" onClick={onExpand} title={expandLabel} aria-label={expandLabel} className="mt-1 grid h-7 w-9 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel-alt hover:text-ro-text">
         <ChevronsRight size={16} />
       </button>
