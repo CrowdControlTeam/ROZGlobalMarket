@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { FILTER_KEYS, type Filters } from "./marketFilterKeys";
+import { FILTER_KEYS, NEW_TAB_PARAM, type Filters } from "./marketFilterKeys";
 
 // Estado central de la búsqueda del mercado. Modelo por PESTAÑA: cada pestaña
 // guarda su propio objeto de filtros; la pestaña activa es la FUENTE DE VERDAD.
@@ -26,6 +26,13 @@ export type MarketTab = { id: string; seq: number; filters: Filters };
 // (crypto.randomUUID no serviría, daría valores distintos). Las siguientes
 // pestañas se crean en el cliente (manejadores) y sí usan randomUUID.
 const INITIAL_TAB_ID = "market-tab-1";
+
+// El workspace de pestañas se persiste en sessionStorage para sobrevivir a la
+// navegación entre secciones (el provider vive dentro de la página del mercado y
+// se desmonta al salir). Alimenta sobre todo el flujo "abrir en pestaña nueva"
+// desde BiS: al volver al mercado con NEW_TAB_PARAM, se recupera lo que hubiera y
+// se le añade una pestaña más.
+const WORKSPACE_KEY = "market-workspace";
 
 // Solo conserva las claves de filtro conocidas de un objeto de query cualquiera.
 function pickFilters(source: Filters): Filters {
@@ -129,6 +136,60 @@ export function MarketSearchProvider({
   useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
+
+  // Restauración / "pestaña nueva" — UNA sola vez al montar (post-hidratación,
+  // así SSR y primer render siguen siendo la pestaña sembrada desde la URL). Si
+  // la URL trae NEW_TAB_PARAM (viene de BiS), se recupera el workspace guardado y
+  // se le AÑADE una pestaña con los filtros de la URL (activa), sin pisar lo que
+  // hubiera; luego se limpia el param. En carga normal NO se restaura: se respeta
+  // el comportamiento actual (una pestaña desde la URL); la persistencia de abajo
+  // solo alimenta este flujo. Declarado ANTES del efecto de persistencia para
+  // leer sessionStorage antes de que aquél lo sobrescriba.
+  const didInitRef = useRef(false);
+  useEffect(() => {
+    if (didInitRef.current) return;
+    didInitRef.current = true;
+    if (new URLSearchParams(window.location.search).get(NEW_TAB_PARAM) !== "1") return;
+
+    let restored: MarketTab[] = [];
+    try {
+      const raw = sessionStorage.getItem(WORKSPACE_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed?.tabs)) restored = parsed.tabs as MarketTab[];
+    } catch {
+      // sessionStorage no disponible (modo privado) o JSON corrupto: se ignora.
+    }
+
+    const itemFilters = pickFilters(initialFilters);
+    const seq = restored.reduce((m, x) => Math.max(m, x.seq), 0) + 1;
+    const newTab: MarketTab = { id: crypto.randomUUID(), seq, filters: itemFilters };
+    // setState en el montaje a propósito: la restauración/append debe ocurrir
+    // tras hidratar (el primer render se siembra determinista desde la URL para
+    // no romper la hidratación), así que aquí se reajustan las pestañas.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setTabs([...restored, newTab]);
+    setActiveId(newTab.id);
+    /* eslint-enable react-hooks/set-state-in-effect */
+
+    // La activa (newTab) ya coincide con los filtros de la URL, así que no hay
+    // que re-navegar: solo se quita NEW_TAB_PARAM de la URL (si no, un refresh
+    // volvería a duplicar la pestaña).
+    const clean = serialize(itemFilters);
+    lastPushedRef.current = clean;
+    lastPushedFiltersRef.current = itemFilters;
+    router.replace(clean ? `${pathname}?${clean}` : pathname);
+  }, [initialFilters, pathname, router]);
+
+  // Persistencia del workspace en sessionStorage (en cada cambio de pestañas o de
+  // activa). Es lo que permite que "lo que haya" sobreviva a la navegación para
+  // el flujo de arriba.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(WORKSPACE_KEY, JSON.stringify({ tabs, activeId }));
+    } catch {
+      // Cuota / modo privado: la persistencia es best-effort.
+    }
+  }, [tabs, activeId]);
 
   const activeFilters = useMemo(
     () => tabs.find((t) => t.id === activeId)?.filters ?? {},

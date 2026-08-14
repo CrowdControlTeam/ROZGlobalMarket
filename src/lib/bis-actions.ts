@@ -144,7 +144,9 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
 
   const options = parseBisOptions(formData, t);
 
-  // Regla: al menos uno de item, tipo de arma (solo arma) u options.
+  // Regla: al menos uno de item, tipo de arma (solo arma) u options. Un slot de
+  // equipo "cualquiera" sin nada más no aporta (todo slot necesita un item), así
+  // que se exige concretar algo.
   if (!hasItem && weaponType === null && options.length === 0) {
     throw new Error(t("bisNeedItemOrOption"));
   }

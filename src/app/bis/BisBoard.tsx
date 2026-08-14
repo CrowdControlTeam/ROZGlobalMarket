@@ -17,6 +17,7 @@ import {
   GripVertical,
   Plus,
   Pencil,
+  Search,
   Trash2,
   X,
   type LucideIcon,
@@ -38,6 +39,7 @@ import { reorderBisEntries, deleteBisEntry } from "@/lib/bis-actions";
 import { buttonClass } from "@/lib/ui";
 import { KebabMenu } from "@/components/KebabMenu";
 import { NoteIndicator } from "@/components/NoteIndicator";
+import { bisEntryMarketQuery } from "./bis-market-link";
 import { BisDetail, type BisDetailData } from "./BisDetail";
 import { BisEntryForm } from "./BisEntryForm";
 
@@ -68,7 +70,7 @@ export type BisEntryView = {
   // Grupo de options de un BiS genérico (null en los concretos). Sirve al editor
   // para recargar el pool correcto y, en arma, saber si es físico o mágico.
   optionGroup: ItemOptionGroup | null;
-  options: { slotIndex: number; defId: string; minValue: number | null; label: string }[];
+  options: { slotIndex: number; defId: string; minValue: number | null; label: string; statCode: string }[];
   roles: Tag[];
   jobs: Tag[];
 };
@@ -174,6 +176,7 @@ function EntryCard({
 }) {
   const t = useTranslations("bis");
   const tMarket = useTranslations("market");
+  const router = useRouter();
 
   const iconBox = entry.item ? (
     <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
@@ -191,9 +194,9 @@ function EntryCard({
       ? weaponTypeLabel(tMarket, entry.weaponType)
       : t("anyItem");
 
-  // La card abre el detalle (panel/bottom sheet). La nota ya no va inline: se
-  // señala con el icono de bocadillo en la esquina (como en los listings) y su
-  // texto completo se ve en el detalle.
+  // La card abre el detalle (panel/bottom sheet). El kebab (para todos los
+  // usuarios) lleva "Buscar en el mercado"; Editar/Borrar solo con permiso. La
+  // nota se señala con el icono bajo el kebab (tooltip con su texto).
   return (
     <div className="group relative flex h-full min-h-[3.5rem] rounded-lg border border-ro-panel-border bg-ro-panel-alt transition-colors hover:border-ro-accent">
       {draggable && (
@@ -205,19 +208,109 @@ function EntryCard({
         </span>
       )}
       <button
-      type="button"
-      onClick={onOpen}
-      className="relative flex min-w-0 flex-1 cursor-pointer gap-2 p-2 text-left"
-    >
-      {iconBox}
+        type="button"
+        onClick={onOpen}
+        className="relative flex min-w-0 flex-1 cursor-pointer gap-2 p-2 text-left"
+      >
+        {iconBox}
+        <div className="min-w-0 flex-1">
+          <p
+            title={title}
+            className={`truncate pr-4 text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}
+          >
+            {title}
+          </p>
+
+          {entry.options.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {entry.options.map((o) => (
+                <span
+                  key={o.slotIndex}
+                  className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1 py-px text-[0.6rem] text-ro-accent"
+                >
+                  {o.label}
+                  {o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {(entry.roles.length > 0 || entry.jobs.length > 0) && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {entry.roles.map((r) => (
+                <TagBadge key={r.id} label={r.label} variant="role" />
+              ))}
+              {entry.jobs.map((j) => (
+                <TagBadge key={j.id} label={j.label} variant="job" />
+              ))}
+            </div>
+          )}
+        </div>
+      </button>
+
+      {/* Kebab para todos los usuarios logueados: "Buscar en el mercado" siempre;
+          Editar/Borrar solo con permiso de edición. */}
+      <div
+        className="absolute right-1 top-1"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <KebabMenu
+          label={t("kebabLabel")}
+          items={[
+            {
+              label: t("searchInMarket"),
+              icon: <Search size={14} aria-hidden />,
+              onSelect: () => router.push(`/market?${bisEntryMarketQuery(entry)}`),
+            },
+            ...(canEdit
+              ? [
+                  { label: t("edit"), icon: <Pencil size={14} aria-hidden />, onSelect: onEdit },
+                  { label: t("form.delete"), icon: <Trash2 size={14} aria-hidden />, onSelect: onDelete },
+                ]
+              : []),
+          ]}
+        />
+      </div>
+
+      {entry.note && (
+        <NoteIndicator
+          label={entry.note}
+          size={13}
+          className="absolute grid h-5 w-5 place-items-center"
+          // Bajo el kebab (siempre presente). El tooltip muestra el texto de la nota.
+          style={{ top: "1.9rem", right: "0.45rem" }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Vista compacta y NO interactiva de una entrada, para el modal de borrado (que
+// se vea qué se elimina). Mismo icono/nombre/options/etiquetas que la card.
+function EntryPreview({ entry }: { entry: BisEntryView }) {
+  const t = useTranslations("bis");
+  const tMarket = useTranslations("market");
+  const title = entry.item
+    ? formatItemDisplayName(entry.item.name, entry.item.refineLevel, entry.item.cardSlots)
+    : entry.weaponType
+      ? weaponTypeLabel(tMarket, entry.weaponType)
+      : t("anyItem");
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
+      {entry.item ? (
+        <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
+          <Image src={entry.item.iconUrl} alt={entry.item.name} width={26} height={26} />
+        </div>
+      ) : (
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed border-ro-panel-border bg-ro-panel text-ro-text-muted">
+          <Boxes size={15} aria-hidden />
+        </div>
+      )}
       <div className="min-w-0 flex-1">
-        <p
-          title={title}
-          className={`truncate pr-4 text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}
-        >
+        <p className={`truncate text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>
           {title}
         </p>
-
         {entry.options.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {entry.options.map((o) => (
@@ -231,7 +324,6 @@ function EntryCard({
             ))}
           </div>
         )}
-
         {(entry.roles.length > 0 || entry.jobs.length > 0) && (
           <div className="mt-1 flex flex-wrap gap-1">
             {entry.roles.map((r) => (
@@ -243,33 +335,6 @@ function EntryCard({
           </div>
         )}
       </div>
-
-      </button>
-      {canEdit && (
-        <div
-          className="absolute right-1 top-1"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <KebabMenu
-            label={t("kebabLabel")}
-            items={[
-              { label: t("edit"), icon: <Pencil size={14} aria-hidden />, onSelect: onEdit },
-              { label: t("form.delete"), icon: <Trash2 size={14} aria-hidden />, onSelect: onDelete },
-            ]}
-          />
-        </div>
-      )}
-      {entry.note && (
-        <NoteIndicator
-          label={t("hasNotes")}
-          size={13}
-          className="absolute grid h-5 w-5 place-items-center"
-          // Snug under the kebab icon on tiny BiS cards (kebab is at top-1),
-          // or top-right when there is no kebab.
-          style={{ top: canEdit ? "1.9rem" : "0.4rem", right: "0.45rem" }}
-        />
-      )}
     </div>
   );
 }
@@ -711,6 +776,9 @@ export function BisBoard({
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-sm text-ro-text">{t("deleteConfirm")}</p>
+            <div className="mt-3">
+              <EntryPreview entry={deleting} />
+            </div>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"

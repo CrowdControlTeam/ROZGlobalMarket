@@ -742,6 +742,7 @@
     "kebabLabel": "Options",
     "deleteConfirm": "Delete this BiS?",
     "hasNotes": "Has notes",
+    "searchInMarket": "Search in market",
     "form": {
       "addTitle": "Add BiS",
       "editTitle": "Edit BiS",
