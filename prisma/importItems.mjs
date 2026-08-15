@@ -2,20 +2,25 @@
 // juego (ROZDataBaseExtractor). Es la fuente de verdad: lo que no esté aquí se
 // borra. Reemplaza por completo la tabla Item. Idempotente.
 //
+// IMPORTANTE: la fuente es el SUBCONJUNTO de items TRADUCIDOS al inglés
+// (`server/output/icons/items.json`), no el volcado completo del extractor
+// (`server/output/items.json`), que trae ~12k items, muchos sin traducir. Si
+// cambia la ubicación del subconjunto, pásala como argumento explícito.
+//
 // Uso:
 //   node prisma/importItems.mjs [ruta/items.json]
 //   (por entorno: npx dotenvx run -f .env.dev -- node prisma/importItems.mjs)
 //
-// NOTA iconos: por ahora se usa la convención /icons/items/<id>.gif; cuando se
-// carguen los sets nuevos (juego + descripciones) se actualiza aquí.
+// Iconos: convención /icons/items/<id>.png (pequeño) y /icons/details/<id>.png
+// (ficha estilo juego); se copian a public/ desde el extractor aparte.
 
 import fs from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-const SRC = process.argv[2] ?? "E:/Proyectos/Git/ROZDataBaseExtractor/server/output/items.json";
+const SRC = process.argv[2] ?? "E:/Proyectos/Git/ROZDataBaseExtractor/server/output/icons/items.json";
 
-// --- Mapeos (validados contra los 3.682 items, 0 huecos) ---
+// --- Mapeos (validados contra los 3.925 items del catálogo traducido) ---
 const CATEGORY_MAP = {
   Weapon: "WEAPON", Armor: "ARMOR", Card: "CARD", Enchant: "ENCHANT", Costume: "COSTUME",
   Healing: "HEALING", Usable: "USABLE", DelayConsume: "DELAY_CONSUME", Etc: "ETC", Ammo: "AMMO",
@@ -28,7 +33,7 @@ const WEAPON_SUBTYPE_MAP = {
   Knuckle: "KNUCKLE", Musical: "INSTRUMENT", Whip: "WHIP", Katar: "KATAR",
 };
 const ARMOR_TYPE_SLOT = {
-  Headgear: "HEADGEAR", Helmet: "HEADGEAR", Armor: "ARMOR", Shield: "SHIELD",
+  Headgear: "HEADGEAR", Helmet: "HEADGEAR", Helm: "HEADGEAR", Armor: "ARMOR", Shield: "SHIELD",
   Garment: "GARMENT", Shoes: "FOOTGEAR", Accessory: "ACCESSORY",
   "Accessory (Right)": "ACCESSORY", "Accessory (Left)": "ACCESSORY",
 };
@@ -84,6 +89,15 @@ async function main() {
   // UPSERT y luego se borran solo los que ya no están:
   const validIds = [...new Set(rows.map((r) => r.id))];
 
+  // Diff contra lo que ya había, para reportar el impacto de la actualización:
+  // nuevos, existentes que se re-sincronizan (el upsert los deja igual que el
+  // archivo, así que cualquier cambio queda aplicado) y los que se borran.
+  const existingIds = new Set((await prisma.item.findMany({ select: { id: true } })).map((i) => i.id));
+  const newIdSet = new Set(validIds);
+  const createdCount = validIds.filter((id) => !existingIds.has(id)).length;
+  const matchedCount = validIds.filter((id) => existingIds.has(id)).length;
+  const deletedCount = [...existingIds].filter((id) => !newIdSet.has(id)).length;
+
   // 1) Limpiar referencias a items que desaparecen (Listing.itemId es requerido;
   //    BisEntry.itemId opcional; Deal.offeredItemId opcional → SetNull solo).
   await prisma.listing.deleteMany({ where: { itemId: { notIn: validIds } } });
@@ -107,6 +121,9 @@ async function main() {
   const total = await prisma.item.count();
   const tradeable = await prisma.item.count({ where: { tradeable: true } });
   console.log(`Items importados: ${total} | comerciables: ${tradeable}`);
+  console.log(
+    `Cambios: ${createdCount} nuevos | ${matchedCount} existentes re-sincronizados | ${deletedCount} borrados`,
+  );
 
   // Bundle de búsqueda empaquetado con la app (solo COMERCIABLES): lo usan el
   // autocompletado de publicar y el match del reconocimiento por imagen (por
