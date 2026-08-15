@@ -180,7 +180,15 @@ function EntryCard({
 
   const iconBox = entry.item ? (
     <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
-      <ItemIcon item={entry.item} width={26} height={26} />
+      <ItemIcon
+        item={entry.item}
+        width={26}
+        height={26}
+        refine={entry.item.refineLevel}
+        options={entry.options.map(
+          (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
+        )}
+      />
     </div>
   ) : (
     <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed border-ro-panel-border bg-ro-panel text-ro-text-muted">
@@ -300,7 +308,15 @@ function EntryPreview({ entry }: { entry: BisEntryView }) {
     <div className="flex items-center gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
       {entry.item ? (
         <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
-          <ItemIcon item={entry.item} width={26} height={26} />
+          <ItemIcon
+            item={entry.item}
+            width={26}
+            height={26}
+            refine={entry.item.refineLevel}
+            options={entry.options.map(
+              (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
+            )}
+          />
         </div>
       ) : (
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed border-ro-panel-border bg-ro-panel text-ro-text-muted">

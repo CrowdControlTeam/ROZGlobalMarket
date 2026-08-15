@@ -137,7 +137,15 @@ export function BisDetail({
             <div className="relative shrink-0">
               {entry.item ? (
                 <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-xl border border-ro-panel-border bg-ro-panel shadow-sm">
-                  <ItemIcon item={entry.item} width={52} height={52} />
+                  <ItemIcon
+                    item={entry.item}
+                    width={52}
+                    height={52}
+                    refine={entry.item.refineLevel}
+                    options={entry.options.map(
+                      (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
+                    )}
+                  />
                 </div>
               ) : (
                 <div className="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-ro-accent/40 bg-ro-panel text-ro-accent/70">
