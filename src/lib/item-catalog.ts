@@ -2,7 +2,7 @@ import type { ItemCategory, EquipSlot, WeaponType } from "@prisma/client";
 import catalogData from "@/data/catalog-search.json";
 
 // Catálogo de items recortado a los campos de búsqueda, empaquetado con la app
-// (lo genera prisma/importCatalog.mjs desde el mismo catálogo que va a la BD) y
+// (lo genera prisma/importItems.mjs desde el mismo catálogo que va a la BD) y
 // cargado en memoria. Así el autocompletado (searchItems) y los candidatos del
 // reconocimiento (item-recognition.ts) no pegan a la BD en cada tecla — solo
 // importa cuando el servidor sirve una versión de RO global con muchos jugadores

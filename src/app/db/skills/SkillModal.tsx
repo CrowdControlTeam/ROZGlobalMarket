@@ -107,7 +107,7 @@ export function SkillModal({
 
         {skill.desc.length > 0 && (
           <div className="mt-3 rounded-md border border-ro-panel-border/60 bg-ro-panel-alt/40 p-3">
-            <RoDescription lines={skill.desc} format="caret" />
+            <RoDescription lines={skill.desc} />
           </div>
         )}
       </div>

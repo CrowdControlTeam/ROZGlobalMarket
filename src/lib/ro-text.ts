@@ -1,10 +1,11 @@
-// Parsers del markup de color del cliente de RO. Hay DOS formatos distintos:
-//   - Items (items.json / Item.description): BBCode `[color=RRGGBB]texto[/color]`,
-//     con otros tags sueltos ([fire], [bash], [ctrl]…) que son iconos/refs que
-//     aquí eliminamos (dejando el texto interior).
-//   - Skills (skills.json): caret `^RRGGBB texto ^000000`.
-// En ambos, un color 000000 = "volver al color por defecto" (en el cliente es
+// Parser del markup de color del cliente de RO. Items y skills usan el mismo
+// formato BBCode `[color=RRGGBB]texto[/color]`, con otros tags sueltos ([fire],
+// [bash], [ctrl]…) que son iconos/refs que aquí eliminamos (dejando el texto
+// interior). Un color 000000 = "volver al color por defecto" (en el cliente es
 // negro; aquí, sobre fondo oscuro, lo tratamos como el texto normal del tema).
+//
+// (Las skills usaban antes el formato caret `^RRGGBB`; la DB actualizada las
+// trae ya en BBCode, así que ese parser se eliminó.)
 
 export type ColorSegment = { text: string; color: string | null };
 
@@ -38,29 +39,6 @@ export function parseBBCode(line: string): ColorSegment[] {
   if (lastIndex < line.length) {
     const current = colorStack.length > 0 ? colorStack[colorStack.length - 1] : null;
     segments.push({ text: line.slice(lastIndex), color: current });
-  }
-  return segments;
-}
-
-// --- Skills: caret `^RRGGBB` ---
-const CARET_RE = /\^([0-9a-fA-F]{6})/g;
-
-export function parseCaretColor(line: string): ColorSegment[] {
-  const segments: ColorSegment[] = [];
-  let lastIndex = 0;
-  let currentColor: string | null = null;
-  let match: RegExpExecArray | null;
-
-  CARET_RE.lastIndex = 0;
-  while ((match = CARET_RE.exec(line)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push({ text: line.slice(lastIndex, match.index), color: currentColor });
-    }
-    currentColor = normalizeColor(match[1]);
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < line.length) {
-    segments.push({ text: line.slice(lastIndex), color: currentColor });
   }
   return segments;
 }
