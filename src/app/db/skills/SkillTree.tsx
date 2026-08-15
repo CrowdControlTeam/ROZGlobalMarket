@@ -176,7 +176,7 @@ export function SkillTree({
           className="pointer-events-none fixed z-50 w-72 max-w-[80vw] rounded-md border-2 border-ro-panel-border bg-ro-panel p-3 shadow-xl"
           style={{ left: hover.x + 14, top: hover.y + 14 }}
         >
-          <RoDescription lines={hoverSkill.desc} format="caret" />
+          <RoDescription lines={hoverSkill.desc} />
         </div>
       )}
     </div>
