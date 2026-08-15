@@ -53,6 +53,12 @@ export function stripBBCode(text: string): string {
 // ya es suficientemente luminoso se devuelve igual; si no, se sube la
 // luminosidad (HSL) preservando el tono, para que el significado del color se
 // mantenga. Lo elige el CSS por tema (ver .ro-desc-color en globals.css).
+// Luminancia objetivo (WCAG relativa) para el texto sobre el panel oscuro
+// (~0.008 de luminancia): 0.3 da un contraste cómodo (~6:1). Se sube la
+// luminosidad HSL hasta alcanzarla, así el azul/púrpura (percibidos más oscuros)
+// se aclaran más que el verde/rojo a igual luminosidad.
+const DARK_TARGET_LUMINANCE = 0.3;
+
 export function darkModeColor(color: string): string {
   const m = /^#([0-9a-fA-F]{6})$/.exec(color);
   if (!m) return color;
@@ -60,15 +66,25 @@ export function darkModeColor(color: string): string {
   const r = (int >> 16) & 255;
   const g = (int >> 8) & 255;
   const b = int & 255;
+  if (relLuminance(r, g, b) >= DARK_TARGET_LUMINANCE) return color; // ya legible
+  const [h, s] = rgbToHsl(r, g, b);
+  let l = rgbToHsl(r, g, b)[2];
+  // Sube la luminosidad (mismo tono/saturación) hasta llegar a la luminancia
+  // objetivo, o hasta casi blanco como tope.
+  for (let candidate = l; candidate <= 0.94; candidate += 0.02) {
+    l = candidate;
+    const [rr, gg, bb] = hslToRgb(h, s, candidate);
+    if (relLuminance(rr, gg, bb) >= DARK_TARGET_LUMINANCE) break;
+  }
+  return `hsl(${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`;
+}
+
+function relLuminance(r: number, g: number, b: number): number {
   const lin = (c: number) => {
     const s = c / 255;
     return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
   };
-  const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  if (luminance >= 0.25) return color; // ya legible sobre fondo oscuro
-  const [h, s, l] = rgbToHsl(r, g, b);
-  const nl = Math.max(l, 0.62);
-  return `hsl(${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(nl * 100)}%)`;
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 }
 
 function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
@@ -93,4 +109,23 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
       h = (r - g) / d + 4;
   }
   return [h * 60, s, l];
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  h /= 360;
+  if (s === 0) {
+    const v = l * 255;
+    return [v, v, v];
+  }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const channel = (t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  return [channel(h + 1 / 3) * 255, channel(h) * 255, channel(h - 1 / 3) * 255];
 }
