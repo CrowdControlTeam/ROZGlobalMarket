@@ -121,7 +121,13 @@ export async function ListingDetailContent({ id }: { id: string }) {
       {/* Hero: icono grande + nombre + badge · vendedor. */}
       <div className="flex items-center gap-3">
         <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl border border-ro-panel-border bg-ro-panel-alt">
-          <ItemIcon item={listing.item} width={44} height={44} />
+          <ItemIcon
+            item={listing.item}
+            width={44}
+            height={44}
+            refine={listing.refineLevel}
+            options={listing.options.map((o) => `${o.def.label} ${formatOptionAmount(o.value, isBuy)}`)}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-extrabold text-ro-text">

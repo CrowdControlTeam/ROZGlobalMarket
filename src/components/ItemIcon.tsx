@@ -25,12 +25,20 @@ export function ItemIcon({
   height,
   className,
   alt,
+  options,
+  refine,
 }: {
   item: ItemIconData;
   width: number;
   height: number;
   className?: string;
   alt?: string;
+  // Random options ya formateadas (p. ej. "ATK +28") de la instancia concreta
+  // (un listing), para mostrarlas en la preview como en el juego. Opcional: el
+  // item genérico no las tiene.
+  options?: string[];
+  // Refine de la instancia (un listing), para el prefijo "+N" del nombre.
+  refine?: number;
 }) {
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,7 +112,14 @@ export function ItemIcon({
         style={{ WebkitTouchCallout: "none", userSelect: "none", touchAction: "manipulation" }}
       />
       {anchor && (
-        <ItemPreviewPopover item={item} x={anchor.x} y={anchor.y} onClose={() => setAnchor(null)} />
+        <ItemPreviewPopover
+          item={item}
+          options={options}
+          refine={refine}
+          x={anchor.x}
+          y={anchor.y}
+          onClose={() => setAnchor(null)}
+        />
       )}
     </>
   );
@@ -114,11 +129,15 @@ export function ItemIcon({
 // al viewport. Portalado a body para escapar del overflow/stacking de las cards.
 function ItemPreviewPopover({
   item,
+  options,
+  refine,
   x,
   y,
   onClose,
 }: {
   item: ItemIconData;
+  options?: string[];
+  refine?: number;
   x: number;
   y: number;
   onClose: () => void;
@@ -187,7 +206,7 @@ function ItemPreviewPopover({
       onContextMenu={(e) => e.preventDefault()}
     >
       {detail ? (
-        <ItemTooltip item={detail} />
+        <ItemTooltip item={detail} options={options} refine={refine} />
       ) : (
         <div className="flex items-center gap-2 text-xs text-ro-text-muted">
           <span className="h-3 w-3 animate-spin rounded-full border-2 border-ro-panel-border border-t-ro-accent" />

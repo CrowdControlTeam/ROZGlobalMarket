@@ -153,7 +153,15 @@ function ListingCard({
   const name = formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount);
   const iconBox = (
     <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
-      <ItemIcon item={listing.item} width={32} height={32} />
+      <ItemIcon
+        item={listing.item}
+        width={32}
+        height={32}
+        refine={listing.refineLevel}
+        options={listing.options.map(
+          (o) => `${o.def.label} ${formatOptionAmount(o.value, listing.type === "BUY")}`,
+        )}
+      />
     </div>
   );
   const meta = (
