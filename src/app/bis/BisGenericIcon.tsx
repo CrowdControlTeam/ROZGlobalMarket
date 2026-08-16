@@ -4,8 +4,16 @@ import { useTranslations } from "next-intl";
 import { Boxes } from "lucide-react";
 import { slotLabel, weaponTypeLabel, formatOptionAmount } from "@/lib/market-labels";
 import { usePreviewTrigger, PreviewShell } from "@/components/PreviewPopover";
-import { PreviewOptions, PreviewTags } from "@/app/db/items/ItemTooltip";
+import { PreviewOptions, PreviewTags, type PreviewTag } from "@/app/db/items/ItemTooltip";
 import type { BisEntryView } from "./BisBoard";
+
+// Etiquetas (rol/job) de una entrada de BiS con su variante, para los previews.
+export function bisEntryTags(entry: BisEntryView): PreviewTag[] {
+  return [
+    ...entry.roles.map((r) => ({ label: r.label, variant: "role" as const })),
+    ...entry.jobs.map((j) => ({ label: j.label, variant: "job" as const })),
+  ];
+}
 
 // Icono placeholder (Boxes) de un BiS GENÉRICO (sin item), pero con preview al
 // click derecho / long-press: como no hay ficha de item, muestra lo que se
@@ -42,7 +50,7 @@ function BisGenericPreview({ entry }: { entry: BisEntryView }) {
   const options = entry.options.map(
     (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
   );
-  const tags = [...entry.roles.map((r) => r.label), ...entry.jobs.map((j) => j.label)];
+  const tags = bisEntryTags(entry);
 
   return (
     <div className="flex flex-col gap-2">
@@ -53,11 +61,11 @@ function BisGenericPreview({ entry }: { entry: BisEntryView }) {
         <div className="min-w-0">
           <h2 className="font-heading text-base leading-tight text-ro-text-muted">{title}</h2>
           <p className="mt-1 text-xs font-medium text-ro-accent">{slotLabel(tMarket, entry.slot)}</p>
+          {tags.length > 0 && <PreviewTags tags={tags} className="mt-1.5" />}
         </div>
       </div>
 
       {options.length > 0 && <PreviewOptions options={options} />}
-      {tags.length > 0 && <PreviewTags tags={tags} />}
     </div>
   );
 }

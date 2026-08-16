@@ -8,7 +8,7 @@ import { Pencil, Search, type LucideIcon } from "lucide-react";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount, weaponTypeLabel } from "@/lib/market-labels";
 import { bisEntryMarketQuery } from "./bis-market-link";
-import { BisGenericIcon } from "./BisGenericIcon";
+import { BisGenericIcon, bisEntryTags } from "./BisGenericIcon";
 import type { BisEntryView } from "./BisBoard";
 
 export type BisDetailData = { entry: BisEntryView; slotLabel: string; slotIcon: LucideIcon };
@@ -146,7 +146,7 @@ export function BisDetail({
                     options={entry.options.map(
                       (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
                     )}
-                    tags={[...entry.roles.map((r) => r.label), ...entry.jobs.map((j) => j.label)]}
+                    tags={bisEntryTags(entry)}
                   />
                 </div>
               ) : (

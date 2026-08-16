@@ -2,7 +2,10 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { categoryLabel, slotLabel, weaponTypeLabel } from "@/lib/market-labels";
 import { RoDescription } from "@/components/RoDescription";
+import { TagBadge, type TagVariant } from "@/components/TagBadge";
 import type { DbItemDetail } from "@/lib/db-items";
+
+export type PreviewTag = { label: string; variant: TagVariant };
 
 // Tooltip de item estilo ventana del juego: imagen grande (/icons/details) +
 // nombre + meta + descripción con colores, y —como en el juego— un bloque por
@@ -21,7 +24,7 @@ export function ItemTooltip({
   // aquí sí se muestra como prefijo del nombre ("+7 …"). Opcional.
   refine?: number;
   // Etiquetas extra (rol/job de un BiS); no vienen del juego. Opcional.
-  tags?: string[];
+  tags?: PreviewTag[];
 }) {
   const tMarket = useTranslations("market");
   const name = `${refine ? `+${refine} ` : ""}${item.name}${item.slotCount > 0 ? ` [${item.slotCount}]` : ""}`;
@@ -50,6 +53,8 @@ export function ItemTooltip({
         <div className="min-w-0">
           <h2 className="font-heading text-base leading-tight text-ro-text">{name}</h2>
           {meta && <p className="mt-1 text-xs font-medium text-ro-accent">{meta}</p>}
+          {/* Etiquetas del BiS (rol/job) bajo el tipo. No vienen del juego. */}
+          {tags && tags.length > 0 && <PreviewTags tags={tags} className="mt-1.5" />}
         </div>
       </div>
 
@@ -74,9 +79,6 @@ export function ItemTooltip({
           ))}
         </div>
       )}
-
-      {/* Etiquetas del BiS (rol/job): no vienen del juego, van al final. */}
-      {tags && tags.length > 0 && <PreviewTags tags={tags} />}
     </div>
   );
 }
@@ -100,16 +102,12 @@ export function PreviewOptions({ options }: { options: string[] }) {
 }
 
 // Chips de etiquetas para la preview (compartido con la ficha genérica de BiS).
-export function PreviewTags({ tags }: { tags: string[] }) {
+// Reutiliza TagBadge para mantener el estilo rol/job de las cards.
+export function PreviewTags({ tags, className }: { tags: PreviewTag[]; className?: string }) {
   return (
-    <div className="flex flex-wrap gap-1">
-      {tags.map((tg, i) => (
-        <span
-          key={i}
-          className="rounded-full border border-ro-panel-border bg-ro-panel-alt px-2 py-0.5 text-xs text-ro-text-muted"
-        >
-          {tg}
-        </span>
+    <div className={`flex flex-wrap gap-1 ${className ?? ""}`}>
+      {tags.map((t, i) => (
+        <TagBadge key={i} label={t.label} variant={t.variant} />
       ))}
     </div>
   );

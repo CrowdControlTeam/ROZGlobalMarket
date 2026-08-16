@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { fetchDbItemDetail } from "@/app/db/items/actions";
-import { ItemTooltip } from "@/app/db/items/ItemTooltip";
+import { ItemTooltip, type PreviewTag } from "@/app/db/items/ItemTooltip";
 import type { DbItemDetail } from "@/lib/db-items";
 import { usePreviewTrigger, PreviewShell } from "./PreviewPopover";
 
@@ -38,7 +38,7 @@ export function ItemIcon({
   // Refine de la instancia, para el prefijo "+N" del nombre.
   refine?: number;
   // Etiquetas extra (rol/job de un BiS), para mostrarlas bajo la ficha.
-  tags?: string[];
+  tags?: PreviewTag[];
 }) {
   const { anchor, close, triggerProps } = usePreviewTrigger();
   return (
@@ -72,7 +72,7 @@ function ItemPreviewContent({
   item: ItemIconData;
   options?: string[];
   refine?: number;
-  tags?: string[];
+  tags?: PreviewTag[];
 }) {
   const [detail, setDetail] = useState<DbItemDetail | null>(() => detailCache.get(item.id) ?? null);
 

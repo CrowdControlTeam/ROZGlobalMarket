@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ItemIcon } from "@/components/ItemIcon";
-import { BisGenericIcon } from "./BisGenericIcon";
+import { TagBadge } from "@/components/TagBadge";
+import { BisGenericIcon, bisEntryTags } from "./BisGenericIcon";
 import { useTranslations } from "next-intl";
 import {
   Crown,
@@ -143,19 +144,6 @@ function FilterGroup({
 
 // Badge de etiqueta (rol/job) dentro de una entrada. Rol tintado de acento,
 // job en neutro, para distinguirlos de un vistazo.
-function TagBadge({ label, variant }: { label: string; variant: "role" | "job" }) {
-  return (
-    <span
-      className={`rounded px-1 py-px text-[0.6rem] ${
-        variant === "role"
-          ? "bg-ro-accent/10 text-ro-accent"
-          : "bg-ro-panel-border/50 text-ro-text-muted"
-      }`}
-    >
-      {label}
-    </span>
-  );
-}
 
 function EntryCard({
   entry,
@@ -188,7 +176,7 @@ function EntryCard({
         options={entry.options.map(
           (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
         )}
-        tags={[...entry.roles.map((r) => r.label), ...entry.jobs.map((j) => j.label)]}
+        tags={bisEntryTags(entry)}
       />
     </div>
   ) : (
@@ -319,7 +307,7 @@ function EntryPreview({ entry }: { entry: BisEntryView }) {
             options={entry.options.map(
               (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
             )}
-            tags={[...entry.roles.map((r) => r.label), ...entry.jobs.map((j) => j.label)]}
+            tags={bisEntryTags(entry)}
           />
         </div>
       ) : (
