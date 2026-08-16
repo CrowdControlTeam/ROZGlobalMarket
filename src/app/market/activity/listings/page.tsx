@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { getTranslations } from "next-intl/server";
 import { getMyListings } from "@/lib/listings";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
@@ -48,7 +48,7 @@ export default async function MyListingsPage({
               listingId={listing.id}
               className="flex items-center gap-4 rounded-lg border-2 border-ro-panel-border bg-ro-panel p-4 text-ro-text transition-colors hover:border-ro-accent"
             >
-              <Image src={listing.item.iconUrl} alt={listing.item.name} width={40} height={40} />
+              <ItemIcon item={listing.item} width={40} height={40} />
               <div className="flex-1">
                 <p className="flex items-center gap-2 font-semibold">
                   {formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount)}

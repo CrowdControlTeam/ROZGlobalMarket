@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon } from "lucide-react";
@@ -299,7 +299,7 @@ export function PublishForm({
       )}
       <div className="flex gap-2.5">
         <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
-          <Image src={selectedItem.iconUrl} alt="" width={32} height={32} />
+          <ItemIcon item={selectedItem} width={32} height={32} alt="" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate pr-5 text-sm font-bold text-ro-text">

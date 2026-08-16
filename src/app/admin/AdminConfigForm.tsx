@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { updateMarketConfig, type getMarketConfig } from "@/lib/admin-config";
-import { buttonClass, inputClass, labelClass, selectClass } from "@/lib/ui";
+import { buttonClass, inputClass, selectClass } from "@/lib/ui";
+import { FloatingField, floatingControlClass } from "@/components/FloatingField";
 import { ToggleSwitch } from "@/components/ToggleSwitch";
 import { RoleMultiSelect } from "@/components/RoleMultiSelect";
 import { ImageUploadField } from "@/components/ImageUploadField";
@@ -43,14 +44,15 @@ export function AdminConfigForm({ config }: { config: Config }) {
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-ro-text">{t("general.legend")}</legend>
         <div>
-          <label className={labelClass}>{t("general.siteNameLabel")}</label>
-          <input
-            type="text"
-            name="siteName"
-            defaultValue={config.siteName}
-            placeholder={config.siteNamePlaceholder}
-            className={inputClass}
-          />
+          <FloatingField label={t("general.siteNameLabel")}>
+            <input
+              type="text"
+              name="siteName"
+              defaultValue={config.siteName}
+              placeholder={config.siteNamePlaceholder}
+              className={floatingControlClass}
+            />
+          </FloatingField>
           <p className="mt-1 text-xs text-ro-text-muted">
             {t("general.siteNameHint", { placeholder: config.siteNamePlaceholder })}
           </p>
@@ -179,13 +181,14 @@ export function AdminConfigForm({ config }: { config: Config }) {
           label={t("webhook.toggleLabel")}
         />
         <div>
-          <label className={labelClass}>{t("webhook.urlLabel")}</label>
-          <input
-            type="url"
-            name="webhookUrl"
-            placeholder={config.webhookUrlMasked ?? t("webhook.urlPlaceholder")}
-            className={inputClass}
-          />
+          <FloatingField label={t("webhook.urlLabel")}>
+            <input
+              type="url"
+              name="webhookUrl"
+              placeholder={config.webhookUrlMasked ?? t("webhook.urlPlaceholder")}
+              className={floatingControlClass}
+            />
+          </FloatingField>
           <p className="mt-1 text-xs text-ro-text-muted">
             {config.webhookUrlMasked ? t("webhook.urlHintBlank") : t("webhook.urlHintUnset")}
           </p>
@@ -231,14 +234,15 @@ export function AdminConfigForm({ config }: { config: Config }) {
           . {t("recognition.requirement")}
         </p>
         <div>
-          <label className={labelClass}>{t("recognition.modelLabel")}</label>
-          <select name="geminiModel" defaultValue={config.geminiModel} className={selectClass}>
-            {config.geminiModelOptions.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
+          <FloatingField label={t("recognition.modelLabel")}>
+            <select name="geminiModel" defaultValue={config.geminiModel} className={floatingControlClass}>
+              {config.geminiModelOptions.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </FloatingField>
           <ul className="mt-1 flex flex-col gap-0.5 text-xs text-ro-text-muted">
             {config.geminiModelOptions.map((m) => (
               <li key={m.value}>

@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 import { createTradeOffer } from "@/lib/trade-offers";
 import { useListingSync } from "../listingStore";
 import { getMaxRefineLevel } from "@/lib/listings";
-import { buttonClass, inputClass, labelClass } from "@/lib/ui";
+import { buttonClass, labelClass } from "@/lib/ui";
+import { FloatingField, floatingControlClass } from "@/components/FloatingField";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { getErrorMessage } from "@/lib/errors";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
@@ -67,33 +68,31 @@ export function TradeOfferForm({ listingId }: { listingId: string }) {
         <input type="hidden" name="itemId" value={selectedItem?.id ?? ""} />
       </div>
 
-      <div>
-        <label className={labelClass}>{tField("quantity")}</label>
-        <input type="number" name="quantity" min={1} defaultValue={1} required className={inputClass} />
+      <div className="flex gap-3">
+        <FloatingField label={tField("quantity")} className="flex-1">
+          <input type="number" name="quantity" min={1} defaultValue={1} required className={floatingControlClass} />
+        </FloatingField>
+
+        {refineEligible && (
+          <FloatingField label={tField("refine")} className="flex-1">
+            <input
+              type="number"
+              name="refineLevel"
+              min={0}
+              max={maxRefineLevel}
+              value={refineLevel}
+              onChange={(e) => setRefineLevel(e.target.value === "" ? 0 : Number(e.target.value))}
+              className={floatingControlClass}
+            />
+          </FloatingField>
+        )}
       </div>
 
-      {refineEligible && (
-        <div>
-          <label className={labelClass}>{tField("refine")}</label>
-          <input
-            type="number"
-            name="refineLevel"
-            min={0}
-            max={maxRefineLevel}
-            value={refineLevel}
-            onChange={(e) => setRefineLevel(e.target.value === "" ? 0 : Number(e.target.value))}
-            className={inputClass}
-          />
-        </div>
-      )}
-
-
-      <div>
-        <label className={labelClass}>{t("zeny")}</label>
+      <FloatingField label={t("zeny")}>
         {/* Máscara de miles + color por tramo (ver MaskedPriceInput); vacío = 0. */}
-        <MaskedPriceInput value={zeny} onChange={setZeny} placeholder="0" />
+        <MaskedPriceInput value={zeny} onChange={setZeny} placeholder="0" className={floatingControlClass} />
         <input type="hidden" name="zenyOffered" value={zeny === "" ? 0 : zeny} />
-      </div>
+      </FloatingField>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
 

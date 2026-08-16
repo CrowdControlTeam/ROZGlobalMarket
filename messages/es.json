@@ -111,6 +111,8 @@
       "stats": { "label": "Estadísticas", "desc": "Rankings y actividad del mercado." },
       "settings": { "label": "Ajustes", "desc": "Configuración del mercado." },
       "bis": { "label": "BiSes", "desc": "Listado de los mejores items por slot." },
+      "items": { "label": "Items", "desc": "Base de datos de objetos con su ficha de juego." },
+      "skills": { "label": "Skills", "desc": "Planifica tu árbol de skills por clase." },
       "comingSoon": "Próximamente"
     }
   },
@@ -154,6 +156,7 @@
     "onlyPosterCancel": "Solo quien la publicó puede cancelarla",
     "notYourListing": "No tienes permiso sobre esta publicación",
     "listingHasDeals": "No se puede editar: la publicación ya tiene ofertas o ventas",
+    "listingHasPendingOffers": "No se puede cerrar con ofertas pendientes: acéptalas o recházalas primero",
     "listingNotActive": "Esta publicación ya no está activa",
     "cannotBuyOwn": "No puedes comprar tu propia publicación",
     "notDirectSale": "Esta publicación no es una venta directa",
@@ -399,6 +402,7 @@
     "card": {
       "menu": "Opciones del anuncio",
       "edit": "Editar",
+      "editBlocked": "No puedes editar una publicación con ofertas o ventas.",
       "viewDetail": "Ver detalle",
       "share": "Compartir",
       "contact": "Contactar",
@@ -531,6 +535,7 @@
       "of": "de",
       "cancelListing": "Cancelar",
       "closeListing": "Cerrar",
+      "cancelBlockedPending": "Resuelve las ofertas pendientes (acéptalas o recházalas) antes de cerrar.",
       "tradedWith": "Intercambiado con",
       "forItem": "por {item}",
       "offersReceived": "Ofertas recibidas",
@@ -756,6 +761,7 @@
       "optionsLabel": "Options",
       "optionNone": "— Sin option —",
       "optionsHint": "El valor es un mínimo opcional; vacío = cualquier valor.",
+      "optionOutOfRange": "Cada valor debe estar dentro del rango de su option.",
       "min": "Mín",
       "rolesLabel": "Roles",
       "jobsLabel": "Jobs",

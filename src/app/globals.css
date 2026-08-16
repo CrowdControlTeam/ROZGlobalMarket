@@ -51,6 +51,17 @@
   --ro-on-type: #ffffff;
 }
 
+/* Colores de descripción del cliente de RO (items/skills). Los códigos vienen
+   pensados para el fondo claro del juego; en tema oscuro los oscuros se pierden,
+   así que cada segmento lleva su color del juego (--c-l) y una versión aclarada
+   (--c-d, ver darkModeColor en ro-text.ts) y aquí se elige según el tema. */
+.ro-desc-color {
+  color: var(--c-l);
+}
+:root[data-theme="dark"] .ro-desc-color {
+  color: var(--c-d);
+}
+
 :root[data-theme="dark"] {
   color-scheme: dark;
   --ro-bg: #0a0e1a;

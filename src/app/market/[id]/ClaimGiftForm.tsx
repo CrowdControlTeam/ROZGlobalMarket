@@ -4,7 +4,8 @@ import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { claimGift } from "@/lib/gifts";
 import { useListingSync } from "../listingStore";
-import { buttonClass, inputClass, labelClass } from "@/lib/ui";
+import { buttonClass } from "@/lib/ui";
+import { FloatingField, floatingControlClass } from "@/components/FloatingField";
 import { getErrorMessage } from "@/lib/errors";
 
 // Reclamar un regalo reclamable (sin destinatario): crea un Deal PENDING que
@@ -45,8 +46,7 @@ export function ClaimGiftForm({
       className="flex flex-col gap-3"
     >
       {available !== null && available > 1 ? (
-        <div>
-          <label className={labelClass}>{t("quantityLabel")}</label>
+        <FloatingField label={t("quantityLabel")}>
           <input
             type="number"
             name="quantity"
@@ -54,9 +54,9 @@ export function ClaimGiftForm({
             max={available}
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
-            className={inputClass}
+            className={floatingControlClass}
           />
-        </div>
+        </FloatingField>
       ) : (
         <input type="hidden" name="quantity" value={1} />
       )}

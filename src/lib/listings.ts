@@ -445,8 +445,10 @@ export async function updateListing(listingId: string, formData: FormData) {
 
 // Quien publica cierra la publicación. Regla de cierre (ver deals.ts): si hubo
 // algún trato cerrado (Deal ACCEPTED) se da por COMPLETED —se comerció algo—; si
-// no, CANCELLED. Las reservas/ofertas aún PENDING se rechazan al cerrar (no
-// pueden cumplirse ya).
+// no, CANCELLED. NO se puede cerrar mientras haya ofertas/reservas PENDING: el
+// poster debe aceptarlas o rechazarlas antes (así ninguna se rechaza en
+// silencio). Las ACCEPTED sí dejan cerrar; si no, un listing ilimitado ya
+// comerciado nunca podría cerrarse.
 export async function cancelListing(listingId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
@@ -471,10 +473,11 @@ export async function cancelListing(listingId: string) {
   const status =
     listing.quantity === null ? listingStatusOnClose(listing.deals) : "CANCELLED";
   await prisma.$transaction(async (tx) => {
-    await tx.deal.updateMany({
-      where: { listingId, status: "PENDING" },
-      data: { status: "REJECTED" },
-    });
+    // Bloqueo con ofertas/reservas PENDING sin resolver. Dentro de la tx para
+    // cerrar la ventana con una oferta que entre justo ahora, igual que
+    // updateListing.
+    const pending = await tx.deal.count({ where: { listingId, status: "PENDING" } });
+    if (pending > 0) throw new Error(t("listingHasPendingOffers"));
     await tx.listing.update({ where: { id: listingId }, data: { status } });
   });
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal } from "lucide-react";
@@ -16,6 +16,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { UserMention, ContactModal } from "@/components/UserMention";
 import { KebabMenu, type KebabItem } from "@/components/KebabMenu";
 import { NoteIndicator } from "@/components/NoteIndicator";
+import { Toast } from "@/components/Toast";
 import { SortSelect } from "./SortSelect";
 import { useMarketSearch } from "./marketSearchStore";
 import { useListingPatches, clearListingPatches } from "./listingStore";
@@ -100,12 +101,14 @@ function ListingCard({
   const t = useTranslations("market");
   const router = useRouter();
   const [contactOpen, setContactOpen] = useState(false);
-  // Editar: solo el dueño y sin NINGÚN deal vivo (PENDING o ACCEPTED). Se usa
-  // hasLiveDeals (mode-independiente), no `reserved` (que es 0 en competitivo/
-  // trade aunque haya ofertas), para no ofrecer editar algo que el server
-  // rechazaría. CANCELLED/REJECTED no cuentan → al cancelarse, vuelve a ser
-  // editable.
-  const canEdit = listing.poster.id === currentUserId && !listing.hasLiveDeals;
+  const [editWarning, setEditWarning] = useState<string | null>(null);
+  // "Editar" se OFRECE a cualquier dueño (isOwner), pero solo NAVEGA si es
+  // editable: sin NINGÚN deal vivo (PENDING o ACCEPTED). Se usa hasLiveDeals
+  // (mode-independiente), no `reserved` (que es 0 en competitivo/trade aunque
+  // haya ofertas). CANCELLED/REJECTED no cuentan → al cancelarse, vuelve a ser
+  // editable. Si no lo es, en vez de ocultar el botón se avisa al pulsar.
+  const isOwner = listing.poster.id === currentUserId;
+  const canEdit = isOwner && !listing.hasLiveDeals;
   // Contactar: al vendedor (no a uno mismo) y con el bot de DMs disponible.
   const canContact = dmAvailable && listing.poster.id !== currentUserId && !!listing.item;
 
@@ -153,7 +156,15 @@ function ListingCard({
   const name = formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount);
   const iconBox = (
     <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
-      <Image src={listing.item.iconUrl} alt={listing.item.name} width={32} height={32} />
+      <ItemIcon
+        item={listing.item}
+        width={32}
+        height={32}
+        refine={listing.refineLevel}
+        options={listing.options.map(
+          (o) => `${o.def.label} ${formatOptionAmount(o.value, listing.type === "BUY")}`,
+        )}
+      />
     </div>
   );
   const meta = (
@@ -179,8 +190,14 @@ function ListingCard({
     ) : null;
 
   const kebabItems: KebabItem[] = [
-    ...(canEdit
-      ? [{ label: t("card.edit"), icon: <Pencil size={14} aria-hidden />, onSelect: () => router.push(editHref) }]
+    ...(isOwner
+      ? [
+          {
+            label: t("card.edit"),
+            icon: <Pencil size={14} aria-hidden />,
+            onSelect: () => (canEdit ? router.push(editHref) : setEditWarning(t("card.editBlocked"))),
+          },
+        ]
       : []),
     { label: t("card.viewDetail"), icon: <Eye size={14} aria-hidden />, onSelect: () => (replace ? router.replace(href) : router.push(href)) },
     {
@@ -234,6 +251,11 @@ function ListingCard({
     />
   ) : null;
 
+  // Aviso al intentar editar una publicación no editable (con ofertas/ventas).
+  const warningToast = editWarning ? (
+    <Toast message={editWarning} onDismiss={() => setEditWarning(null)} />
+  ) : null;
+
   if (variant === "row") {
     return (
       <div className={`relative h-full ${className ?? ""}`}>
@@ -256,6 +278,7 @@ function ListingCard({
         </Link>
         {cornerActions}
         {contactModal}
+        {warningToast}
       </div>
     );
   }
@@ -287,6 +310,7 @@ function ListingCard({
       </Link>
       {cornerActions}
       {contactModal}
+      {warningToast}
     </div>
   );
 }
