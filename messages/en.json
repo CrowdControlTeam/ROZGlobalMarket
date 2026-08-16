@@ -111,6 +111,8 @@
       "stats": { "label": "Statistics", "desc": "Market rankings and activity." },
       "settings": { "label": "Settings", "desc": "Market configuration." },
       "bis": { "label": "BiSes", "desc": "List of the best items per slot." },
+      "items": { "label": "Items", "desc": "Item database with its in-game tooltip." },
+      "skills": { "label": "Skills", "desc": "Plan your skill tree by class." },
       "comingSoon": "Coming soon"
     }
   },
@@ -154,6 +156,7 @@
     "onlyPosterCancel": "Only the poster can cancel this",
     "notYourListing": "You don't have permission over this listing",
     "listingHasDeals": "Can't edit: this listing already has offers or sales",
+    "listingHasPendingOffers": "Can't close with pending offers: accept or reject them first",
     "listingNotActive": "This listing is no longer active",
     "cannotBuyOwn": "You can't buy your own listing",
     "notDirectSale": "This listing isn't a direct sale",
@@ -399,6 +402,7 @@
     "card": {
       "menu": "Listing options",
       "edit": "Edit",
+      "editBlocked": "You can't edit a listing with offers or sales.",
       "viewDetail": "View detail",
       "share": "Share",
       "contact": "Contact",
@@ -531,6 +535,7 @@
       "of": "of",
       "cancelListing": "Cancel",
       "closeListing": "Close",
+      "cancelBlockedPending": "Resolve the pending offers (accept or reject them) before closing.",
       "tradedWith": "Traded with",
       "forItem": "for {item}",
       "offersReceived": "Offers received",
@@ -756,6 +761,7 @@
       "optionsLabel": "Options",
       "optionNone": "— No option —",
       "optionsHint": "The value is an optional minimum; empty = any value.",
+      "optionOutOfRange": "Each value must be within its option's range.",
       "min": "Min",
       "rolesLabel": "Roles",
       "jobsLabel": "Jobs",

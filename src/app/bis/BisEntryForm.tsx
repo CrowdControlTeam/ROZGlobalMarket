@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { EquipSlot, ItemOptionGroup, WeaponType, type ItemOptionDef } from "@prisma/client";
 import { ItemPicker, type ItemResult } from "@/app/market/ItemPicker";
-import { getOptionChoices } from "@/lib/listings";
+import { getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
 import { createBisEntry, updateBisEntry, deleteBisEntry } from "@/lib/bis-actions";
 import { optionGroupForSlot } from "@/lib/bis-constants";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
+import { DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { getErrorMessage } from "@/lib/errors";
 import { slotLabel, weaponTypeLabel } from "@/lib/market-labels";
 import { buttonClass, inputBaseClass, selectClass, labelClass } from "@/lib/ui";
+import { FloatingField, floatingControlClass } from "@/components/FloatingField";
 import type { Tag, BisEntryView, BisEntryItem } from "./BisBoard";
 
 type OptionInput = { defId: string; minValue: string };
@@ -65,6 +67,8 @@ export function BisEntryForm({
     entry?.item ? toItemResult(entry.item) : null,
   );
   const [refine, setRefine] = useState(entry?.item?.refineLevel ? String(entry.item.refineLevel) : "");
+  // Tope de refine configurable por admin (mismo origen que Publicar/TradeOffer).
+  const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
 
   const [weaponType, setWeaponType] = useState<WeaponType | "">(entry?.weaponType ?? "");
   const [options, setOptions] = useState<OptionInput[]>(() =>
@@ -108,6 +112,10 @@ export function BisEntryForm({
     };
   }, [group]);
 
+  useEffect(() => {
+    getMaxRefineLevel().then(setMaxRefineLevel);
+  }, []);
+
   function emptyOptions(): OptionInput[] {
     return Array.from({ length: MAX_OPTION_SLOTS }, () => ({ defId: "", minValue: "" }));
   }
@@ -129,8 +137,16 @@ export function BisEntryForm({
 
   const hasTag = roleIds.length + jobIds.length > 0;
   const hasOption = options.some((o) => o.defId !== "");
+  // Algún valor pedido cae fuera del rango real de su option: no se puede guardar
+  // (el servidor lo rechazaría igualmente).
+  const hasOutOfRangeOption = options.some((o) => {
+    if (o.defId === "" || o.minValue.trim() === "") return false;
+    const def = optionDefs.find((d) => d.id === o.defId);
+    return def !== undefined && (Number(o.minValue) < def.minValue || Number(o.minValue) > def.maxValue);
+  });
   // Hace falta ≥1 tag y al menos uno de: item, tipo de arma u options.
-  const canSubmit = hasTag && (selectedItem !== null || weaponType !== "" || hasOption);
+  const canSubmit =
+    hasTag && (selectedItem !== null || weaponType !== "" || hasOption) && !hasOutOfRangeOption;
 
   function submit() {
     setError(null);
@@ -201,12 +217,11 @@ export function BisEntryForm({
         <div className="flex flex-col gap-4 overflow-y-auto p-4">
           {/* Sub-slot (solo cabeza, al crear): upper/mid/lower. */}
           {!entry && slots.length > 1 && (
-            <div>
-              <label className={labelClass}>{t("form.slotLabel")}</label>
+            <FloatingField label={t("form.slotLabel")}>
               <select
                 value={slot}
                 onChange={(e) => setSlot(e.target.value as EquipSlot)}
-                className={`w-full ${selectClass}`}
+                className={floatingControlClass}
               >
                 {slots.map((s) => (
                   <option key={s} value={s}>
@@ -214,7 +229,7 @@ export function BisEntryForm({
                   </option>
                 ))}
               </select>
-            </div>
+            </FloatingField>
           )}
 
           {/* Item (opcional) y options (opcional): al menos uno. Un item concreto
@@ -226,17 +241,17 @@ export function BisEntryForm({
           </div>
 
           {selectedItem && (
-            <div className="w-1/2 pr-1.5">
-              <label className={labelClass}>{t("form.refine")}</label>
+            <FloatingField label={t("form.refine")} className="w-1/2">
               <input
                 type="number"
                 min={0}
+                max={maxRefineLevel}
                 value={refine}
                 onChange={(e) => setRefine(e.target.value)}
                 placeholder="0"
-                className={`w-full ${inputBaseClass}`}
+                className={floatingControlClass}
               />
-            </div>
+            </FloatingField>
           )}
 
           {/* Tipo de arma: solo para un BiS de arma SIN item concreto. Hace el
@@ -244,15 +259,14 @@ export function BisEntryForm({
               (físico/mágico) según el tipo. Con item elegido, el propio item lo
               define. */}
           {!selectedItem && slot === EquipSlot.WEAPON && (
-            <div>
-              <label className={labelClass}>{t("form.weaponType")}</label>
+            <FloatingField label={t("form.weaponType")}>
               <select
                 value={weaponType}
                 onChange={(e) => {
                   setWeaponType(e.target.value as WeaponType | "");
                   setOptions(emptyOptions());
                 }}
-                className={`w-full ${selectClass}`}
+                className={floatingControlClass}
               >
                 <option value="">{t("form.weaponTypeNone")}</option>
                 {WEAPON_TYPES.map((wt) => (
@@ -261,7 +275,7 @@ export function BisEntryForm({
                   </option>
                 ))}
               </select>
-            </div>
+            </FloatingField>
           )}
 
           {group && (
@@ -271,6 +285,12 @@ export function BisEntryForm({
                 {options.map((o, i) => {
                   const defsForSlot = optionDefs.filter((d) => d.slotIndex === i + 1);
                   const def = defsForSlot.find((d) => d.id === o.defId);
+                  // El valor pedido (mínimo deseado) debe caer dentro del rango
+                  // real de la option [min, max]; fuera de ahí ningún item existe.
+                  const outOfRange =
+                    def !== undefined &&
+                    o.minValue.trim() !== "" &&
+                    (Number(o.minValue) < def.minValue || Number(o.minValue) > def.maxValue);
                   return (
                     <div key={i} className="flex items-center gap-2">
                       <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-ro-accent/15 text-[0.7rem] font-bold text-ro-accent">
@@ -294,17 +314,32 @@ export function BisEntryForm({
                         type="number"
                         value={o.minValue}
                         disabled={!o.defId}
+                        min={def?.minValue}
+                        max={def?.maxValue}
                         onChange={(e) =>
                           setOptions((prev) => prev.map((p, j) => (j === i ? { ...p, minValue: e.target.value } : p)))
                         }
-                        placeholder={def ? `${def.minValue}` : t("form.min")}
+                        placeholder={
+                          def
+                            ? def.minValue === def.maxValue
+                              ? `${def.minValue}`
+                              : `${def.minValue}-${def.maxValue}`
+                            : t("form.min")
+                        }
                         className={`w-20 ${inputBaseClass} disabled:opacity-40`}
+                        // Borde rojo inline: un className condicional pierde contra
+                        // el orden con el que Tailwind genera focus:border (ver
+                        // mismo patrón en PublishForm/MaskedPriceInput).
+                        style={outOfRange ? { borderColor: "#dc2626" } : undefined}
                       />
                     </div>
                   );
                 })}
               </div>
               <p className="mt-1 text-[0.7rem] text-ro-text-muted">{t("form.optionsHint")}</p>
+              {hasOutOfRangeOption && (
+                <p className="mt-1 text-[0.7rem] text-red-600">{t("form.optionOutOfRange")}</p>
+              )}
             </div>
           )}
 
@@ -313,15 +348,14 @@ export function BisEntryForm({
           <TagPicker label={t("form.jobsLabel")} options={jobs} selected={jobIds} onToggle={(id) => toggle(jobIds, id, setJobIds)} />
           {!hasTag && <p className="-mt-2 text-[0.7rem] text-ro-text-muted">{t("form.needTag")}</p>}
 
-          <div>
-            <label className={labelClass}>{t("form.noteLabel")}</label>
+          <FloatingField label={t("form.noteLabel")}>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              className={`w-full resize-none ${inputBaseClass}`}
+              className={`resize-none ${floatingControlClass}`}
             />
-          </div>
+          </FloatingField>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>

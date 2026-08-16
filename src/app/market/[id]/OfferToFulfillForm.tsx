@@ -4,7 +4,8 @@ import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { offerToFulfill } from "@/lib/listings";
 import { useListingSync } from "../listingStore";
-import { buttonClass, inputClass, labelClass } from "@/lib/ui";
+import { buttonClass } from "@/lib/ui";
+import { FloatingField, floatingControlClass } from "@/components/FloatingField";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { getErrorMessage } from "@/lib/errors";
@@ -56,44 +57,46 @@ export function OfferToFulfillForm({
       }}
       className="flex flex-col gap-3"
     >
-      <div>
-        <label className={labelClass}>{t("quantityLabel")}</label>
-        {/* Con 1 sola unidad el input no aporta: "1" en texto plano (armonía) +
-            hidden. */}
-        {available === 1 ? (
-          <>
-            <p className="text-sm text-ro-text-muted">1</p>
-            <input type="hidden" name="quantity" value={1} />
-          </>
-        ) : (
-          <input
-            type="number"
-            name="quantity"
-            min={1}
-            max={available ?? undefined}
-            value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
-            className={inputClass}
-          />
+      {/* Cantidad y precio pedido en la MISMA fila (cantidad × precio); el
+          total va destacado debajo. En precio fijo solo hay cantidad. */}
+      <div className="flex gap-3">
+        <FloatingField label={t("quantityLabel")} className="flex-1">
+          {/* Con 1 sola unidad el input no aporta: "1" en texto plano (con la
+              etiqueta flotante arriba) + hidden. */}
+          {available === 1 ? (
+            <>
+              <span className="text-sm text-ro-text-muted">1</span>
+              <input type="hidden" name="quantity" value={1} />
+            </>
+          ) : (
+            <input
+              type="number"
+              name="quantity"
+              min={1}
+              max={available ?? undefined}
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              className={floatingControlClass}
+            />
+          )}
+        </FloatingField>
+
+        {competitive && (
+          <FloatingField label={t("askLabel")} className="flex-1">
+            {/* Máscara de miles + color por tramo (ver MaskedPriceInput); el
+                valor crudo viaja por el input oculto. */}
+            <MaskedPriceInput value={ask} onChange={setAsk} className={floatingControlClass} />
+            <input type="hidden" name="price" value={ask} />
+          </FloatingField>
         )}
       </div>
 
-      {competitive && (
-        <div>
-          <label className={labelClass}>{t("askLabel")}</label>
-          {/* Máscara de miles + color por tramo (ver MaskedPriceInput); el
-              valor crudo viaja por el input oculto. */}
-          <MaskedPriceInput value={ask} onChange={setAsk} />
-          <input type="hidden" name="price" value={ask} />
-        </div>
-      )}
-
-      <p className="text-sm text-ro-text-muted">
-        {t("total")}{" "}
-        <span className={`font-semibold ${priceColorClass(quantity * effectiveUnit)}`}>
+      <div className="flex items-baseline justify-between border-t border-ro-panel-border/60 pt-3">
+        <span className="text-sm text-ro-text-muted">{t("total")}</span>
+        <span className={`text-lg font-bold ${priceColorClass(quantity * effectiveUnit)}`}>
           {formatPrice(quantity * effectiveUnit)}
         </span>
-      </p>
+      </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
 
