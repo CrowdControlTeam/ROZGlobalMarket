@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ItemIcon } from "@/components/ItemIcon";
 import { useTranslations } from "next-intl";
-import { Boxes, Pencil, Search, type LucideIcon } from "lucide-react";
+import { Pencil, Search, type LucideIcon } from "lucide-react";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount, weaponTypeLabel } from "@/lib/market-labels";
 import { bisEntryMarketQuery } from "./bis-market-link";
+import { BisGenericIcon } from "./BisGenericIcon";
 import type { BisEntryView } from "./BisBoard";
 
 export type BisDetailData = { entry: BisEntryView; slotLabel: string; slotIcon: LucideIcon };
@@ -145,12 +146,15 @@ export function BisDetail({
                     options={entry.options.map(
                       (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
                     )}
+                    tags={[...entry.roles.map((r) => r.label), ...entry.jobs.map((j) => j.label)]}
                   />
                 </div>
               ) : (
-                <div className="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-ro-accent/40 bg-ro-panel text-ro-accent/70">
-                  <Boxes size={30} aria-hidden />
-                </div>
+                <BisGenericIcon
+                  entry={entry}
+                  iconSize={30}
+                  boxClassName="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-ro-accent/40 bg-ro-panel text-ro-accent/70"
+                />
               )}
             </div>
             <div className="min-w-0">

@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ItemIcon } from "@/components/ItemIcon";
+import { BisGenericIcon } from "./BisGenericIcon";
 import { useTranslations } from "next-intl";
 import {
-  Boxes,
   Crown,
   Sword,
   Wind,
@@ -188,12 +188,15 @@ function EntryCard({
         options={entry.options.map(
           (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
         )}
+        tags={[...entry.roles.map((r) => r.label), ...entry.jobs.map((j) => j.label)]}
       />
     </div>
   ) : (
-    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed border-ro-panel-border bg-ro-panel text-ro-text-muted">
-      <Boxes size={15} aria-hidden />
-    </div>
+    <BisGenericIcon
+      entry={entry}
+      iconSize={15}
+      boxClassName="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed border-ro-panel-border bg-ro-panel text-ro-text-muted"
+    />
   );
 
   const title = entry.item
@@ -316,12 +319,15 @@ function EntryPreview({ entry }: { entry: BisEntryView }) {
             options={entry.options.map(
               (o) => `${o.label}${o.minValue !== null ? ` ${formatOptionAmount(o.minValue, true)}` : ""}`,
             )}
+            tags={[...entry.roles.map((r) => r.label), ...entry.jobs.map((j) => j.label)]}
           />
         </div>
       ) : (
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed border-ro-panel-border bg-ro-panel text-ro-text-muted">
-          <Boxes size={15} aria-hidden />
-        </div>
+        <BisGenericIcon
+          entry={entry}
+          iconSize={15}
+          boxClassName="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed border-ro-panel-border bg-ro-panel text-ro-text-muted"
+        />
       )}
       <div className="min-w-0 flex-1">
         <p className={`truncate text-xs font-bold ${entry.item ? "text-ro-text" : "text-ro-text-muted"}`}>

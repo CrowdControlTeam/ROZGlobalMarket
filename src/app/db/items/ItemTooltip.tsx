@@ -13,12 +13,15 @@ export function ItemTooltip({
   item,
   options,
   refine,
+  tags,
 }: {
   item: DbItemDetail;
   options?: string[];
   // Refine de la instancia (un listing). El juego no lo pone en la ficha, pero
   // aquí sí se muestra como prefijo del nombre ("+7 …"). Opcional.
   refine?: number;
+  // Etiquetas extra (rol/job de un BiS); no vienen del juego. Opcional.
+  tags?: string[];
 }) {
   const tMarket = useTranslations("market");
   const name = `${refine ? `+${refine} ` : ""}${item.name}${item.slotCount > 0 ? ` [${item.slotCount}]` : ""}`;
@@ -56,20 +59,8 @@ export function ItemTooltip({
         </div>
       )}
 
-      {/* Un bloque por option (como las ventanitas extra del juego), con el
-          mismo estilo neutro que el bloque de descripción. */}
-      {options && options.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {options.map((o, i) => (
-            <div
-              key={i}
-              className="rounded-md border border-ro-panel-border/60 bg-ro-panel-alt/40 px-3 py-1.5 text-center text-sm text-ro-text"
-            >
-              {o}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Un bloque por option (como las ventanitas extra del juego). */}
+      {options && options.length > 0 && <PreviewOptions options={options} />}
 
       {/* Bloque final con los slots de carta (rombos vacíos). */}
       {item.slotCount > 0 && (
@@ -83,6 +74,43 @@ export function ItemTooltip({
           ))}
         </div>
       )}
+
+      {/* Etiquetas del BiS (rol/job): no vienen del juego, van al final. */}
+      {tags && tags.length > 0 && <PreviewTags tags={tags} />}
+    </div>
+  );
+}
+
+// Un bloque por random option (como las ventanitas extra del juego), estilo
+// neutro. Compartido con la ficha genérica de BiS. Las cadenas vienen ya
+// formateadas (p. ej. "ATK +28").
+export function PreviewOptions({ options }: { options: string[] }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {options.map((o, i) => (
+        <div
+          key={i}
+          className="rounded-md border border-ro-panel-border/60 bg-ro-panel-alt/40 px-3 py-1.5 text-center text-sm text-ro-text"
+        >
+          {o}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Chips de etiquetas para la preview (compartido con la ficha genérica de BiS).
+export function PreviewTags({ tags }: { tags: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tags.map((tg, i) => (
+        <span
+          key={i}
+          className="rounded-full border border-ro-panel-border bg-ro-panel-alt px-2 py-0.5 text-xs text-ro-text-muted"
+        >
+          {tg}
+        </span>
+      ))}
     </div>
   );
 }
