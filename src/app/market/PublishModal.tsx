@@ -15,14 +15,20 @@ export function PublishModal({
   recognitionEnabled,
   initialType,
   editListing,
+  repostListing,
 }: {
   recognitionEnabled: boolean;
   initialType: PublicationType;
   editListing?: EditListingData;
+  repostListing?: EditListingData;
 }) {
   const router = useRouter();
   const t = useTranslations();
-  const title = editListing ? t("market.form.editTitle") : t("home.tiles.publish.label");
+  const title = editListing
+    ? t("market.form.editTitle")
+    : repostListing
+      ? t("market.form.repostTitle")
+      : t("home.tiles.publish.label");
 
   function close() {
     router.back();
@@ -68,7 +74,7 @@ export function PublishModal({
           </button>
         </div>
         {/* El propio form gestiona su scroll interno y su pie fijo (flex-1). */}
-        <PublishForm recognitionEnabled={recognitionEnabled} initialType={initialType} onClose={close} editListing={editListing} />
+        <PublishForm recognitionEnabled={recognitionEnabled} initialType={initialType} onClose={close} editListing={editListing} repostListing={repostListing} />
       </div>
     </div>
   );

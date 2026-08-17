@@ -17,6 +17,8 @@ import { availableFrom } from "@/lib/deals";
 import { UserMention } from "@/components/UserMention";
 import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { CancelListingButton } from "./[id]/CancelListingButton";
+import { EditListingButton } from "./[id]/EditListingButton";
+import { RepostListingButton } from "./[id]/RepostListingButton";
 import { ReserveForm } from "./[id]/ReserveForm";
 import { SaleReservationActions } from "./[id]/SaleReservationActions";
 import { OfferToFulfillForm } from "./[id]/OfferToFulfillForm";
@@ -104,6 +106,9 @@ export async function ListingDetailContent({ id }: { id: string }) {
       : 0;
   const available = availableFrom(listing.quantity, sold, reserved);
   const pendingOffers = listing.deals.filter((d) => d.status === "PENDING");
+  // Editable = del usuario y SIN deals vivos (PENDING/ACCEPTED); misma regla que
+  // la card del mercado y updateListing. CANCELLED/REJECTED no cuentan.
+  const hasLiveDeals = listing.deals.some((d) => d.status === "PENDING" || d.status === "ACCEPTED");
   const myOffers = listing.deals.filter((d) => d.userId === session.user.discordId);
   // En competitivo, el poster compara pujas: se ordenan por mejor precio/ud
   // (venta = más alto primero; compra = más bajo primero). Copia para no mutar.
@@ -223,11 +228,16 @@ export async function ListingDetailContent({ id }: { id: string }) {
       {listing.status === "ACTIVE" && (
         <div className="mt-3">
           {isPoster ? (
-            <CancelListingButton
-              listingId={listing.id}
-              unlimited={listing.quantity === null}
-              hasPendingOffers={pendingOffers.length > 0}
-            />
+            // Cancelar primero (siempre visible para el poster) y Editar en la
+            // misma línea; los mensajes del cancelar caen debajo (order-last).
+            <div className="flex flex-wrap items-center gap-2">
+              <CancelListingButton
+                listingId={listing.id}
+                unlimited={listing.quantity === null}
+                hasPendingOffers={pendingOffers.length > 0}
+              />
+              <EditListingButton listingId={listing.id} canEdit={!hasLiveDeals} />
+            </div>
           ) : isTrade ? (
             <TradeOfferForm listingId={listing.id} />
           ) : isSale && (available === null || available > 0) ? (
@@ -252,6 +262,14 @@ export async function ListingDetailContent({ id }: { id: string }) {
           ) : isGift && (available === null || available > 0) ? (
             <ClaimGiftForm listingId={listing.id} available={available} />
           ) : null}
+        </div>
+      )}
+
+      {/* Publicación NO activa (cerrada/cancelada/expirada) del propio poster:
+          "Republicar" para crear una nueva con los datos precargados. */}
+      {isPoster && listing.status !== "ACTIVE" && (
+        <div className="mt-3">
+          <RepostListingButton listingId={listing.id} />
         </div>
       )}
 
