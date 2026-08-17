@@ -143,6 +143,18 @@ export function SearchTabs() {
     setMenu({ tabId, x: e.clientX, y: e.clientY });
   }
 
+  // Click central (rueda) cierra la pestaña, como en un navegador. En mousedown
+  // se previene el autoscroll del botón central; el cierre va en el auxclick.
+  function onTabMouseDown(e: React.MouseEvent) {
+    if (e.button === 1) e.preventDefault();
+  }
+  function onTabAuxClick(e: React.MouseEvent, tabId: string) {
+    if (e.button === 1) {
+      e.preventDefault();
+      closeTab(tabId);
+    }
+  }
+
   function tabInner(tab: MarketTab, count: number) {
     if (edit?.tabId === tab.id) {
       return (
@@ -215,6 +227,8 @@ export function SearchTabs() {
                 key={tab.id}
                 ref={activeRef}
                 onContextMenu={(e) => openMenu(e, tab.id)}
+                onMouseDown={onTabMouseDown}
+                onAuxClick={(e) => onTabAuxClick(e, tab.id)}
                 // z-10 para que los flares se dibujen por encima de las vecinas;
                 // -mb-0.5 para que la base del SVG caiga sobre la línea de acento.
                 className="relative z-10 -mb-0.5 flex shrink-0 items-center gap-1 px-2.5 text-xs font-medium text-ro-text"
@@ -250,6 +264,8 @@ export function SearchTabs() {
             <div
               key={tab.id}
               onContextMenu={(e) => openMenu(e, tab.id)}
+              onMouseDown={onTabMouseDown}
+              onAuxClick={(e) => onTabAuxClick(e, tab.id)}
               // Inactiva: apoyada sobre la línea, sin taparla (caja abierta abajo).
               className="flex shrink-0 items-center gap-1 rounded-t-lg border border-b-0 border-ro-panel-border bg-ro-panel-alt px-2.5 py-1.5 text-xs text-ro-text-muted transition-colors hover:text-ro-text"
             >
