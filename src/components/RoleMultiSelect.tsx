@@ -16,10 +16,14 @@ export function RoleMultiSelect({
   name,
   roles,
   defaultSelected,
+  onChange,
 }: {
-  name: string;
+  // `name` opcional (ver ToggleSwitch): solo hace falta en forms de servidor.
+  name?: string;
   roles: { id: string; name: string }[];
   defaultSelected: string[];
+  // Autoguardado: se llama con la lista completa de ids al cambiar la selección.
+  onChange?: (ids: string[]) => void;
 }) {
   const t = useTranslations("admin.access");
   const [selected, setSelected] = useState<Set<string>>(new Set(defaultSelected));
@@ -43,12 +47,11 @@ export function RoleMultiSelect({
   }, [open]);
 
   function toggle(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+    onChange?.([...next]);
   }
 
   // Nombres en el orden del listado del servidor (no de selección) para que el

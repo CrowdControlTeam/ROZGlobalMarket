@@ -6,15 +6,26 @@ export function ToggleSwitch({
   name,
   defaultChecked,
   label,
+  onChange,
 }: {
-  name: string;
+  // `name` es opcional: en formularios de servidor da el valor a FormData; con
+  // autoguardado (onChange) ya no hace falta.
+  name?: string;
   defaultChecked?: boolean;
   label: string;
+  // Autoguardado: se llama con el nuevo estado al conmutar.
+  onChange?: (checked: boolean) => void;
 }) {
   return (
     <label className="flex cursor-pointer items-center gap-3 text-sm text-ro-text">
       <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
-        <input type="checkbox" name={name} defaultChecked={defaultChecked} className="peer sr-only" />
+        <input
+          type="checkbox"
+          name={name}
+          defaultChecked={defaultChecked}
+          onChange={onChange ? (e) => onChange(e.target.checked) : undefined}
+          className="peer sr-only"
+        />
         {/* Estado activo = acento (no verde), coherente con el rediseño; foco de
             teclado visible en el track porque el checkbox real va sr-only. */}
         <span className="absolute inset-0 rounded-full bg-ro-panel-border transition-colors peer-checked:bg-ro-accent peer-focus-visible:ring-2 peer-focus-visible:ring-ro-accent peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-ro-panel" />
