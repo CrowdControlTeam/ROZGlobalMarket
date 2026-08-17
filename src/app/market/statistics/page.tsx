@@ -74,7 +74,7 @@ export default async function AdminStatsPage({
   await requireAdmin();
   const raw = await searchParams;
   const rawPeriod = Array.isArray(raw.period) ? raw.period[0] : raw.period;
-  const period: StatsPeriod = rawPeriod && isStatsPeriod(rawPeriod) ? rawPeriod : "30d";
+  const period: StatsPeriod = rawPeriod && isStatsPeriod(rawPeriod) ? rawPeriod : "7d";
 
   const stats = await getMarketStats(period);
   const t = await getTranslations("admin.stats");

@@ -20,7 +20,7 @@ export function AdminStatsPeriodSelect() {
     <div className="flex items-center gap-2">
       <label className="text-xs font-medium text-ro-text-muted">{t("label")}</label>
       <select
-        value={searchParams.get("period") ?? "30d"}
+        value={searchParams.get("period") ?? "7d"}
         onChange={(e) => handleChange(e.target.value)}
         className={selectClass}
       >
