@@ -51,6 +51,7 @@ export function LupaMenu() {
   const [open, setOpen] = useState(false);
   const [submenu, setSubmenu] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const submenuTimer = useRef<number | null>(null);
   const none = savedSearches.length === 0;
 
   const close = () => {
@@ -58,6 +59,24 @@ export function LupaMenu() {
     setSubmenu(false);
   };
   useDismiss(open, close, ref);
+
+  // Hover intent para el submenú: al SALIR se cierra con un pequeño retardo, no
+  // al instante. Así moverse despacio del item "Cargar filtro" al submenú
+  // (cruzando el hueco entre ambos) no lo desmonta antes de llegar; si el
+  // puntero entra al submenú, se cancela el cierre.
+  const openSubmenu = () => {
+    if (submenuTimer.current) {
+      clearTimeout(submenuTimer.current);
+      submenuTimer.current = null;
+    }
+    if (!none) setSubmenu(true);
+  };
+  const scheduleCloseSubmenu = () => {
+    submenuTimer.current = window.setTimeout(() => setSubmenu(false), 250);
+  };
+  useEffect(() => () => {
+    if (submenuTimer.current) clearTimeout(submenuTimer.current);
+  }, []);
 
   return (
     // items-end + border-b para que la línea de acento continúe bajo la lupa
@@ -81,11 +100,7 @@ export function LupaMenu() {
           className="absolute left-0 top-full z-30 mt-1 min-w-[12rem] rounded-lg border border-ro-panel-border bg-ro-panel py-1 shadow-lg"
         >
           {/* Cargar filtro concreto: submenú a la derecha con la lista guardada. */}
-          <div
-            className="relative"
-            onMouseEnter={() => !none && setSubmenu(true)}
-            onMouseLeave={() => setSubmenu(false)}
-          >
+          <div className="relative" onMouseEnter={openSubmenu} onMouseLeave={scheduleCloseSubmenu}>
             <button type="button" role="menuitem" disabled={none} className={`${ITEM_CLASS} justify-between`}>
               <span className="flex items-center gap-2">
                 <FolderOpen size={14} aria-hidden />
