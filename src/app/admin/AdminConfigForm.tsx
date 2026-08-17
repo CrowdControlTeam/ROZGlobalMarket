@@ -8,7 +8,7 @@ import {
   type getMarketConfig,
   type ConfigFieldUpdate,
 } from "@/lib/admin-config";
-import { inputBaseClass, selectClass } from "@/lib/ui";
+import { inputBaseClass } from "@/lib/ui";
 import { FloatingField, floatingControlClass, floatingSelectClass } from "@/components/FloatingField";
 import { ToggleSwitch } from "@/components/ToggleSwitch";
 import { RoleMultiSelect } from "@/components/RoleMultiSelect";
@@ -102,16 +102,12 @@ export function AdminConfigForm({ config }: { config: Config }) {
             <legend className="mb-1 text-sm font-semibold text-ro-text">{t("access.legend")}</legend>
             <p className="text-xs text-ro-text-muted">{t("access.hint")}</p>
             {config.guildRolesResult.status === "ok" ? (
-              <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <RoleMultiSelect
-                    roles={config.guildRolesResult.roles}
-                    defaultSelected={config.adminRoleIds}
-                    onChange={(ids) => save({ field: "adminRoleIds", value: ids })}
-                  />
-                </div>
-                <FieldStatus state={state.adminRoleIds} />
-              </div>
+              <RoleMultiSelect
+                roles={config.guildRolesResult.roles}
+                defaultSelected={config.adminRoleIds}
+                onChange={(ids) => save({ field: "adminRoleIds", value: ids })}
+                affix={<FieldStatus state={state.adminRoleIds} />}
+              />
             ) : (
               <div>
                 {config.guildRolesResult.status === "error" && (
@@ -155,18 +151,15 @@ export function AdminConfigForm({ config }: { config: Config }) {
             onSave={(v) => save({ field: "bisEditorRoleId", value: v })}
           />
 
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-sm font-semibold text-ro-text">{t("market.maxRefineLabel")}</legend>
-            <EditableField
-              label={t("market.maxRefineLabel")}
-              initial={String(config.maxRefineLevel)}
-              type="number"
-              min={0}
-              state={state.maxRefineLevel}
-              error={errors.maxRefineLevel}
-              onSave={(v) => save({ field: "maxRefineLevel", value: Number(v) })}
-            />
-          </fieldset>
+          <EditableField
+            label={t("market.maxRefineLabel")}
+            initial={String(config.maxRefineLevel)}
+            type="number"
+            min={0}
+            state={state.maxRefineLevel}
+            error={errors.maxRefineLevel}
+            onSave={(v) => save({ field: "maxRefineLevel", value: Number(v) })}
+          />
         </div>
 
         {/* Grupo DERECHO — funcionalidades. */}
@@ -508,24 +501,28 @@ function RoleSelectField({
   onSave: (value: string) => Promise<boolean>;
 }) {
   return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="mb-1 text-sm font-semibold text-ro-text">{legend}</legend>
+    <div className="flex flex-col gap-2">
       <p className="text-xs text-ro-text-muted">{hint}</p>
       {roles ? (
-        <div className="flex items-center gap-2">
-          <select
-            defaultValue={value ?? ""}
-            onChange={(e) => onSave(e.target.value)}
-            className={`min-w-0 flex-1 ${selectClass} w-full`}
-          >
-            <option value="">{noneLabel}</option>
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-          <FieldStatus state={state} />
+        <div>
+          <FloatingField label={legend}>
+            <div className="flex items-center gap-2">
+              <select
+                defaultValue={value ?? ""}
+                onChange={(e) => onSave(e.target.value)}
+                className={`min-w-0 flex-1 ${floatingSelectClass}`}
+              >
+                <option value="">{noneLabel}</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+              <FieldStatus state={state} />
+            </div>
+          </FloatingField>
+          <FieldError error={error} />
         </div>
       ) : (
         <EditableField
@@ -537,7 +534,6 @@ function RoleSelectField({
           onSave={onSave}
         />
       )}
-      {roles && <FieldError error={error} />}
-    </fieldset>
+    </div>
   );
 }

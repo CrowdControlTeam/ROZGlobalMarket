@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { inputClass } from "@/lib/ui";
@@ -17,6 +17,7 @@ export function RoleMultiSelect({
   roles,
   defaultSelected,
   onChange,
+  affix,
 }: {
   // `name` opcional (ver ToggleSwitch): solo hace falta en forms de servidor.
   name?: string;
@@ -24,6 +25,9 @@ export function RoleMultiSelect({
   defaultSelected: string[];
   // Autoguardado: se llama con la lista completa de ids al cambiar la selección.
   onChange?: (ids: string[]) => void;
+  // Elemento a la derecha DENTRO del botón (p. ej. el indicador de guardado),
+  // antes del chevron.
+  affix?: ReactNode;
 }) {
   const t = useTranslations("admin.access");
   const [selected, setSelected] = useState<Set<string>>(new Set(defaultSelected));
@@ -78,6 +82,7 @@ export function RoleMultiSelect({
           )}
         </span>
         {selected.size > 0 && <span className="shrink-0 text-ro-text-muted">({selected.size})</span>}
+        {affix}
         <ChevronDown size={16} className="shrink-0 text-ro-text-muted" aria-hidden />
       </button>
       {open && (
