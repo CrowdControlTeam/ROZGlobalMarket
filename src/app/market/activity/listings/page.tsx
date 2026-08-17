@@ -11,6 +11,7 @@ import {
 } from "@/lib/market-labels";
 import { ListingStatusFilter } from "@/components/ListingStatusFilter";
 import { ListingLink } from "@/components/ListingLink";
+import { MyListingActions } from "./MyListingActions";
 
 export default async function MyListingsPage({
   searchParams,
@@ -42,11 +43,16 @@ export default async function MyListingsPage({
         <ul className="flex flex-col gap-3">
           {filtered.map((listing) => {
         const isBuy = listing.type === "BUY";
+        // Kebab en todas las filas: activa → Editar, no activa → Republicar. El
+        // <a> reserva a la derecha (pr-12) el hueco de esa columna para no
+        // solaparlo con la fecha.
+        const active = listing.status === "ACTIVE";
         return (
           <li key={listing.id}>
+            <div className="relative">
             <ListingLink
               listingId={listing.id}
-              className="flex items-center gap-4 rounded-lg border-2 border-ro-panel-border bg-ro-panel p-4 text-ro-text transition-colors hover:border-ro-accent"
+              className="flex items-center gap-4 rounded-lg border-2 border-ro-panel-border bg-ro-panel p-4 pr-12 text-ro-text transition-colors hover:border-ro-accent"
             >
               <ItemIcon item={listing.item} width={40} height={40} />
               <div className="flex-1">
@@ -94,6 +100,15 @@ export default async function MyListingsPage({
                 {listing.createdAt.toLocaleDateString()}
               </span>
             </ListingLink>
+            {/* Kebab centrado en vertical SIN transform: un translate crearía un
+                stacking context que atraparía el desplegable por debajo de las
+                tarjetas siguientes. -mt-3.5 = media altura del botón (h-7) →
+                centra igual, y el z del menú compite a nivel de página (como en
+                el grid del mercado). */}
+            <div className="absolute right-2 top-1/2 -mt-3.5">
+              <MyListingActions listingId={listing.id} active={active} canEdit={!listing.hasLiveDeals} />
+            </div>
+            </div>
           </li>
             );
           })}

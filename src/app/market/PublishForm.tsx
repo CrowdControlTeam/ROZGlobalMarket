@@ -61,31 +61,39 @@ export function PublishForm({
   initialType,
   onClose,
   editListing,
+  repostListing,
 }: {
   recognitionEnabled: boolean;
   initialType: PublicationType;
   onClose: () => void;
   editListing?: EditListingData;
+  // Republicar: precarga los mismos campos que editar PERO en modo CREACIÓN
+  // (createListing, tipo/item desbloqueados). Nunca llegan ambos a la vez.
+  repostListing?: EditListingData;
 }) {
   const router = useRouter();
   const isEdit = editListing !== undefined;
-  const [type, setType] = useState<PublicationType>(editListing?.type ?? initialType);
-  const [selectedItem, setSelectedItem] = useState<ItemResult | null>(editListing?.item ?? null);
+  // Semilla de valores iniciales: edición o republicación (misma forma). isEdit
+  // distingue el comportamiento (bloqueo de tipo/item + update vs create); el
+  // resto del formulario solo lee de la semilla.
+  const seed = editListing ?? repostListing;
+  const [type, setType] = useState<PublicationType>(seed?.type ?? initialType);
+  const [selectedItem, setSelectedItem] = useState<ItemResult | null>(seed?.item ?? null);
   const [selectedRecipient, setSelectedRecipient] = useState<UserResult | null>(null);
   const [optionDefs, setOptionDefs] = useState<ItemOptionDef[]>([]);
   const [optionSelections, setOptionSelections] = useState<OptionSelection[]>(
-    editListing?.optionSelections ?? emptyOptionSelections(),
+    seed?.optionSelections ?? emptyOptionSelections(),
   );
-  const [refineLevel, setRefineLevel] = useState(editListing?.refineLevel ?? 0);
-  const [quantity, setQuantity] = useState<number | "">(editListing ? (editListing.quantity ?? "") : 1);
-  const [price, setPrice] = useState<number | "">(editListing ? (editListing.price ?? "") : "");
-  const [unlimited, setUnlimited] = useState(editListing ? editListing.quantity === null : false);
+  const [refineLevel, setRefineLevel] = useState(seed?.refineLevel ?? 0);
+  const [quantity, setQuantity] = useState<number | "">(seed ? (seed.quantity ?? "") : 1);
+  const [price, setPrice] = useState<number | "">(seed ? (seed.price ?? "") : "");
+  const [unlimited, setUnlimited] = useState(seed ? seed.quantity === null : false);
   // noPrice (competitivo) solo aplica a SALE/BUY; en TRADE/GIFT el precio es null
   // por naturaleza, no por "sin precio".
   const [noPrice, setNoPrice] = useState(
-    editListing ? editListing.price === null && (editListing.type === "SALE" || editListing.type === "BUY") : false,
+    seed ? seed.price === null && (seed.type === "SALE" || seed.type === "BUY") : false,
   );
-  const [notes, setNotes] = useState(editListing?.notes ?? "");
+  const [notes, setNotes] = useState(seed?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [priceMissing, setPriceMissing] = useState(false);
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);

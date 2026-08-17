@@ -438,6 +438,7 @@
       "menu": "Listing options",
       "edit": "Edit",
       "editBlocked": "You can't edit a listing with offers or sales.",
+      "repost": "Repost",
       "viewDetail": "View detail",
       "share": "Share",
       "contact": "Contact"
@@ -660,6 +661,7 @@
       },
       "saveLabel": "Save",
       "editTitle": "Edit listing",
+      "repostTitle": "Repost listing",
       "publishing": "Posting...",
       "recognitionLabel": "Recognize from screenshot (optional)",
       "itemLabel": "Item",

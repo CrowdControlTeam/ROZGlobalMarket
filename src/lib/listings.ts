@@ -83,6 +83,9 @@ export async function getMyListings() {
     include: {
       item: true,
       options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
+      // Deals vivos (PENDING/ACCEPTED): >0 ⇒ no editable, gate del kebab "Editar"
+      // (misma regla que la card del mercado y updateListing).
+      _count: { select: { deals: { where: { status: { in: ["PENDING", "ACCEPTED"] } } } } },
     },
   });
 
@@ -93,7 +96,11 @@ export async function getMyListings() {
     _sum: { quantity: true },
   });
   const soldMap = new Map(soldByListing.map((g) => [g.listingId, g._sum.quantity ?? 0]));
-  return listings.map((l) => ({ ...l, sold: soldMap.get(l.id) ?? 0 }));
+  return listings.map((l) => ({
+    ...l,
+    sold: soldMap.get(l.id) ?? 0,
+    hasLiveDeals: l._count.deals > 0,
+  }));
 }
 
 // Para la página de gestión (/market/activity/pending): todo lo que tengo

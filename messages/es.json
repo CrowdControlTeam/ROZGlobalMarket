@@ -438,6 +438,7 @@
       "menu": "Opciones del anuncio",
       "edit": "Editar",
       "editBlocked": "No puedes editar una publicación con ofertas o ventas.",
+      "repost": "Republicar",
       "viewDetail": "Ver detalle",
       "share": "Compartir",
       "contact": "Contactar"
@@ -660,6 +661,7 @@
       },
       "saveLabel": "Guardar",
       "editTitle": "Editar publicación",
+      "repostTitle": "Republicar publicación",
       "publishing": "Publicando...",
       "recognitionLabel": "Reconocer desde captura (opcional)",
       "itemLabel": "Item",
