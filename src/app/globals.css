@@ -62,6 +62,19 @@
   color: var(--c-d);
 }
 
+/* Carril de pestañas del mercado con scroll horizontal. La barra de scroll se
+   OCULTA: consumía alto dentro del carril y, al aparecer, empujaba las pestañas
+   hacia arriba descuadrándolas respecto a la línea de acento y a la lupa/"+".
+   El scroll se hace con la rueda (traducida a horizontal por JS en SearchTabs),
+   como en la tira de pestañas de un navegador. */
+.market-tabs-rail {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge/IE antiguos */
+}
+.market-tabs-rail::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
 :root[data-theme="dark"] {
   color-scheme: dark;
   --ro-bg: #0a0e1a;

@@ -156,6 +156,9 @@
     "listingNotFound": "Publicación no encontrada",
     "onlyPosterCancel": "Solo quien la publicó puede cancelarla",
     "notYourListing": "No tienes permiso sobre esta publicación",
+    "savedSearchLimit": "Has alcanzado el máximo de búsquedas guardadas ({max})",
+    "savedSearchNotFound": "La búsqueda guardada no existe",
+    "notYourSavedSearch": "No tienes permiso sobre esta búsqueda guardada",
     "listingHasDeals": "No se puede editar: la publicación ya tiene ofertas o ventas",
     "listingHasPendingOffers": "No se puede cerrar con ofertas pendientes: acéptalas o recházalas primero",
     "listingNotActive": "Esta publicación ya no está activa",
@@ -414,7 +417,17 @@
       "indicator": "Búsquedas de esta sesión",
       "add": "Nueva búsqueda",
       "close": "Cerrar búsqueda",
-      "untitled": "Búsqueda {n}"
+      "untitled": "Búsqueda {n}",
+      "menuLabel": "Búsquedas guardadas",
+      "load": "Cargar filtro",
+      "loadAll": "Cargar todos los filtros",
+      "noneSaved": "No tienes búsquedas guardadas",
+      "save": "Guardar",
+      "rename": "Renombrar",
+      "update": "Actualizar búsqueda guardada",
+      "deleteSaved": "Borrar de guardados",
+      "modified": "Filtros modificados respecto a lo guardado",
+      "namePlaceholder": "Nombre de la búsqueda"
     },
     "view": {
       "label": "Vista",

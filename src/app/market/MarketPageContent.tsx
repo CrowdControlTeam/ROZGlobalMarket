@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@prisma/client";
 import { isMarketSort, type MarketFilters as MarketFiltersType } from "@/lib/market";
 import { requireSession } from "@/lib/guard";
+import { listSavedSearches } from "@/lib/saved-searches";
 import { MarketFilters } from "./MarketFilters";
 import { SearchTabs } from "./SearchTabs";
 import { SegmentedTypeSelector } from "./SegmentedTypeSelector";
@@ -111,12 +112,15 @@ export async function MarketPageContent({
     if (value) initialFilters[key] = value;
   }
 
+  // Búsquedas guardadas del usuario (menú de la lupa / pestañas).
+  const savedSearches = await listSavedSearches();
+
   return (
     // El hub + contenedor los pone el layout de /market. Aquí solo el contenido
     // del índice, dentro del store de búsqueda: cada pestaña tiene su propio
     // objeto de filtros (fuente de verdad) que se serializa a la URL, y la URL es
     // lo que lee el servidor.
-    <MarketSearchProvider initialFilters={initialFilters}>
+    <MarketSearchProvider initialFilters={initialFilters} initialSavedSearches={savedSearches}>
       {/* Pestañas de "Mis búsquedas": función de power-user; solo en desktop
           (en móvil quitan espacio vertical sin aportar lo suficiente). */}
       <div className="mb-3 hidden sm:block">

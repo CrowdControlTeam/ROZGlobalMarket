@@ -137,6 +137,25 @@ model User {
   deals    Deal[]
   // BiS que ha creado (página /bis).
   bisEntries BisEntry[]
+  // Búsquedas de mercado guardadas (menú de la lupa / pestañas).
+  savedSearches SavedSearch[]
+}
+
+// Búsqueda de mercado guardada por un usuario: una pestaña de "Mis búsquedas"
+// persistida. `filters` es el query string de filtros (mismas claves y orden que
+// la URL, ver FILTER_KEYS) — se reutiliza la semántica de la URL en vez de JSON.
+model SavedSearch {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  name      String
+  filters   String
+  // Orden estable en la lista (para el menú de carga; base para reordenar luego).
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // Catálogo de items extraído del cliente del juego (ver prisma/importItems.mjs).

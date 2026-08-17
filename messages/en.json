@@ -156,6 +156,9 @@
     "listingNotFound": "Listing not found",
     "onlyPosterCancel": "Only the poster can cancel this",
     "notYourListing": "You don't have permission over this listing",
+    "savedSearchLimit": "You've reached the maximum number of saved searches ({max})",
+    "savedSearchNotFound": "That saved search doesn't exist",
+    "notYourSavedSearch": "You don't have permission over this saved search",
     "listingHasDeals": "Can't edit: this listing already has offers or sales",
     "listingHasPendingOffers": "Can't close with pending offers: accept or reject them first",
     "listingNotActive": "This listing is no longer active",
@@ -414,7 +417,17 @@
       "indicator": "This session's searches",
       "add": "New search",
       "close": "Close search",
-      "untitled": "Search {n}"
+      "untitled": "Search {n}",
+      "menuLabel": "Saved searches",
+      "load": "Load filter",
+      "loadAll": "Load all filters",
+      "noneSaved": "You have no saved searches",
+      "save": "Save",
+      "rename": "Rename",
+      "update": "Update saved search",
+      "deleteSaved": "Remove from saved",
+      "modified": "Filters changed from what's saved",
+      "namePlaceholder": "Search name"
     },
     "view": {
       "label": "View",
