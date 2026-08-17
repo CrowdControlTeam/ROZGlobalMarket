@@ -291,11 +291,19 @@ export function PublishForm({
   const selectedOptions = optionSelections
     .map((sel) => ({ sel, def: optionDefs.find((d) => d.id === sel.defId) }))
     .filter((o) => o.def !== undefined && o.sel.value !== "");
+  // Cantidad del preview, igual que en la card del mercado: ilimitado = "∞";
+  // BUY = "x{n} unidades"; resto = "x{n} disponibles".
+  const previewCount = unlimited
+    ? tMarket("results.availableUnlimited")
+    : previewType === "BUY"
+      ? tMarket("results.wanted", { count: quantity === "" ? 0 : quantity })
+      : tMarket("results.available", { count: quantity === "" ? 0 : quantity });
   const previewCard = selectedItem && (
     <div className="relative rounded-xl border border-ro-panel-border bg-ro-panel p-3">
-      {/* Bocadillo de notas en la esquina, igual que en la card del mercado. */}
+      {/* Bocadillo de notas en la esquina, igual que en la card del mercado. El
+          tooltip muestra el TEXTO de la nota (como en BiS). */}
       {notes.trim() && (
-        <NoteIndicator label={tMarket("card.hasNotes")} className="absolute right-2 top-2" />
+        <NoteIndicator label={notes} className="absolute right-2 top-2" />
       )}
       <div className="flex gap-2.5">
         <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border border-ro-panel-border bg-ro-panel-alt">
@@ -324,18 +332,21 @@ export function PublishForm({
           ))}
         </div>
       )}
-      <div className="mt-2 flex justify-end text-sm">
-        {type === "TRADE" ? (
-          <span className="font-extrabold text-ro-type-trade">{listingTypeLabel(tMarket, "TRADE")}</span>
-        ) : type === "GIFT" ? (
-          <span className="font-extrabold text-ro-type-buy">{tMarket("results.free")}</span>
-        ) : noPrice ? (
-          <span className="font-bold text-ro-text-muted">{type === "BUY" ? tField("bestPrice") : tField("bestOffer")}</span>
-        ) : (
-          <span className={`font-extrabold ${priceColorClass(price === "" ? 0 : price)}`}>
-            {formatPrice(price === "" ? 0 : price)}
-          </span>
-        )}
+      <div className="mt-2 flex items-end justify-between gap-2 text-sm">
+        <span className="text-xs text-ro-text-muted">{previewCount}</span>
+        <span>
+          {type === "TRADE" ? (
+            <span className="font-extrabold text-ro-type-trade">{listingTypeLabel(tMarket, "TRADE")}</span>
+          ) : type === "GIFT" ? (
+            <span className="font-extrabold text-ro-type-buy">{tMarket("results.free")}</span>
+          ) : noPrice ? (
+            <span className="font-bold text-ro-text-muted">{type === "BUY" ? tField("bestPrice") : tField("bestOffer")}</span>
+          ) : (
+            <span className={`font-extrabold ${priceColorClass(price === "" ? 0 : price)}`}>
+              {formatPrice(price === "" ? 0 : price)}
+            </span>
+          )}
+        </span>
       </div>
     </div>
   );

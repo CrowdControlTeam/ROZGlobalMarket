@@ -14,12 +14,16 @@ export function ImageUploadField({
   hint,
   maxBytes,
   defaultValue,
+  onChange,
 }: {
-  name: string;
+  // `name` opcional (ver ToggleSwitch): solo hace falta en forms de servidor.
+  name?: string;
   label: string;
   hint?: string;
   maxBytes: number;
   defaultValue?: string | null;
+  // Autoguardado: data-URI nuevo, o null al quitar la imagen.
+  onChange?: (dataUrl: string | null) => void;
 }) {
   const t = useTranslations("admin.appearance");
   const [value, setValue] = useState(defaultValue ?? "");
@@ -35,8 +39,10 @@ export function ImageUploadField({
     }
     const reader = new FileReader();
     reader.onload = () => {
-      setValue(typeof reader.result === "string" ? reader.result : "");
+      const result = typeof reader.result === "string" ? reader.result : "";
+      setValue(result);
       setError(null);
+      onChange?.(result || null);
     };
     reader.readAsDataURL(file);
   }
@@ -45,6 +51,7 @@ export function ImageUploadField({
     setValue("");
     setError(null);
     if (inputRef.current) inputRef.current.value = "";
+    onChange?.(null);
   }
 
   return (

@@ -118,9 +118,10 @@
   },
   "maintenancePage": {
     "title": "En mantenimiento",
-    "message": "El mercado está temporalmente en mantenimiento. Vuelve dentro de un rato.",
+    "message": "El mercado está temporalmente en mantenimiento. Mientras tanto puedes seguir usando BiS y la base de datos.",
     "adminNote": "Eres admin: sigues teniendo acceso completo.",
-    "backToMarket": "Ir al mercado"
+    "backToMarket": "Ir al mercado",
+    "backHome": "Volver al inicio"
   },
   "authError": {
     "title": "Acceso denegado",
@@ -200,11 +201,32 @@
   "admin": {
     "title": "Configuración",
     "statsLink": "Estadísticas",
+    "nav": {
+      "general": "General",
+      "features": "Funcionalidades"
+    },
+    "features": {
+      "bis": {
+        "title": "BiS",
+        "hint": "Etapas del juego que aparecen en la página de BiS. La primera (arriba) es la que sale por defecto.",
+        "empty": "No hay etapas todavía.",
+        "entryCount": "{count} BiS",
+        "moveUp": "Subir",
+        "moveDown": "Bajar",
+        "rename": "Renombrar",
+        "save": "Guardar",
+        "delete": "Borrar etapa",
+        "confirmDelete": "Borrar etapa y {count} BiS",
+        "addPlaceholder": "Nueva etapa…",
+        "add": "Añadir"
+      }
+    },
     "stats": {
       "title": "Estadísticas del mercado",
       "backToConfig": "Volver",
       "period": {
         "label": "Periodo",
+        "7d": "Última semana",
         "30d": "Últimos 30 días"
       },
       "totals": {
@@ -318,7 +340,7 @@
     },
     "market": {
       "legend": "Mercado",
-      "maintenanceToggleLabel": "Modo mantenimiento (bloquea crear ventas y comprar para todos menos administradores)",
+      "maintenanceToggleLabel": "Modo mantenimiento (bloquea el acceso al mercado para todos menos administradores; BiS y DB siguen abiertos)",
       "maxRefineLabel": "Refine máximo permitido"
     }
   },
@@ -405,8 +427,7 @@
       "editBlocked": "No puedes editar una publicación con ofertas o ventas.",
       "viewDetail": "Ver detalle",
       "share": "Compartir",
-      "contact": "Contactar",
-      "hasNotes": "Tiene notas"
+      "contact": "Contactar"
     },
     "sort": {
       "label": "Orden",

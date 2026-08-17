@@ -118,9 +118,10 @@
   },
   "maintenancePage": {
     "title": "Under maintenance",
-    "message": "The market is temporarily down for maintenance. Check back in a bit.",
+    "message": "The market is temporarily down for maintenance. In the meantime you can still use BiS and the database.",
     "adminNote": "You're an admin: you still have full access.",
-    "backToMarket": "Go to the market"
+    "backToMarket": "Go to the market",
+    "backHome": "Back to home"
   },
   "authError": {
     "title": "Access denied",
@@ -200,11 +201,32 @@
   "admin": {
     "title": "Settings",
     "statsLink": "Stats",
+    "nav": {
+      "general": "General",
+      "features": "Features"
+    },
+    "features": {
+      "bis": {
+        "title": "BiS",
+        "hint": "Game stages shown on the BiS page. The first one (top) is the default.",
+        "empty": "No stages yet.",
+        "entryCount": "{count} BiS",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "rename": "Rename",
+        "save": "Save",
+        "delete": "Delete stage",
+        "confirmDelete": "Delete stage and {count} BiS",
+        "addPlaceholder": "New stage…",
+        "add": "Add"
+      }
+    },
     "stats": {
       "title": "Market stats",
       "backToConfig": "Back",
       "period": {
         "label": "Period",
+        "7d": "Last week",
         "30d": "Last 30 days"
       },
       "totals": {
@@ -318,7 +340,7 @@
     },
     "market": {
       "legend": "Market",
-      "maintenanceToggleLabel": "Maintenance mode (blocks creating sales and buying for everyone except admins)",
+      "maintenanceToggleLabel": "Maintenance mode (blocks access to the market for everyone except admins; BiS and DB stay open)",
       "maxRefineLabel": "Maximum allowed refine"
     }
   },
@@ -405,8 +427,7 @@
       "editBlocked": "You can't edit a listing with offers or sales.",
       "viewDetail": "View detail",
       "share": "Share",
-      "contact": "Contact",
-      "hasNotes": "Has notes"
+      "contact": "Contact"
     },
     "sort": {
       "label": "Sort",

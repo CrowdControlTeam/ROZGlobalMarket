@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -75,135 +76,92 @@ export async function getMarketConfig() {
 // texto libre en el caso sin bot, conviene ser tolerante.
 const SNOWFLAKE = /^\d{15,25}$/;
 
+// ── Guardado POR CAMPO (autoguardado del formulario de admin) ───────────────
+// Cada control del formulario guarda solo su campo, validado de forma
+// independiente (así un campo a medio escribir no bloquea los demás). El upsert
+// crea la fila con defaults si aún no existe (todos los campos tienen @default).
 
-function parseAdminRoleIds(formData: FormData): string[] {
-  // Modo con bot: <select multiple name="adminRoleIds"> manda varias
-  // entradas con el mismo nombre. Modo sin bot: un único textarea con un
-  // ID por línea/coma. Solo uno de los dos se renderiza a la vez, así que
-  // no hay ambigüedad sobre cuál usar.
-  const textarea = formData.get("adminRoleIdsText");
-  const raw =
-    typeof textarea === "string"
-      ? textarea.split(/[\n,]/)
-      : formData.getAll("adminRoleIds").filter((v): v is string => typeof v === "string");
+type BoolField =
+  | "webhookEnabled"
+  | "imageRecognitionEnabled"
+  | "dmNotificationsEnabled"
+  | "maintenanceModeEnabled"
+  | "optionsEnabled";
 
-  return Array.from(new Set(raw.map((id) => id.trim()).filter((id) => SNOWFLAKE.test(id))));
-}
+export type ConfigFieldUpdate =
+  | { field: BoolField; value: boolean }
+  | { field: "siteName"; value: string }
+  | { field: "maxRefineLevel"; value: number }
+  | { field: "webhookUrl"; value: string }
+  | { field: "geminiModel"; value: string }
+  | { field: "accessRoleId" | "bisEditorRoleId"; value: string }
+  | { field: "adminRoleIds"; value: string[] }
+  | { field: "logoUrl" | "homeImageUrl"; value: string | null };
 
-export async function updateMarketConfig(formData: FormData) {
-  await requireAdmin();
-  const t = await getTranslations("errors");
-
-  const updateConfigSchema = z.object({
-    maxRefineLevel: z.coerce.number().int().nonnegative(),
-    webhookEnabled: z.boolean(),
-    imageRecognitionEnabled: z.boolean(),
-    geminiModel: z.string().refine(isGeminiModel, t("unsupportedGeminiModel")),
-    dmNotificationsEnabled: z.boolean(),
-    maintenanceModeEnabled: z.boolean(),
-    optionsEnabled: z.boolean(),
-    // Vacío = no tocar el valor ya guardado (patrón "enmascarado + reemplazar":
-    // el formulario nunca recibe el valor real, así que no puede reenviarlo).
-    // Cuando sí viene un valor, debe ser un webhook de Discord (ver
-    // isDiscordWebhookUrl) para no permitir SSRF a hosts arbitrarios.
-    webhookUrl: z
-      .string()
-      .trim()
-      .refine(isDiscordWebhookUrl, t("invalidWebhookUrl"))
-      .optional(),
-    // A diferencia de webhookUrl, este campo no está enmascarado — vacío
-    // aquí sí significa "volver a sin configurar" (cae al placeholder).
-    siteName: z.string().trim().optional(),
-  });
-
-  const parsed = updateConfigSchema.safeParse({
-    maxRefineLevel: formData.get("maxRefineLevel"),
-    webhookEnabled: formData.get("webhookEnabled") === "on",
-    imageRecognitionEnabled: formData.get("imageRecognitionEnabled") === "on",
-    geminiModel: formData.get("geminiModel"),
-    dmNotificationsEnabled: formData.get("dmNotificationsEnabled") === "on",
-    maintenanceModeEnabled: formData.get("maintenanceModeEnabled") === "on",
-    optionsEnabled: formData.get("optionsEnabled") === "on",
-    webhookUrl: formData.get("webhookUrl") || undefined,
-    siteName: formData.get("siteName") || undefined,
-  });
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
-  }
-  const adminRoleIds = parseAdminRoleIds(formData);
-
-  // Rol de acceso a la app: un único snowflake, o vacío = sin restricción (null).
-  const accessRoleRaw = formData.get("accessRoleId");
-  const accessRoleId =
-    typeof accessRoleRaw === "string" && SNOWFLAKE.test(accessRoleRaw.trim())
-      ? accessRoleRaw.trim()
-      : null;
-
-  // Rol de editor de BiS: un único snowflake, o vacío = solo los admin editan
-  // (null → BiS de solo lectura para el resto). Si se configura, pueden editar
-  // los admin O quien tenga ese rol.
-  const bisEditorRoleRaw = formData.get("bisEditorRoleId");
-  const bisEditorRoleId =
-    typeof bisEditorRoleRaw === "string" && SNOWFLAKE.test(bisEditorRoleRaw.trim())
-      ? bisEditorRoleRaw.trim()
-      : null;
-
-  // Imágenes de marca (logo + imagen del hub): data-URI base64 o vacío = borrar
-  // (null). Se validan formato y peso. El formulario reenvía el valor completo
-  // (no enmascarado), así que "sin tocar" ya trae el data-URI existente.
-  const images: { logoUrl: string | null; homeImageUrl: string | null } = {
-    logoUrl: null,
-    homeImageUrl: null,
-  };
-  for (const [field, maxBytes] of [
-    ["logoUrl", MAX_LOGO_BYTES],
-    ["homeImageUrl", MAX_HOME_IMAGE_BYTES],
-  ] as const) {
-    const raw = formData.get(field);
-    if (typeof raw === "string" && raw.trim() !== "") {
-      const value = raw.trim();
-      if (!isImageDataUrl(value)) throw new Error(t("invalidImage"));
-      if (dataUrlByteSize(value) > maxBytes) throw new Error(t("imageTooLarge"));
-      images[field] = value;
+// Valida un campo y devuelve el fragmento de update de Prisma. Lanza con el
+// mensaje i18n adecuado si el valor no es válido. El switch es exhaustivo sobre
+// el union (TS lo verifica por el tipo de retorno sin `undefined`).
+function buildFieldData(
+  u: ConfigFieldUpdate,
+  t: Awaited<ReturnType<typeof getTranslations>>,
+): Prisma.MarketConfigUncheckedUpdateInput {
+  switch (u.field) {
+    case "webhookEnabled":
+    case "imageRecognitionEnabled":
+    case "dmNotificationsEnabled":
+    case "maintenanceModeEnabled":
+    case "optionsEnabled":
+      return { [u.field]: u.value };
+    case "siteName":
+      return { siteName: u.value.trim() || null };
+    case "maxRefineLevel": {
+      const n = z.coerce.number().int().nonnegative().safeParse(u.value);
+      if (!n.success) throw new Error(t("invalidData"));
+      return { maxRefineLevel: n.data };
+    }
+    case "webhookUrl": {
+      const v = u.value.trim();
+      // Vacío no se guarda por aquí (patrón enmascarado): la UI solo manda ✓ con
+      // un valor escrito. Un valor debe ser un webhook de Discord (anti-SSRF).
+      if (!v) throw new Error(t("invalidData"));
+      if (!isDiscordWebhookUrl(v)) throw new Error(t("invalidWebhookUrl"));
+      return { webhookUrl: v };
+    }
+    case "geminiModel":
+      if (!isGeminiModel(u.value)) throw new Error(t("unsupportedGeminiModel"));
+      return { geminiModel: u.value };
+    case "accessRoleId":
+    case "bisEditorRoleId": {
+      const v = u.value.trim();
+      return { [u.field]: SNOWFLAKE.test(v) ? v : null };
+    }
+    case "adminRoleIds": {
+      const ids = Array.from(
+        new Set(u.value.map((s) => s.trim()).filter((id) => SNOWFLAKE.test(id))),
+      );
+      return { adminRoleIds: ids };
+    }
+    case "logoUrl":
+    case "homeImageUrl": {
+      const raw = u.value;
+      if (raw === null || raw.trim() === "") return { [u.field]: null };
+      const v = raw.trim();
+      if (!isImageDataUrl(v)) throw new Error(t("invalidImage"));
+      const max = u.field === "logoUrl" ? MAX_LOGO_BYTES : MAX_HOME_IMAGE_BYTES;
+      if (dataUrlByteSize(v) > max) throw new Error(t("imageTooLarge"));
+      return { [u.field]: v };
     }
   }
+}
 
+export async function setMarketConfigField(update: ConfigFieldUpdate): Promise<void> {
+  await requireAdmin();
+  const t = await getTranslations("errors");
+  const data = buildFieldData(update, t);
   await prisma.marketConfig.upsert({
     where: { id: 1 },
-    create: {
-      id: 1,
-      maxRefineLevel: parsed.data.maxRefineLevel,
-      webhookEnabled: parsed.data.webhookEnabled,
-      imageRecognitionEnabled: parsed.data.imageRecognitionEnabled,
-      geminiModel: parsed.data.geminiModel,
-      dmNotificationsEnabled: parsed.data.dmNotificationsEnabled,
-      maintenanceModeEnabled: parsed.data.maintenanceModeEnabled,
-      optionsEnabled: parsed.data.optionsEnabled,
-      webhookUrl: parsed.data.webhookUrl ?? null,
-      adminRoleIds,
-      accessRoleId,
-      bisEditorRoleId,
-      siteName: parsed.data.siteName ?? null,
-      logoUrl: images.logoUrl,
-      homeImageUrl: images.homeImageUrl,
-    },
-    update: {
-      maxRefineLevel: parsed.data.maxRefineLevel,
-      webhookEnabled: parsed.data.webhookEnabled,
-      imageRecognitionEnabled: parsed.data.imageRecognitionEnabled,
-      geminiModel: parsed.data.geminiModel,
-      dmNotificationsEnabled: parsed.data.dmNotificationsEnabled,
-      maintenanceModeEnabled: parsed.data.maintenanceModeEnabled,
-      optionsEnabled: parsed.data.optionsEnabled,
-      ...(parsed.data.webhookUrl ? { webhookUrl: parsed.data.webhookUrl } : {}),
-      adminRoleIds,
-      accessRoleId,
-      bisEditorRoleId,
-      siteName: parsed.data.siteName ?? null,
-      logoUrl: images.logoUrl,
-      homeImageUrl: images.homeImageUrl,
-    },
+    create: { id: 1, ...data } as Prisma.MarketConfigUncheckedCreateInput,
+    update: data,
   });
-
   revalidatePath("/admin");
 }

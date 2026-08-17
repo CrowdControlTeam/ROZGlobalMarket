@@ -232,7 +232,7 @@ function ListingCard({
     <div className="absolute right-1.5 top-1.5 flex flex-col items-center gap-1">
       <KebabMenu label={t("card.menu")} items={kebabItems} />
       {listing.notes && (
-        <NoteIndicator label={t("card.hasNotes")} className="grid h-6 w-6 place-items-center" />
+        <NoteIndicator label={listing.notes} className="grid h-6 w-6 place-items-center" />
       )}
     </div>
   );

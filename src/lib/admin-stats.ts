@@ -5,11 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-guard";
 import type { StatsPeriod } from "@/lib/admin-stats-constants";
 
-// Un único caso hoy (period siempre es "30d") — cuando haya más valores en
-// STATS_PERIOD_VALUES (admin-stats-constants.ts), este switch es el único
-// sitio que hay que tocar.
+// Inicio de la ventana según el periodo. Al añadir valores a
+// STATS_PERIOD_VALUES (admin-stats-constants.ts), este mapa es el único sitio
+// que hay que tocar para el cálculo.
 function windowStartFor(period: StatsPeriod): Date {
-  const days = { "30d": 30 }[period];
+  const days = { "7d": 7, "30d": 30 }[period];
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
@@ -44,7 +44,7 @@ function topN<T extends { total: number }>(map: Map<string, T>, n: number): T[] 
 // del dinero depende del tipo de listing: en SALE el vendedor es el poster y el
 // comprador la contraparte; en BUY, al revés; en TRADE el "dinero" es el zeny
 // de compensación; GIFT no mueve zeny.
-export async function getMarketStats(period: StatsPeriod = "30d") {
+export async function getMarketStats(period: StatsPeriod = "7d") {
   await requireAdmin();
   const since = windowStartFor(period);
 
