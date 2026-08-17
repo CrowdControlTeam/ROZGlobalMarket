@@ -60,7 +60,9 @@ export function LupaMenu() {
   useDismiss(open, close, ref);
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    // items-end + border-b para que la línea de acento continúe bajo la lupa
+    // (fija) y case con la del track de pestañas; pr para separar de la 1ª pestaña.
+    <div ref={ref} className="relative flex shrink-0 items-end border-b-2 border-ro-accent pr-1">
       <button
         type="button"
         aria-label={t("menuLabel")}

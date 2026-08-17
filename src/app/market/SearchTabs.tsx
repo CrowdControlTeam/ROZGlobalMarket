@@ -206,19 +206,21 @@ export function SearchTabs() {
     // Línea de acento a todo el ancho; la pestaña activa la funde con el
     // contenido mediante los flares cóncavos del SVG. La lupa (menú de carga) y
     // el "+" quedan FIJOS en los extremos; solo el carril de pestañas scrollea.
-    <div className="flex items-end gap-1 border-b-2 border-ro-accent">
+    <div className="flex items-end">
       <LupaMenu />
 
       <div
         ref={railRef}
         onWheel={onWheel}
-        // Scroll SOLO horizontal: overflow-y-hidden evita que los ~2px que la
-        // pestaña activa sobresale por abajo (para fundirse con la línea de
-        // acento) generen un scroll vertical parásito. Los flares quedan tocando
-        // la línea igualmente (se recortan justo en el borde del carril).
-        className="market-tabs-rail flex min-w-0 flex-1 flex-nowrap items-end gap-1 overflow-x-auto overflow-y-hidden"
+        // El carril SOLO hace scroll horizontal. La línea de acento vive DENTRO,
+        // en el track (que scrollea con las pestañas), para que la pestaña activa
+        // la "muerda" con sus flares sin que el overflow del carril los recorte.
+        // El track lleva min-w-full para que la línea llegue de extremo a extremo
+        // aunque haya pocas pestañas, y w-max para crecer y desbordar con muchas.
+        className="market-tabs-rail min-w-0 flex-1 overflow-x-auto"
       >
-        {tabs.map((tab) => {
+        <div className="flex w-max min-w-full items-end gap-1 border-b-2 border-ro-accent">
+          {tabs.map((tab) => {
           const active = tab.id === activeId;
           const count = countFilters(tab.filters ?? {});
           if (active) {
@@ -272,18 +274,21 @@ export function SearchTabs() {
               {tabInner(tab, count)}
             </div>
           );
-        })}
+          })}
+        </div>
       </div>
 
-      <button
-        type="button"
-        onClick={addTab}
-        title={t("searchTabs.add")}
-        aria-label={t("searchTabs.add")}
-        className="mb-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg text-ro-accent hover:bg-ro-accent/10"
-      >
-        <Plus size={15} />
-      </button>
+      <div className="flex shrink-0 items-end border-b-2 border-ro-accent pl-1">
+        <button
+          type="button"
+          onClick={addTab}
+          title={t("searchTabs.add")}
+          aria-label={t("searchTabs.add")}
+          className="grid h-7 w-7 place-items-center rounded-lg text-ro-accent hover:bg-ro-accent/10"
+        >
+          <Plus size={15} />
+        </button>
+      </div>
 
       {menu && menuTab && (
         <TabActionsMenu
