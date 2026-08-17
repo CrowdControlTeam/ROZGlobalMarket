@@ -7,6 +7,13 @@ import type { ReactNode } from "react";
 export const floatingControlClass =
   "w-full bg-transparent text-sm text-ro-text placeholder:text-ro-text-muted focus:outline-none disabled:text-ro-text-muted [color-scheme:dark]";
 
+// Variante para <select> DENTRO de un FloatingField: igual que floatingControlClass
+// pero con fondo SÓLIDO del panel (mismo color que el marco, así se ve igual de
+// integrado). Un <select> con fondo transparente hace que su popup nativo de
+// opciones salga claro en tema oscuro (ilegible); con fondo sólido sale oscuro.
+export const floatingSelectClass =
+  "w-full bg-ro-panel text-sm text-ro-text focus:outline-none disabled:text-ro-text-muted [color-scheme:dark]";
+
 export function FloatingField({
   label,
   children,

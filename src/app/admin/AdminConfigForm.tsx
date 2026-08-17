@@ -9,7 +9,7 @@ import {
   type ConfigFieldUpdate,
 } from "@/lib/admin-config";
 import { inputBaseClass, selectClass } from "@/lib/ui";
-import { FloatingField, floatingControlClass } from "@/components/FloatingField";
+import { FloatingField, floatingControlClass, floatingSelectClass } from "@/components/FloatingField";
 import { ToggleSwitch } from "@/components/ToggleSwitch";
 import { RoleMultiSelect } from "@/components/RoleMultiSelect";
 import { ImageUploadField } from "@/components/ImageUploadField";
@@ -239,10 +239,12 @@ export function AdminConfigForm({ config }: { config: Config }) {
             <div>
               <FloatingField label={t("recognition.modelLabel")}>
                 <div className="flex items-center gap-2">
+                  {/* floatingSelectClass = fondo sólido del panel: sin él (fondo
+                      transparente) el popup nativo del select sale claro en oscuro. */}
                   <select
                     defaultValue={config.geminiModel}
                     onChange={(e) => save({ field: "geminiModel", value: e.target.value })}
-                    className={`min-w-0 flex-1 ${floatingControlClass}`}
+                    className={`min-w-0 flex-1 ${floatingSelectClass}`}
                   >
                     {config.geminiModelOptions.map((m) => (
                       <option key={m.value} value={m.value}>
