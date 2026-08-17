@@ -219,7 +219,10 @@ export function SearchTabs() {
         // aunque haya pocas pestañas, y w-max para crecer y desbordar con muchas.
         className="market-tabs-rail min-w-0 flex-1 overflow-x-auto"
       >
-        <div className="flex w-max min-w-full items-end gap-1 border-b-2 border-ro-accent">
+        {/* px-2 = FLARE (8px): deja hueco para el flare izquierdo de la 1ª
+            pestaña y el derecho de la última, que si no se recortan en el borde
+            del carril. */}
+        <div className="flex w-max min-w-full items-end gap-1 border-b-2 border-ro-accent px-2">
           {tabs.map((tab) => {
           const active = tab.id === activeId;
           const count = countFilters(tab.filters ?? {});
