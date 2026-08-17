@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth, signIn } from "@/auth";
 import { loadMarketConfig } from "@/lib/market-config";
@@ -14,18 +13,10 @@ export default async function Home({
 }) {
   const session = await auth();
 
-  // Un no-admin logueado durante el mantenimiento no debe quedarse en el home
-  // (el hub no le llevaría a ningún sitio útil): a la página de mantenimiento.
-  if (session?.user && !session.user.isAdmin) {
-    const { maintenanceModeEnabled } = await loadMarketConfig();
-    if (maintenanceModeEnabled) redirect("/maintenance");
-  }
-
-  // Con sesión: hub de inicio (accesos directos a las secciones). Cuenta,
-  // admin, tema e idioma viven en el menú de usuario de la cabecera.
+  // Con sesión: hub de inicio (accesos directos a las secciones). El hub sigue
+  // accesible en mantenimiento (solo se cierra el mercado); desde aquí se puede
+  // ir a BiS/DB. Cuenta, admin, tema e idioma viven en el menú de usuario.
   if (session?.user) {
-    // loadMarketConfig va cacheada por request, así que reusarla aquí no
-    // añade otra query aunque el guard de arriba ya la haya pedido.
     const { homeImageUrl } = await loadMarketConfig();
     return (
       <Hub

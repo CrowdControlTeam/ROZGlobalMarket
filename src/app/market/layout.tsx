@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/guard";
+import { requireMarketSession } from "@/lib/guard";
 import { MarketNav } from "./MarketNav";
 
 // Layout de la sección Mercado. Hace dos cosas:
@@ -8,9 +8,10 @@ import { MarketNav } from "./MarketNav";
 //  2) Monta el hub superior + contenedor común, de modo que /market,
 //     /market/activity y /market/statistics comparten el mismo marco (el hub)
 //     sin duplicarlo: cada página se monta como children.
-// requireSession aquí protege toda la sección (ya era logueado-only) y aporta
-// isAdmin al hub; las páginas mantienen sus guards propios (p. ej. requireAdmin
-// en statistics).
+// requireMarketSession protege toda la sección (logueado-only) y, en
+// mantenimiento, manda a /maintenance a los no-admin — es el único sitio donde
+// se cierra el mercado (/bis y /db quedan abiertos). Aporta isAdmin al hub; las
+// páginas mantienen sus guards propios (p. ej. requireAdmin en statistics).
 export default async function MarketLayout({
   children,
   detail,
@@ -22,7 +23,7 @@ export default async function MarketLayout({
   publish: React.ReactNode;
   edit: React.ReactNode;
 }) {
-  const session = await requireSession();
+  const session = await requireMarketSession();
   return (
     <>
       <main className="mx-auto max-w-5xl px-6 py-8">

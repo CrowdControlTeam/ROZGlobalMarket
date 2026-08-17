@@ -118,9 +118,10 @@
   },
   "maintenancePage": {
     "title": "En mantenimiento",
-    "message": "El mercado está temporalmente en mantenimiento. Vuelve dentro de un rato.",
+    "message": "El mercado está temporalmente en mantenimiento. Mientras tanto puedes seguir usando BiS y la base de datos.",
     "adminNote": "Eres admin: sigues teniendo acceso completo.",
-    "backToMarket": "Ir al mercado"
+    "backToMarket": "Ir al mercado",
+    "backHome": "Volver al inicio"
   },
   "authError": {
     "title": "Acceso denegado",
@@ -339,7 +340,7 @@
     },
     "market": {
       "legend": "Mercado",
-      "maintenanceToggleLabel": "Modo mantenimiento (bloquea crear ventas y comprar para todos menos administradores)",
+      "maintenanceToggleLabel": "Modo mantenimiento (bloquea el acceso al mercado para todos menos administradores; BiS y DB siguen abiertos)",
       "maxRefineLabel": "Refine máximo permitido"
     }
   },
