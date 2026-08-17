@@ -200,6 +200,26 @@
   "admin": {
     "title": "Configuración",
     "statsLink": "Estadísticas",
+    "nav": {
+      "general": "General",
+      "features": "Funcionalidades"
+    },
+    "features": {
+      "bis": {
+        "title": "BiS",
+        "hint": "Etapas del juego que aparecen en la página de BiS. La primera (arriba) es la que sale por defecto.",
+        "empty": "No hay etapas todavía.",
+        "entryCount": "{count} BiS",
+        "moveUp": "Subir",
+        "moveDown": "Bajar",
+        "rename": "Renombrar",
+        "save": "Guardar",
+        "delete": "Borrar etapa",
+        "confirmDelete": "Borrar etapa y {count} BiS",
+        "addPlaceholder": "Nueva etapa…",
+        "add": "Añadir"
+      }
+    },
     "stats": {
       "title": "Estadísticas del mercado",
       "backToConfig": "Volver",

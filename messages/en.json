@@ -200,6 +200,26 @@
   "admin": {
     "title": "Settings",
     "statsLink": "Stats",
+    "nav": {
+      "general": "General",
+      "features": "Features"
+    },
+    "features": {
+      "bis": {
+        "title": "BiS",
+        "hint": "Game stages shown on the BiS page. The first one (top) is the default.",
+        "empty": "No stages yet.",
+        "entryCount": "{count} BiS",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "rename": "Rename",
+        "save": "Save",
+        "delete": "Delete stage",
+        "confirmDelete": "Delete stage and {count} BiS",
+        "addPlaceholder": "New stage…",
+        "add": "Add"
+      }
+    },
     "stats": {
       "title": "Market stats",
       "backToConfig": "Back",

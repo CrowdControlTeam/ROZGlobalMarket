@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { EquipSlot, ItemOptionGroup, WeaponType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
+import { requireAdmin } from "@/lib/admin-guard";
 import { canEditBis, optionGroupForSlot } from "@/lib/bis";
 import { itemFitsSlot } from "@/lib/bis-constants";
 import { loadMarketConfig } from "@/lib/market-config";
@@ -281,4 +282,87 @@ export async function reorderBisEntries(
   );
 
   revalidatePath("/bis");
+}
+
+// ── Gestión de ETAPAS (admin) ──────────────────────────────────────────────
+// Las etapas (BisStage) son la dimensión temporal de la página de BiS. Antes
+// solo se sembraban por script; esto las hace administrables desde /admin/features.
+// El `key` es un identificador interno único (no se muestra): se autogenera del
+// label. El `order` fija el orden en la página de BiS (mayor order = primera).
+
+const MAX_STAGE_LABEL = 60;
+
+// Slug ASCII a partir del label, para el `key` interno (único).
+function slugifyStage(label: string): string {
+  const slug = label
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return slug || "etapa";
+}
+
+// Primera clave libre a partir de una base (base, base-2, base-3…).
+async function freeStageKey(base: string): Promise<string> {
+  let key = base;
+  let n = 2;
+  while (await prisma.bisStage.findUnique({ where: { key }, select: { id: true } })) {
+    key = `${base}-${n++}`;
+  }
+  return key;
+}
+
+function revalidateStages() {
+  revalidatePath("/bis");
+  revalidatePath("/admin/features");
+}
+
+export async function createBisStage(label: string): Promise<void> {
+  const t = await getTranslations("errors");
+  await requireAdmin();
+  const trimmed = label.trim();
+  if (!trimmed || trimmed.length > MAX_STAGE_LABEL) throw new Error(t("invalidData"));
+  const key = await freeStageKey(slugifyStage(trimmed));
+  const max = await prisma.bisStage.aggregate({ _max: { order: true } });
+  await prisma.bisStage.create({ data: { key, label: trimmed, order: (max._max.order ?? 0) + 1 } });
+  revalidateStages();
+}
+
+export async function renameBisStage(id: string, label: string): Promise<void> {
+  const t = await getTranslations("errors");
+  await requireAdmin();
+  const trimmed = label.trim();
+  if (!trimmed || trimmed.length > MAX_STAGE_LABEL) throw new Error(t("invalidData"));
+  const exists = await prisma.bisStage.findUnique({ where: { id }, select: { id: true } });
+  if (!exists) throw new Error(t("stageNotFound"));
+  await prisma.bisStage.update({ where: { id }, data: { label: trimmed } });
+  revalidateStages();
+}
+
+// Borra una etapa. CASCADE: se borran también todos sus BiS (ver schema) — la
+// confirmación vive en la UI.
+export async function deleteBisStage(id: string): Promise<void> {
+  const t = await getTranslations("errors");
+  await requireAdmin();
+  const exists = await prisma.bisStage.findUnique({ where: { id }, select: { id: true } });
+  if (!exists) throw new Error(t("stageNotFound"));
+  await prisma.bisStage.delete({ where: { id } });
+  revalidateStages();
+}
+
+// Reordena las etapas. `orderedIds` va de ARRIBA a ABAJO tal como se ven en el
+// admin = de mayor a menor `order` (la página de BiS muestra la de mayor order
+// primero). Solo se tocan ids válidos (defensa).
+export async function reorderBisStages(orderedIds: string[]): Promise<void> {
+  await requireAdmin();
+  const existing = await prisma.bisStage.findMany({ select: { id: true } });
+  const valid = new Set(existing.map((s) => s.id));
+  const ordered = orderedIds.filter((id) => valid.has(id));
+  const n = ordered.length;
+  await prisma.$transaction(
+    ordered.map((id, i) => prisma.bisStage.update({ where: { id }, data: { order: n - i } })),
+  );
+  revalidateStages();
 }
