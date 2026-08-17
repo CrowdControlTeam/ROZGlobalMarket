@@ -1,4 +1,49 @@
 {
+  "db": {
+    "nav": {
+      "items": "Items",
+      "skills": "Skills"
+    },
+    "items": {
+      "searchPlaceholder": "Search item by name…",
+      "allCategories": "All categories",
+      "count": "{total} items",
+      "empty": "No item matches your search.",
+      "prev": "Previous",
+      "next": "Next",
+      "pageOf": "{page} / {pages}",
+      "loadingDetail": "Loading…",
+      "close": "Close"
+    },
+    "skills": {
+      "chooseJob": "Choose a job…",
+      "firstJobs": "1st jobs",
+      "secondJobs": "2nd jobs",
+      "firstPoints": "1st points",
+      "secondPoints": "2nd points",
+      "reset": "Reset",
+      "emptyHint": "Choose a job to start planning its skills.",
+      "selectHint": "Select a skill to see its details.",
+      "level": "Level",
+      "platinum": "Platinum",
+      "decrease": "Decrease level",
+      "increase": "Increase level",
+      "requires": "Requires",
+      "lvShort": "Lv",
+      "close": "Close",
+      "showTooltip": "Show description",
+      "import": "Import",
+      "export": "Export",
+      "share": "Share",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "exportTitle": "Export build",
+      "exportHint": "Copy this code to save or share your build.",
+      "importTitle": "Import build",
+      "importPlaceholder": "Paste the build code here…",
+      "importError": "Invalid code."
+    }
+  },
   "common": {
     "cancel": "Cancel",
     "close": "Close",
@@ -16,6 +61,12 @@
     "openMenu": "Open market menu",
     "newPublication": "New listing",
     "comingSoon": "(coming soon)",
+    "sections": {
+      "label": "Sections",
+      "market": "Market",
+      "bis": "BiS",
+      "db": "DB"
+    },
     "account": {
       "title": "Your account",
       "discordId": "Discord ID",
@@ -32,6 +83,11 @@
   "myActivity": {
     "title": "My activity",
     "listingsEmpty": "You haven't posted anything yet.",
+    "listingsNoneMatch": "No listings match the filter.",
+    "statusFilter": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
     "pendingEmpty": "Nothing pending.",
     "pendingIncoming": "To confirm",
     "pendingOutgoing": "My requests",
@@ -43,16 +99,29 @@
   },
   "home": {
     "welcome": "Welcome",
-    "greeting": "Hi, <strong>{username}</strong>. What's cooking in the guild market today?",
-    "goToMarket": "Go to the market",
+    "hubWelcome": "Welcome, <strong>{username}</strong>",
+    "hubGreeting": "Hi, <strong>{username}</strong>",
+    "whereTo": "Where to?",
     "intro": "Private market for guild members. Sign in with Discord to enter.",
-    "signIn": "Log in with Discord"
+    "signIn": "Log in with Discord",
+    "tiles": {
+      "market": { "label": "Market", "desc": "Browse and filter everything for sale, purchase and trade." },
+      "activity": { "label": "My activity", "desc": "Your listings, requests and gifts." },
+      "publish": { "label": "Create listing", "desc": "Put an item up for sale, purchase or trade." },
+      "stats": { "label": "Statistics", "desc": "Market rankings and activity." },
+      "settings": { "label": "Settings", "desc": "Market configuration." },
+      "bis": { "label": "BiSes", "desc": "List of the best items per slot." },
+      "items": { "label": "Items", "desc": "Item database with its in-game tooltip." },
+      "skills": { "label": "Skills", "desc": "Plan your skill tree by class." },
+      "comingSoon": "Coming soon"
+    }
   },
   "maintenancePage": {
     "title": "Under maintenance",
-    "message": "The market is temporarily down for maintenance. Check back in a bit.",
+    "message": "The market is temporarily down for maintenance. In the meantime you can still use BiS and the database.",
     "adminNote": "You're an admin: you still have full access.",
-    "backToMarket": "Go to the market"
+    "backToMarket": "Go to the market",
+    "backHome": "Back to home"
   },
   "authError": {
     "title": "Access denied",
@@ -69,6 +138,8 @@
       "message": "This page doesn't exist, or the item you're looking for is no longer available."
     },
     "invalidData": "Invalid data",
+    "invalidImage": "The image is not valid (unsupported format).",
+    "imageTooLarge": "The image exceeds the maximum allowed size.",
     "selectItem": "Select an item",
     "selectRecipient": "Select a recipient",
     "positiveQuantity": "Quantity must be greater than 0",
@@ -81,8 +152,15 @@
     "refineTooHigh": "Refine can't be higher than +{max}",
     "positiveCardSlots": "Slots must be a positive whole number",
     "cardSlotsTooHigh": "This item supports at most {max} slots",
+    "notesTooLong": "Notes can't exceed {max} characters",
     "listingNotFound": "Listing not found",
     "onlyPosterCancel": "Only the poster can cancel this",
+    "notYourListing": "You don't have permission over this listing",
+    "savedSearchLimit": "You've reached the maximum number of saved searches ({max})",
+    "savedSearchNotFound": "That saved search doesn't exist",
+    "notYourSavedSearch": "You don't have permission over this saved search",
+    "listingHasDeals": "Can't edit: this listing already has offers or sales",
+    "listingHasPendingOffers": "Can't close with pending offers: accept or reject them first",
     "listingNotActive": "This listing is no longer active",
     "cannotBuyOwn": "You can't buy your own listing",
     "notDirectSale": "This listing isn't a direct sale",
@@ -113,16 +191,45 @@
     "noImageReceived": "No image was received",
     "imageTooLarge": "The image can't be larger than {max} MB",
     "rateLimited": "Too many requests. Wait {seconds}s and try again.",
-    "recognitionFailed": "Automatic detection failed. Try again or fill in the item by hand."
+    "recognitionFailed": "Automatic detection failed. Try again or fill in the item by hand.",
+    "notBisEditor": "You don't have permission to edit BiS",
+    "stageNotFound": "The stage does not exist",
+    "bisEntryNotFound": "The BiS doesn't exist or was already removed",
+    "bisNeedTag": "Pick at least one role or job",
+    "bisNeedItemOrOption": "Pick an item or at least one option",
+    "bisNoOptionsForSlot": "This slot doesn't allow random options",
+    "bisWeaponTypeRequired": "Choose a weapon type for the options",
+    "bisItemSlotMismatch": "The item doesn't match this equipment slot"
   },
   "admin": {
     "title": "Settings",
     "statsLink": "Stats",
+    "nav": {
+      "general": "General",
+      "features": "Features"
+    },
+    "features": {
+      "bis": {
+        "title": "BiS",
+        "hint": "Game stages shown on the BiS page. The first one (top) is the default.",
+        "empty": "No stages yet.",
+        "entryCount": "{count} BiS",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "rename": "Rename",
+        "save": "Save",
+        "delete": "Delete stage",
+        "confirmDelete": "Delete stage and {count} BiS",
+        "addPlaceholder": "New stage…",
+        "add": "Add"
+      }
+    },
     "stats": {
       "title": "Market stats",
       "backToConfig": "Back",
       "period": {
         "label": "Period",
+        "7d": "Last week",
         "30d": "Last 30 days"
       },
       "totals": {
@@ -157,12 +264,37 @@
       "siteNameLabel": "App name",
       "siteNameHint": "Shown in the header and browser tab. Empty = use \"{placeholder}\" by default."
     },
+    "appearance": {
+      "legend": "Appearance",
+      "logoLabel": "Header logo",
+      "logoHint": "Shown next to the title, desktop only. Max 150 KB (GIF allowed).",
+      "homeImageLabel": "Home image",
+      "homeImageHint": "Shown on the home page, between the greeting and the shortcuts. Max 512 KB.",
+      "choose": "Choose file",
+      "change": "Change",
+      "remove": "Remove",
+      "tooLarge": "The file exceeds the {kb} KB limit."
+    },
     "access": {
       "legend": "Panel access",
       "hint": "Anyone with the \"Administrator\" permission on the Discord server can already always get in. These roles are ADDED as an extra way in, not a replacement.",
       "rolesFetchError": "Couldn't list the server's roles by name ({message}).",
       "roleIdsPlaceholder": "One role ID per line (or comma-separated)",
-      "roleIdsHint": "Without a configured bot (DISCORD_BOT_TOKEN) role names can't be shown — copy each role's ID from Discord (Server Settings → Roles → right-click → Copy ID, with developer mode enabled)."
+      "roleIdsHint": "Without a configured bot (DISCORD_BOT_TOKEN) role names can't be shown — copy each role's ID from Discord (Server Settings → Roles → right-click → Copy ID, with developer mode enabled).",
+      "noneSelected": "No roles selected",
+      "noRoles": "No roles"
+    },
+    "appAccess": {
+      "legend": "App access",
+      "hint": "Role required to sign in. If you pick one, getting in requires being in the server AND having that role; admins get in regardless. No role = access by membership only, as before.",
+      "none": "No restriction (membership only)",
+      "roleIdPlaceholder": "Access role ID (empty = no restriction)"
+    },
+    "bisEditor": {
+      "legend": "BiS editor",
+      "hint": "Role that can create and edit BiS items, in addition to admins (who always can). No role = admins only; read-only for everyone else.",
+      "none": "Admins only",
+      "roleIdPlaceholder": "Editor role ID (empty = read-only)"
     },
     "webhook": {
       "legend": "Discord notifications",
@@ -211,7 +343,7 @@
     },
     "market": {
       "legend": "Market",
-      "maintenanceToggleLabel": "Maintenance mode (blocks creating sales and buying for everyone except admins)",
+      "maintenanceToggleLabel": "Maintenance mode (blocks access to the market for everyone except admins; BiS and DB stay open)",
       "maxRefineLabel": "Maximum allowed refine"
     }
   },
@@ -239,7 +371,8 @@
       "quantity": "Quantity",
       "message": "Message",
       "refine": "Refine",
-      "cardSlots": "Card slots",
+      "cardSlots": "Slots",
+      "notes": "Notes",
       "minStats": "Minimum stats",
       "payUpTo": "Pay/ea",
       "bestOffer": "Make an offer",
@@ -254,8 +387,10 @@
       "type": "Type",
       "all": "All",
       "category": "Category",
-      "slot": "Armor",
+      "slot": "Equipment slot",
       "any": "Any",
+      "addMore": "Add…",
+      "removeValue": "Remove {value}",
       "weaponType": "Weapon type",
       "refineMin": "Refine min.",
       "refineMax": "Refine max.",
@@ -264,9 +399,49 @@
       "priceMin": "Price min.",
       "priceMax": "Price max.",
       "optionPlaceholder": "-- Option {slot} --",
+      "optionSlotLabel": "Op {slot}",
       "min": "Min",
       "max": "Max",
-      "value": "Value"
+      "value": "Value",
+      "priceSection": "Price",
+      "clearN": "Clear ({count})",
+      "clearSection": "Clear section",
+      "expand": "Expand filters",
+      "collapse": "Collapse filters"
+    },
+    "typeSelector": {
+      "label": "Listing type",
+      "all": "All"
+    },
+    "searchTabs": {
+      "indicator": "This session's searches",
+      "add": "New search",
+      "close": "Close search",
+      "untitled": "Search {n}",
+      "menuLabel": "Saved searches",
+      "load": "Load filter",
+      "loadAll": "Load all filters",
+      "noneSaved": "You have no saved searches",
+      "save": "Save",
+      "rename": "Rename",
+      "update": "Update saved search",
+      "deleteSaved": "Remove from saved",
+      "modified": "Filters changed from what's saved",
+      "namePlaceholder": "Search name"
+    },
+    "view": {
+      "label": "View",
+      "grid": "Grid",
+      "list": "List"
+    },
+    "card": {
+      "menu": "Listing options",
+      "edit": "Edit",
+      "editBlocked": "You can't edit a listing with offers or sales.",
+      "repost": "Repost",
+      "viewDetail": "View detail",
+      "share": "Share",
+      "contact": "Contact"
     },
     "sort": {
       "label": "Sort",
@@ -282,16 +457,20 @@
         "WEAPON": "Weapon",
         "ARMOR": "Armor",
         "CARD": "Card",
-        "CONSUMABLE": "Consumable",
-        "COSTUME": "Costume",
-        "PET": "Pet",
         "ENCHANT": "Enchant",
-        "ETC": "Misc"
+        "COSTUME": "Costume",
+        "HEALING": "Healing",
+        "USABLE": "Usable",
+        "DELAY_CONSUME": "Delayed consumable",
+        "AMMO": "Ammo",
+        "ETC": "Misc",
+        "PET_EGG": "Pet egg",
+        "PET_ARMOR": "Pet equipment",
+        "CASH": "Cash",
+        "GET_PORING": "GetPoring"
       },
       "slot": {
-        "UPPER_HEADGEAR": "Upper headgear",
-        "MID_HEADGEAR": "Mid headgear",
-        "LOWER_HEADGEAR": "Lower headgear",
+        "HEADGEAR": "Headgear",
         "ARMOR": "Body",
         "SHIELD": "Shield",
         "GARMENT": "Garment",
@@ -375,8 +554,10 @@
       "tradedBy": "traded by",
       "giftedBy": "gifted by",
       "available": "x{count} available",
-      "wanted": "x{count}",
+      "wanted": "x{count} units",
       "availableUnlimited": "∞",
+      "count": "<b>{shown}</b> of <b>{total}</b>",
+      "free": "Free",
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
     },
@@ -389,6 +570,7 @@
       "of": "of",
       "cancelListing": "Cancel",
       "closeListing": "Close",
+      "cancelBlockedPending": "Resolve the pending offers (accept or reject them) before closing.",
       "tradedWith": "Traded with",
       "forItem": "for {item}",
       "offersReceived": "Offers received",
@@ -458,6 +640,13 @@
     },
     "form": {
       "typeLabel": "Listing type",
+      "or": "OR",
+      "notes": "Notes",
+      "confirm": "Confirm",
+      "previewHint": "This is how it will appear in the market.",
+      "tabs": {
+        "info": "Info"
+      },
       "typeOptions": {
         "SALE": "Sale",
         "BUY": "Buy",
@@ -470,11 +659,15 @@
         "TRADE": "Post",
         "GIFT": "Send gift"
       },
+      "saveLabel": "Save",
+      "editTitle": "Edit listing",
+      "repostTitle": "Repost listing",
       "publishing": "Posting...",
       "recognitionLabel": "Recognize from screenshot (optional)",
       "itemLabel": "Item",
       "priceLabel": "Price/ea",
       "payUpToLabel": "Pay/ea",
+      "notesPlaceholder": "Optional notes: deal details, online hours, conditions…",
       "unlimitedLabel": "Unlimited",
       "noPriceLabel": "No price",
       "recipientLabel": "Recipient (optional — without one, anyone can claim it)",
@@ -493,7 +686,8 @@
     },
     "itemPicker": {
       "placeholder": "Search for an item by name...",
-      "removeSelected": "Remove selected item"
+      "removeSelected": "Remove selected item",
+      "change": "Change"
     },
     "userPicker": {
       "placeholder": "Search for a user by name...",
@@ -549,6 +743,72 @@
       "giftClaimAccepted": "{username} handed you the gift of {item}",
       "giftClaimRejected": "{username} rejected your claim of {item}",
       "contactMessage": "{username} wrote to you about {item}"
+    }
+  },
+  "bis": {
+    "title": "BiS · Best in Slot",
+    "subtitle": "The best gear per equipment slot for each stage of the game.",
+    "stageLabel": "Stage",
+    "filters": {
+      "roleLegend": "Role",
+      "jobLegend": "Job",
+      "clear": "Clear filters"
+    },
+    "cells": {
+      "head": "Headgear",
+      "weapon": "Weapon",
+      "garment": "Garment",
+      "accessory": "Accessory",
+      "armor": "Armor",
+      "shield": "Shield",
+      "footgear": "Footgear"
+    },
+    "cell": {
+      "empty": "No BiS yet",
+      "noMatches": "No matches"
+    },
+    "detail": {
+      "close": "Close",
+      "options": "Options",
+      "roles": "Roles",
+      "jobs": "Jobs",
+      "note": "Note"
+    },
+    "showAll": "Show all ({count})",
+    "showLess": "Show less",
+    "anyItem": "Any item",
+    "noStages": "No stages configured yet.",
+    "add": "Add",
+    "edit": "Edit",
+    "kebabLabel": "Options",
+    "deleteConfirm": "Delete this BiS?",
+    "hasNotes": "Has notes",
+    "searchInMarket": "Search in market",
+    "form": {
+      "addTitle": "Add BiS",
+      "editTitle": "Edit BiS",
+      "slotLabel": "Slot",
+      "itemLabel": "Item",
+      "itemOrOptionHint": "Optional. Pick an item, some options, or both (a specific item with options).",
+      "refine": "Refine",
+      "cardSlots": "Slots",
+      "weaponType": "Weapon type",
+      "weaponTypeNone": "Unspecified",
+      "optionsLabel": "Options",
+      "optionNone": "— No option —",
+      "optionsHint": "The value is an optional minimum; empty = any value.",
+      "optionOutOfRange": "Each value must be within its option's range.",
+      "min": "Min",
+      "rolesLabel": "Roles",
+      "jobsLabel": "Jobs",
+      "needTag": "Pick at least one role or job.",
+      "noteLabel": "Note",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "confirmDelete": "Sure? Delete",
+      "saveError": "Couldn't save. Try again."
     }
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { formatNumber, priceColorClass } from "@/lib/price";
+import { formatNumber, priceColorClass, MAX_INT } from "@/lib/price";
 import { inputClass } from "@/lib/ui";
 
 // Input de texto controlado para cualquier campo de moneda/precio/coste:
@@ -20,13 +20,15 @@ export function MaskedPriceInput({
   className?: string;
   // Borde rojo cuando el campo era obligatorio y se envió vacío — estilo
   // inline porque un className condicional pierde contra el orden interno
-  // con el que Tailwind genera focus:border-ro-gold-dark (ver mismo patrón
-  // en NewPublicationForm para las options fuera de rango).
+  // con el que Tailwind genera focus:border-ro-accent (ver mismo patrón
+  // en PublishForm para las options fuera de rango).
   invalid?: boolean;
 }) {
   function handleChange(raw: string) {
     const digits = raw.replace(/\D/g, "");
-    onChange(digits === "" ? "" : Number(digits));
+    // Se recorta al máximo de un INT: así el campo nunca deja escribir un
+    // valor que la base rechazaría por overflow (ver MAX_INT).
+    onChange(digits === "" ? "" : Math.min(Number(digits), MAX_INT));
   }
 
   return (

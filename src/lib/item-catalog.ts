@@ -2,7 +2,7 @@ import type { ItemCategory, EquipSlot, WeaponType } from "@prisma/client";
 import catalogData from "@/data/catalog-search.json";
 
 // Catálogo de items recortado a los campos de búsqueda, empaquetado con la app
-// (lo genera prisma/importCatalog.mjs desde el mismo catálogo que va a la BD) y
+// (lo genera prisma/importItems.mjs desde el mismo catálogo que va a la BD) y
 // cargado en memoria. Así el autocompletado (searchItems) y los candidatos del
 // reconocimiento (item-recognition.ts) no pegan a la BD en cada tecla — solo
 // importa cuando el servidor sirve una versión de RO global con muchos jugadores
@@ -14,6 +14,9 @@ export type CatalogItem = {
   category: ItemCategory;
   slot: EquipSlot | null;
   weaponType: WeaponType | null;
+  // Nº de ranuras de carta del item (fijo por id) — lo usan el match del
+  // reconocimiento (nombre + slots) y la vista previa.
+  slotCount: number;
 };
 
 const CATALOG = catalogData as unknown as CatalogItem[];
@@ -27,13 +30,18 @@ export function getAllCatalogItems(): CatalogItem[] {
 // EMPIEZAN por la consulta van primero (mejor UX que un "contiene" plano), y
 // dentro de cada grupo por nombre — mismo criterio de fondo que el
 // `contains` insensible que hacía la BD, pero en memoria.
-export function searchCatalog(query: string, limit = 20): CatalogItem[] {
+export function searchCatalog(
+  query: string,
+  limit = 20,
+  filter?: (item: CatalogItem) => boolean,
+): CatalogItem[] {
   const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
 
   const prefix: CatalogItem[] = [];
   const contains: CatalogItem[] = [];
   for (const item of CATALOG) {
+    if (filter && !filter(item)) continue;
     const idx = item.name.toLowerCase().indexOf(q);
     if (idx === 0) prefix.push(item);
     else if (idx > 0) contains.push(item);

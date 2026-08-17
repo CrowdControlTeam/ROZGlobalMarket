@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { ItemOptionGroup } from "@prisma/client";
+import { ItemOptionGroup, type EquipSlot, type Item } from "@prisma/client";
+import { itemFitsSlot } from "@/lib/bis-constants";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
@@ -19,17 +20,21 @@ import {
   validateOptions,
 } from "@/lib/item-options";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
-import { getMaxCardSlots, formatItemDisplayName } from "@/lib/card-slots-constants";
+import { formatItemDisplayName } from "@/lib/card-slots-constants";
+import { formatOptionAmount } from "@/lib/market-labels";
+import { MAX_LISTING_NOTES_LENGTH, parseListingNotes } from "@/lib/listing-notes-constants";
 import { loadMarketConfig } from "@/lib/market-config";
 import { searchCatalog } from "@/lib/item-catalog";
 import { listingStatusOnClose, availableFrom, isSoldOut } from "@/lib/deals";
 import { listingCardState } from "@/lib/listing-card";
 
-export async function searchItems(query: string) {
+export async function searchItems(query: string, slot?: EquipSlot) {
   await requireSession();
   // Búsqueda en memoria (catálogo empaquetado, ver src/lib/item-catalog.ts) en
-  // vez de pegar a la BD en cada tecla.
-  const items = searchCatalog(query, 20);
+  // vez de pegar a la BD en cada tecla. `slot` (lo usa el picker de BiS) acota a
+  // los items que encajan en ese slot de equipo, para no dejar elegir uno que
+  // luego el servidor rechazaría.
+  const items = searchCatalog(query, 20, slot ? (item) => itemFitsSlot(item, slot) : undefined);
   if (items.length === 0) return [];
 
   const [magicalTypes, optionsAvailable] = await Promise.all([
@@ -78,6 +83,9 @@ export async function getMyListings() {
     include: {
       item: true,
       options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
+      // Deals vivos (PENDING/ACCEPTED): >0 ⇒ no editable, gate del kebab "Editar"
+      // (misma regla que la card del mercado y updateListing).
+      _count: { select: { deals: { where: { status: { in: ["PENDING", "ACCEPTED"] } } } } },
     },
   });
 
@@ -88,11 +96,15 @@ export async function getMyListings() {
     _sum: { quantity: true },
   });
   const soldMap = new Map(soldByListing.map((g) => [g.listingId, g._sum.quantity ?? 0]));
-  return listings.map((l) => ({ ...l, sold: soldMap.get(l.id) ?? 0 }));
+  return listings.map((l) => ({
+    ...l,
+    sold: soldMap.get(l.id) ?? 0,
+    hasLiveDeals: l._count.deals > 0,
+  }));
 }
 
-// Para la página de gestión (/my/pending): todo lo que tengo pendiente de
-// resolver, sin entrar listing por listing.
+// Para la página de gestión (/market/activity/pending): todo lo que tengo
+// pendiente de resolver, sin entrar listing por listing.
 //   - entrantes: Deal PENDING sobre MIS listings (reservas/ofertas/reclamaciones
 //     por confirmar) — los acepto/rechazo.
 //   - salientes: MIS Deal PENDING (donde soy la contraparte) — puedo cancelarlos.
@@ -142,42 +154,20 @@ export async function getAllOptionChoices() {
   });
 }
 
-export async function createListing(formData: FormData) {
-  const session = await requireSession();
-  const t = await getTranslations("errors");
-
-  const { maintenanceModeEnabled } = await loadMarketConfig();
-  if (maintenanceModeEnabled && !session.user.isAdmin) {
-    throw new Error(t("maintenanceMode"));
-  }
-
-  // Los mensajes de zod se resuelven aquí dentro (no como const a nivel de
-  // módulo) porque necesitan el traductor, que solo existe dentro de la
-  // request — reconstruir el schema en cada llamada no tiene coste real.
-  const createListingSchema = z.object({
-    itemId: z.string().min(1, t("selectItem")),
-    // GIFT no entra por aquí: los regalos se crean con sendGift (gifts.ts).
-    type: z.enum(["SALE", "BUY", "TRADE"]).default("SALE"),
-  });
-
-  const parsed = createListingSchema.safeParse({
-    itemId: formData.get("itemId"),
-    type: formData.get("type") || "SALE",
-  });
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
-  }
-
-  // El precio no aplica a un trade (se intercambia por otro item, nunca
-  // por zeny fijo — ver TradeOffer.zenyOffered para la compensación
-  // opcional en la oferta). En SALE es el precio de venta; en BUY el mismo
-  // campo significa "precio máximo que pagaría" — mismo campo, doble
-  // sentido según `type` (ver comentario en schema.prisma).
-  // price null en SALE/BUY = "sin precio" (competitivo): no se fija precio y la
-  // contraparte puja/oferta el suyo; el poster elige la mejor (ver reserveListing
-  // / offerToFulfill y su rama competitiva). La señal es el checkbox `noPrice`.
+// Parseo + validación de los campos COMUNES de un listing (precio, cantidad,
+// refino, slots, opciones y notas), compartido por createListing y
+// updateListing. `type` e `item` ya vienen resueltos/validados por el caller;
+// `t` es el traductor de "errors". Lanza con el mensaje i18n al primer fallo.
+async function parseListingFields(
+  formData: FormData,
+  type: "SALE" | "BUY" | "TRADE" | "GIFT",
+  item: Item,
+  t: Awaited<ReturnType<typeof getTranslations>>,
+) {
+  // Precio: solo SALE/BUY. null = "sin precio" (competitivo, señal `noPrice`) o
+  // no aplica (TRADE/GIFT). Ver el doble sentido de `price` en schema.prisma.
   let price: number | null = null;
-  if (parsed.data.type === "SALE" || parsed.data.type === "BUY") {
+  if (type === "SALE" || type === "BUY") {
     const noPrice = formData.get("noPrice") === "on";
     if (!noPrice) {
       const pricedParsed = z.coerce
@@ -192,47 +182,22 @@ export async function createListing(formData: FormData) {
     }
   }
 
-  const item = await prisma.item.findUnique({
-    where: { id: parsed.data.itemId },
-  });
-  if (!item) throw new Error(t("itemNotFound"));
-
   const [magicalTypes, optionsAvailable] = await Promise.all([
     loadMagicalWeaponTypes(),
     isOptionsFeatureAvailable(),
   ]);
   const optionGroup = optionsAvailable ? getItemOptionGroup(item, magicalTypes) : null;
 
-  const rawOptions = await parseOptionsFromFormData(formData);
-  // En SALE/TRADE es el roll exacto de una instancia real; en BUY es el
-  // mínimo que el comprador pide (ver comentario de ListingOption en
-  // schema.prisma) — el rango válido [minValue, maxValue] es el mismo en
-  // los dos casos. defsById también se reutiliza para el webhook más abajo.
+  // BUY = "mínimos deseados" (se permiten huecos: pedir solo un slot); el resto
+  // describe una instancia real → sin huecos. defsById se reutiliza (webhook/DM).
+  const rawOptions = await parseOptionsFromFormData(formData, type === "BUY");
   const defsById = await validateOptions(rawOptions, optionGroup);
 
-  // Un item con random options es una instancia única (el roll de options
-  // no es igual entre copias) — no tiene sentido apilar cantidad > 1. Solo
-  // aplica a SALE (representa un ejemplar real); en BUY no describe una
-  // instancia, así que un item option-eligible no fuerza nada ahí. Se
-  // fuerza aquí también (no solo ocultando el campo en el form) porque no
-  // hay que confiar en lo que mande el cliente. El refine, en cambio, sí
-  // admite varias copias al mismo nivel (ver decisión con el usuario).
-  // Un trade tampoco admite cantidad > 1: TradeOffer no lleva cuánto del
-  // listing original se lleva a cambio, aceptar una oferta cierra el
-  // listing entero.
-  const forcesQuantityOne =
-    parsed.data.type === "TRADE" || (parsed.data.type === "SALE" && optionGroup !== null);
-
-  // Cantidad. Ilimitado ("los que tengas" → null) solo tiene sentido en
-  // SALE/BUY de materiales; TRADE cierra el listing entero y un item con
-  // options es un ejemplar único, así que ahí siempre hay tope. La señal de
-  // ilimitado es el checkbox `unlimited` del form, no un campo vacío (no se
-  // confía en lo que mande el cliente: si no se permite, se ignora).
+  // Ilimitado ("los que tengas" → null): solo BUY, o SALE de un item SIN options
+  // (infinitas copias de un ejemplar con options aleatorias no tiene sentido).
   let quantity: number | null;
-  if (forcesQuantityOne) {
-    quantity = 1;
-  } else if (
-    (parsed.data.type === "SALE" || parsed.data.type === "BUY") &&
+  if (
+    (type === "BUY" || (type === "SALE" && optionGroup === null)) &&
     formData.get("unlimited") === "on"
   ) {
     quantity = null;
@@ -248,9 +213,8 @@ export async function createListing(formData: FormData) {
     quantity = qParsed.data;
   }
 
-  const refineEligible = isRefineEligible(item);
   let refineLevel = 0;
-  if (refineEligible) {
+  if (isRefineEligible(item)) {
     const rawRefine = formData.get("refineLevel");
     refineLevel = typeof rawRefine === "string" && rawRefine !== "" ? Number(rawRefine) : 0;
     if (!Number.isInteger(refineLevel) || refineLevel < 0) {
@@ -262,66 +226,236 @@ export async function createListing(formData: FormData) {
     }
   }
 
-  const maxCardSlots = getMaxCardSlots(item);
-  let cardSlots = 0;
-  if (maxCardSlots > 0) {
-    const rawCardSlots = formData.get("cardSlots");
-    cardSlots = typeof rawCardSlots === "string" && rawCardSlots !== "" ? Number(rawCardSlots) : 0;
-    if (!Number.isInteger(cardSlots) || cardSlots < 0) {
-      throw new Error(t("positiveCardSlots"));
-    }
-    if (cardSlots > maxCardSlots) {
-      throw new Error(t("cardSlotsTooHigh", { max: maxCardSlots }));
-    }
+  // Las ranuras de carta ya no las indica quien publica: son fijas por item
+  // (Item.slotCount, extraído del cliente).
+
+  const notes = parseListingNotes(formData.get("notes"));
+  if (notes && notes.length > MAX_LISTING_NOTES_LENGTH) {
+    throw new Error(t("notesTooLong", { max: MAX_LISTING_NOTES_LENGTH }));
   }
 
-  const listing = await prisma.listing.create({
-    data: {
-      posterId: session.user.discordId,
-      itemId: parsed.data.itemId,
-      type: parsed.data.type,
-      quantity,
-      price,
-      refineLevel,
-      cardSlots,
-      options:
-        rawOptions.length > 0
-          ? {
-              create: rawOptions.map((o) => ({
-                slotIndex: o.slotIndex,
-                defId: o.defId,
-                value: o.value,
-              })),
-            }
-          : undefined,
-    },
+  return { price, quantity, refineLevel, notes, rawOptions, defsById };
+}
+
+export async function createListing(formData: FormData) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+
+  const { maintenanceModeEnabled } = await loadMarketConfig();
+  if (maintenanceModeEnabled && !session.user.isAdmin) {
+    throw new Error(t("maintenanceMode"));
+  }
+
+  // Los mensajes de zod se resuelven aquí dentro (no como const a nivel de
+  // módulo) porque necesitan el traductor, que solo existe dentro de la
+  // request — reconstruir el schema en cada llamada no tiene coste real.
+  const createListingSchema = z.object({
+    itemId: z.string().min(1, t("selectItem")),
+    // Acción única para TODOS los tipos, incluido GIFT (antes en sendGift). El
+    // único caso con lógica propia es el regalo CON destinatario (entrega
+    // directa, más abajo); el reclamable es una publicación normal más.
+    type: z.enum(["SALE", "BUY", "TRADE", "GIFT"]).default("SALE"),
+  });
+
+  const parsed = createListingSchema.safeParse({
+    itemId: formData.get("itemId"),
+    type: formData.get("type") || "SALE",
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
+  }
+
+  const item = await prisma.item.findUnique({
+    where: { id: parsed.data.itemId },
+  });
+  if (!item) throw new Error(t("itemNotFound"));
+
+  // Regalo CON destinatario = entrega directa (ver más abajo). Sin destinatario,
+  // el GIFT es RECLAMABLE: una publicación normal más. Solo se lee/valida el
+  // destinatario en GIFT; en el resto de tipos se ignora aunque venga en el form.
+  const recipientId =
+    parsed.data.type === "GIFT"
+      ? ((formData.get("recipientId") as string) || "").trim() || undefined
+      : undefined;
+  if (recipientId) {
+    if (recipientId === session.user.discordId) throw new Error(t("cannotGiftSelf"));
+    const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
+    if (!recipient) throw new Error(t("recipientNotFound"));
+  }
+  const isDirectGift = parsed.data.type === "GIFT" && !!recipientId;
+
+  const { price, quantity, refineLevel, notes, rawOptions, defsById } =
+    await parseListingFields(formData, parsed.data.type, item, t);
+
+  const listing = await prisma.$transaction(async (tx) => {
+    const created = await tx.listing.create({
+      data: {
+        posterId: session.user.discordId,
+        itemId: parsed.data.itemId,
+        type: parsed.data.type,
+        quantity,
+        price,
+        // Regalo directo: nace ya cerrado (la entrega es instantánea).
+        status: isDirectGift ? "COMPLETED" : "ACTIVE",
+        refineLevel,
+        notes,
+        options:
+          rawOptions.length > 0
+            ? {
+                create: rawOptions.map((o) => ({
+                  slotIndex: o.slotIndex,
+                  defId: o.defId,
+                  value: o.value,
+                })),
+              }
+            : undefined,
+      },
+    });
+    // Regalo directo: además del listing, un Deal ACCEPTED para el destinatario
+    // (la transferencia ya hecha). Sin destinatario no hay Deal (reclamable).
+    if (isDirectGift) {
+      await tx.deal.create({
+        data: {
+          listingId: created.id,
+          userId: recipientId!,
+          quantity: quantity ?? 1,
+          status: "ACCEPTED",
+          unitPrice: null,
+        },
+      });
+    }
+    return created;
   });
 
   const appUrl = getAppUrl();
-  await sendListingCreatedWebhook({
-    itemName: formatItemDisplayName(item.name, refineLevel, cardSlots),
-    itemIconUrl: `${appUrl}${item.iconUrl}`,
-    type: parsed.data.type,
-    price: listing.price,
-    quantity: listing.quantity,
-    posterUsername: session.user.username,
-    posterAvatarUrl: session.user.avatarUrl,
-    posterId: session.user.discordId,
-    listingUrl: `${appUrl}/market/${listing.id}`,
-    options: rawOptions.map((o) => ({
-      label: defsById.get(o.defId)!.label,
-      value: o.value,
-    })),
+
+  // Regalo directo: DM al destinatario (la entrega ya está hecha) y punto —no se
+  // anuncia por webhook—; se vuelve a /market/activity/gifts (ahí aparece, tiene Deal).
+  if (isDirectGift) {
+    const tDiscord = await getTranslations("discord");
+    const tField = await getTranslations("market.field");
+    const itemName = formatItemDisplayName(item.name, refineLevel, item.slotCount);
+    await sendDirectMessage(recipientId!, {
+      title: tDiscord("dm.gifted", { username: session.user.username, item: itemName }),
+      url: `${appUrl}/market/activity/gifts`,
+      color: DISCORD_EMBED_COLOR.GIFT,
+      itemIconUrl: `${appUrl}${item.iconUrl}`,
+      fields: [
+        { name: tField("quantity"), value: String(quantity), inline: true },
+        ...(rawOptions.length > 0
+          ? [
+              {
+                name: tField("options"),
+                value: rawOptions
+                  .map((o) => `${defsById.get(o.defId)!.label}: ${formatOptionAmount(o.value, false)}`)
+                  .join("\n"),
+                inline: false,
+              },
+            ]
+          : []),
+        { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
+      ],
+    });
+    revalidatePath("/market/activity/gifts");
+    revalidatePath("/market");
+    return { id: listing.id, directGift: true };
+  }
+
+  // SALE/BUY/TRADE: anuncio en el webhook de "publicación creada". El regalo
+  // RECLAMABLE no se anuncia por webhook (como antes con sendGift: se "anuncia"
+  // apareciendo en el mercado).
+  if (parsed.data.type !== "GIFT") {
+    await sendListingCreatedWebhook({
+      itemName: formatItemDisplayName(item.name, refineLevel, item.slotCount),
+      itemIconUrl: `${appUrl}${item.iconUrl}`,
+      type: parsed.data.type,
+      price: listing.price,
+      quantity: listing.quantity,
+      posterUsername: session.user.username,
+      posterAvatarUrl: session.user.avatarUrl,
+      posterId: session.user.discordId,
+      listingUrl: `${appUrl}/market/${listing.id}`,
+      options: rawOptions.map((o) => ({
+        label: defsById.get(o.defId)!.label,
+        value: o.value,
+      })),
+    });
+  }
+
+  revalidatePath("/market");
+  return { id: listing.id, directGift: false };
+}
+
+// Editar una publicación propia. Reutiliza el mismo parseo de campos que
+// createListing (parseListingFields). El TIPO y el ITEM no se editan: se toman
+// del listing existente, no se confía en lo que mande el form. Solo se permite
+// si el listing es del usuario, está ACTIVE y NO tiene deals vivos.
+export async function updateListing(listingId: string, formData: FormData) {
+  const session = await requireSession();
+  const t = await getTranslations("errors");
+
+  const { maintenanceModeEnabled } = await loadMarketConfig();
+  if (maintenanceModeEnabled && !session.user.isAdmin) {
+    throw new Error(t("maintenanceMode"));
+  }
+
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: { item: true },
+  });
+  if (!listing) throw new Error(t("listingNotFound"));
+  if (listing.posterId !== session.user.discordId) throw new Error(t("notYourListing"));
+  if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+
+  // Tipo e item se toman del listing (bloqueados en edición), así el parseo usa
+  // la misma semántica con la que se creó.
+  const { price, quantity, refineLevel, notes, rawOptions } =
+    await parseListingFields(formData, listing.type, listing.item, t);
+
+  // Editable solo SIN deals vivos (PENDING o ACCEPTED); CANCELLED/REJECTED no
+  // cuentan. Se comprueba DENTRO de la transacción para cerrar la ventana con
+  // una oferta que entre justo ahora. Esto excluye de suyo el regalo directo
+  // (nace con Deal ACCEPTED). Opciones: se borran y se recrean (más simple y
+  // seguro que un diff, y el volumen es mínimo: hasta MAX_OPTION_SLOTS filas).
+  await prisma.$transaction(async (tx) => {
+    const liveDeals = await tx.deal.count({
+      where: { listingId, status: { in: ["PENDING", "ACCEPTED"] } },
+    });
+    if (liveDeals > 0) throw new Error(t("listingHasDeals"));
+
+    await tx.listingOption.deleteMany({ where: { listingId } });
+    await tx.listing.update({
+      where: { id: listingId },
+      data: {
+        quantity,
+        price,
+        refineLevel,
+        notes,
+        options:
+          rawOptions.length > 0
+            ? {
+                create: rawOptions.map((o) => ({
+                  slotIndex: o.slotIndex,
+                  defId: o.defId,
+                  value: o.value,
+                })),
+              }
+            : undefined,
+      },
+    });
   });
 
   revalidatePath("/market");
-  return { id: listing.id };
+  revalidatePath(`/market/${listingId}`);
+  return { id: listingId };
 }
 
 // Quien publica cierra la publicación. Regla de cierre (ver deals.ts): si hubo
 // algún trato cerrado (Deal ACCEPTED) se da por COMPLETED —se comerció algo—; si
-// no, CANCELLED. Las reservas/ofertas aún PENDING se rechazan al cerrar (no
-// pueden cumplirse ya).
+// no, CANCELLED. NO se puede cerrar mientras haya ofertas/reservas PENDING: el
+// poster debe aceptarlas o rechazarlas antes (así ninguna se rechaza en
+// silencio). Las ACCEPTED sí dejan cerrar; si no, un listing ilimitado ya
+// comerciado nunca podría cerrarse.
 export async function cancelListing(listingId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
@@ -346,10 +480,11 @@ export async function cancelListing(listingId: string) {
   const status =
     listing.quantity === null ? listingStatusOnClose(listing.deals) : "CANCELLED";
   await prisma.$transaction(async (tx) => {
-    await tx.deal.updateMany({
-      where: { listingId, status: "PENDING" },
-      data: { status: "REJECTED" },
-    });
+    // Bloqueo con ofertas/reservas PENDING sin resolver. Dentro de la tx para
+    // cerrar la ventana con una oferta que entre justo ahora, igual que
+    // updateListing.
+    const pending = await tx.deal.count({ where: { listingId, status: "PENDING" } });
+    if (pending > 0) throw new Error(t("listingHasPendingOffers"));
     await tx.listing.update({ where: { id: listingId }, data: { status } });
   });
 
@@ -457,7 +592,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
   await sendDirectMessage(listing.posterId, {
     title: tDiscord("dm.reserveRequested", {
       username: session.user.username,
-      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
+      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
@@ -548,7 +683,7 @@ export async function acceptSaleReservation(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.reserveAccepted", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
@@ -582,7 +717,7 @@ export async function rejectSaleReservation(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.reserveRejected", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
@@ -690,7 +825,7 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
   await sendDirectMessage(listing.posterId, {
     title: tDiscord("dm.fulfillOffered", {
       username: session.user.username,
-      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.cardSlots),
+      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
@@ -779,7 +914,7 @@ export async function acceptFulfillOffer(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.fulfillAccepted", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
@@ -813,7 +948,7 @@ export async function rejectFulfillOffer(dealId: string) {
   await sendDirectMessage(deal.userId, {
     title: tDiscord("dm.fulfillRejected", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.cardSlots),
+      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
     }),
     url: `${appUrl}/market/${deal.listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,

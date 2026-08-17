@@ -23,9 +23,8 @@ export function UserPicker({
   // Modo controlado (mismo patrón que ItemPicker): con un usuario ya
   // elegido, el input queda bloqueado y el único modo de cambiarlo es el
   // botón de limpiar — evita que se pueda editar el texto libre sin que
-  // eso quite la selección del padre. Opcional para no romper el uso
-  // existente (NewPublicationForm, sin selected/onClear): ahí sigue
-  // comportándose igual que antes.
+  // eso quite la selección del padre. Opcional para no romper usos más
+  // simples (sin selected/onClear): ahí sigue comportándose igual que antes.
   selected?: UserResult | null;
   onClear?: () => void;
 }) {
@@ -103,7 +102,7 @@ export function UserPicker({
           type="button"
           onClick={handleClear}
           aria-label={t("removeSelected")}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-ro-text-muted hover:text-ro-gold"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-ro-text-muted hover:text-ro-accent"
         >
           <X size={16} />
         </button>
@@ -144,7 +143,7 @@ export function UserPicker({
                         setQuery(user.username);
                         setResults([]);
                       }}
-                      className="flex w-full items-center gap-2 rounded-md p-2 text-left text-ro-text hover:bg-ro-gold/20"
+                      className="flex w-full items-center gap-2 rounded-md p-2 text-left text-ro-text hover:bg-ro-accent/15"
                     >
                       {user.avatarUrl && (
                         <Image

@@ -1,0 +1,50 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+
+// Badges para filtrar "Mis publicaciones" por estado: Activos / No activos.
+// Ambos cuentan como marcados por defecto (sin parámetro en la URL = se
+// muestran todos); al desmarcar uno se añade `?active=0` o `?inactive=0`. El
+// filtrado real lo hace el server component leyendo esos parámetros — aquí solo
+// se alterna la URL.
+function isOn(params: URLSearchParams, key: string): boolean {
+  return params.get(key) !== "0";
+}
+
+export function ListingStatusFilter() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const t = useTranslations("myActivity.statusFilter");
+
+  function toggle(key: "active" | "inactive") {
+    const next = new URLSearchParams(params.toString());
+    if (isOn(next, key)) next.set(key, "0");
+    else next.delete(key);
+    const qs = next.toString();
+    router.replace(qs ? `/market/activity/listings?${qs}` : "/market/activity/listings", { scroll: false });
+  }
+
+  return (
+    <div className="mb-4 flex flex-wrap gap-2">
+      {(["active", "inactive"] as const).map((key) => {
+        const on = isOn(params, key);
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => toggle(key)}
+            aria-pressed={on}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              on
+                ? "border-ro-accent bg-ro-accent/10 text-ro-accent"
+                : "border-ro-panel-border text-ro-text-muted hover:text-ro-text"
+            }`}
+          >
+            {t(key)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

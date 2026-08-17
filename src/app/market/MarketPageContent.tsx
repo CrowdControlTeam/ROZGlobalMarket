@@ -1,22 +1,43 @@
 import { Suspense } from "react";
 import { z } from "zod";
-import { getTranslations } from "next-intl/server";
 import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@prisma/client";
 import { isMarketSort, type MarketFilters as MarketFiltersType } from "@/lib/market";
 import { requireSession } from "@/lib/guard";
-import { marketViewTitle } from "@/lib/market-labels";
+import { listSavedSearches } from "@/lib/saved-searches";
 import { MarketFilters } from "./MarketFilters";
+import { SearchTabs } from "./SearchTabs";
+import { SegmentedTypeSelector } from "./SegmentedTypeSelector";
+import { MarketSearchProvider } from "./marketSearchStore";
+import { FILTER_KEYS, type Filters } from "./marketFilterKeys";
 import { MarketListingsSection } from "./MarketListingsSection";
 import { MarketResultsSkeleton } from "./MarketResultsSkeleton";
-import { SortSelect } from "./SortSelect";
+
+// Filtro multi-valor codificado como CSV en la URL (p. ej. "WEAPON,ARMOR").
+// Se parsea a array validado contra el enum (descartando valores inválidos);
+// undefined si viene vacío o sin nada válido. Así un valor basura en la URL se
+// ignora en vez de romper el filtro.
+function csvEnum<T extends Record<string, string>>(enumObj: T) {
+  const valid = new Set<string>(Object.values(enumObj));
+  return z
+    .string()
+    .optional()
+    .transform((v): T[keyof T][] | undefined => {
+      if (!v) return undefined;
+      const arr = v
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => valid.has(s)) as T[keyof T][];
+      return arr.length > 0 ? arr : undefined;
+    });
+}
 
 const searchParamsSchema = z.object({
   q: z.string().trim().min(1).optional(),
-  category: z.enum(ItemCategory).optional(),
-  slot: z.enum(EquipSlot).optional(),
-  weaponType: z.enum(WeaponType).optional(),
-  // Solo se lee de la query string en /market (screenType null) — en las
-  // pantallas fijas el tipo lo da la ruta, no la URL (ver más abajo).
+  category: csvEnum(ItemCategory),
+  slot: csvEnum(EquipSlot),
+  weaponType: csvEnum(WeaponType),
+  // El tipo (Venta/Compra/Interc./Regalo) es un filtro más, fijado desde la
+  // query string por el SegmentedTypeSelector — ya no hay rutas por tipo.
   type: z.enum(ListingType).optional(),
   posterId: z.string().trim().min(1).optional(),
   option1Stat: z.string().trim().min(1).optional(),
@@ -40,17 +61,12 @@ const searchParamsSchema = z.object({
     .transform((v) => (v && isMarketSort(v) ? v : "newest")),
 });
 
-// screenType viene de la ruta (null = /market, o el segmento /market/sale,
-// /market/buy, /market/trade), nunca de la query string — así la
-// identidad de "en qué pantalla estoy" no puede mezclarse con los filtros
-// normales (ver resetFilters en MarketFilters.tsx: ya no necesita tratar
-// "type" como caso especial, porque en las pantallas fijas ni siquiera
-// existe como filtro).
+// Mercado unificado: una sola pantalla para todos los tipos. El tipo se lee de
+// `?type=` (lo fija el SegmentedTypeSelector), no de la ruta — antes había
+// /market/sale|buy|trade y /market/gifts, ahora fusionados aquí.
 export async function MarketPageContent({
-  screenType,
   searchParams,
 }: {
-  screenType: ListingType | null;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await requireSession();
@@ -80,36 +96,62 @@ export async function MarketPageContent({
     sort: firstValue(raw.sort),
   });
 
-  const filters: MarketFiltersType = parsed.success
-    ? parsed.data
-    : { sort: "newest" };
-  if (screenType) filters.type = screenType;
+  const filters: MarketFiltersType = parsed.success ? parsed.data : { sort: "newest" };
 
-  const t = await getTranslations("market");
-  const pageTitle = screenType ? marketViewTitle(t, screenType) : t("title");
+  // La key del Suspense NO incluye `q` (ver comentario abajo).
+  const suspenseKeyFilters = { ...filters };
+  delete suspenseKeyFilters.q;
+  const suspenseKey = JSON.stringify(suspenseKeyFilters);
+
+  // Filtros iniciales para el store (objeto plano de queryParams conocidos),
+  // tomados de la URL aquí en el servidor para no llamar a useSearchParams en el
+  // provider (rompería la hidratación en carga dura).
+  const initialFilters: Filters = {};
+  for (const key of FILTER_KEYS) {
+    const value = firstValue(raw[key]);
+    if (value) initialFilters[key] = value;
+  }
+
+  // Búsquedas guardadas del usuario (menú de la lupa / pestañas).
+  const savedSearches = await listSavedSearches();
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
-      <h1 className="mb-6 font-heading text-lg text-ro-text">{pageTitle}</h1>
+    // El hub + contenedor los pone el layout de /market. Aquí solo el contenido
+    // del índice, dentro del store de búsqueda: cada pestaña tiene su propio
+    // objeto de filtros (fuente de verdad) que se serializa a la URL, y la URL es
+    // lo que lee el servidor.
+    <MarketSearchProvider initialFilters={initialFilters} initialSavedSearches={savedSearches}>
+      {/* Pestañas de "Mis búsquedas": función de power-user; solo en desktop
+          (en móvil quitan espacio vertical sin aportar lo suficiente). */}
+      <div className="mb-3 hidden sm:block">
+        <SearchTabs />
+      </div>
+      {/* El selector de tipo queda DENTRO del contexto de la pestaña activa
+          (cada búsqueda tiene su propio tipo), así que va debajo de las
+          pestañas. */}
+      <div className="mb-4">
+        <SegmentedTypeSelector />
+      </div>
 
-      {/* Nada de lo de aquí arriba toca la base de datos (MarketFilters es
-          "use client" y busca sus propios datos aparte) — solo el grid de
-          resultados, más abajo, se envuelve en Suspense. */}
-      <MarketFilters screenType={screenType} />
+      {/* Los filtros se auto-posicionan (fijos en el margen izquierdo en
+          desktop; botón "Filtros" + bottom-sheet en móvil), así que los
+          resultados ocupan el ancho completo del contenedor. */}
+      <MarketFilters />
 
-      <SortSelect />
-      {/* key en el propio Suspense (no solo en MarketResults más abajo):
-          así, al cambiar cualquier filtro/orden, React trata la sección
-          como nueva y vuelve a mostrar el skeleton mientras llega el
-          resultado, en vez de dejar el listado anterior colgado. */}
-      <Suspense key={JSON.stringify(filters)} fallback={<MarketResultsSkeleton />}>
+      {/* key en el propio Suspense: al cambiar cualquier filtro/orden, React
+          trata la sección como nueva y muestra el skeleton mientras llega el
+          resultado. Excluimos `q` de la key a propósito: el buscador aplica al
+          vuelo, así que si `q` remontara la sección, el input perdería el foco
+          en cada tecla. Al dejarlo fuera, la búsqueda actualiza los resultados
+          en su sitio (sin skeleton) y el foco se conserva. */}
+      <Suspense key={suspenseKey} fallback={<MarketResultsSkeleton />}>
         <MarketListingsSection
           filters={filters}
           currentUserId={session.user.discordId}
           isAdmin={session.user.isAdmin}
         />
       </Suspense>
-    </main>
+    </MarketSearchProvider>
   );
 }
 

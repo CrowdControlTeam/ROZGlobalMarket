@@ -93,6 +93,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       const member = (await res.json()) as { roles?: string[]; nick?: string | null };
       const discordId = profile.id as string;
+      const memberRoles = member.roles ?? [];
+
+      // Rol de acceso a la app: si está configurado en /admin, no basta con
+      // pertenecer al guild — hay que tener además ese rol. Los admins están
+      // exentos a propósito, para que nadie pueda auto-bloquearse (ni bloquear
+      // al resto de admins) eligiendo un rol que no tiene. Sin configurar =
+      // acceso solo por pertenencia, como hasta ahora.
+      const { accessRoleId, adminRoleIds } = await loadMarketConfig();
+      if (accessRoleId && !memberRoles.includes(accessRoleId)) {
+        const isAdmin =
+          getEnvAdminIds().includes(discordId) ||
+          memberRoles.some((r) => adminRoleIds.includes(r)) ||
+          (await isGuildAdmin(account.access_token));
+        if (!isAdmin) return false;
+      }
       // Apodo del servidor si tiene uno puesto; si no, el nombre visible de
       // Discord. Nunca el username (@handle) — así se le reconoce y se le
       // puede escribir DM sin tener que buscar quién es. Ver norma 4.1 del

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/lib/guard";
@@ -8,10 +8,9 @@ import { UserMention } from "@/components/UserMention";
 import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { formatOptionAmount } from "@/lib/market-labels";
 
-// Cuerpo de la lista de regalos enviados/recibidos, compartido entre
-// /market/gifts (entrada del menú hamburguesa, sin cambios) y /my/gifts
-// (pestaña de la pantalla "Mi actividad") — mismo contenido, dos sitios
-// desde donde se llega.
+// Cuerpo de la lista de regalos enviados/recibidos (historial personal). Vive
+// en /market/activity/gifts (pestaña "Regalos" de "Mi actividad"). Es distinto del tipo
+// Regalo del mercado unificado (?type=GIFT), que son listings reclamables.
 export async function GiftsHistory() {
   // Ninguna depende del resultado de otra (getMyGifts vuelve a resolver la
   // sesión por su cuenta) — en paralelo en vez de en serie.
@@ -54,7 +53,7 @@ export async function GiftsHistory() {
                 <title>{t("receivedLabel")}</title>
               </ArrowDownLeft>
             )}
-            <Image src={gift.item.iconUrl} alt={gift.item.name} width={40} height={40} />
+            <ItemIcon item={gift.item} width={40} height={40} />
             <div className="flex-1">
               <p className="font-semibold">
                 {formatItemDisplayName(gift.item.name, gift.refineLevel, gift.cardSlots)}
@@ -65,7 +64,7 @@ export async function GiftsHistory() {
                   {gift.options.map((o) => (
                     <span
                       key={o.slotIndex}
-                      className="rounded border border-ro-gold-dark/50 bg-ro-gold/10 px-1.5 py-0.5 text-xs text-ro-text-muted"
+                      className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-xs text-ro-accent"
                     >
                       {o.def.label} {formatOptionAmount(o.value, false)}
                     </span>

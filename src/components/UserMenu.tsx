@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Settings, LogOut, Package } from "lucide-react";
-import { Sidebar } from "./Sidebar";
+import { Drawer } from "./Drawer";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { buttonClass } from "@/lib/ui";
@@ -25,10 +25,12 @@ export function UserMenu({
   user,
   theme,
   locale,
+  version,
 }: {
   user: FullUser;
   theme: "light" | "dark";
   locale: AppLocale;
+  version: string;
 }) {
   const [open, setOpen] = useState(false);
   const t = useTranslations("nav.account");
@@ -38,7 +40,7 @@ export function UserMenu({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-md px-2 py-1 text-ro-text-light hover:bg-white/5"
+        className="flex items-center gap-2 rounded-md px-2 py-1 text-ro-on-navy hover:bg-white/5"
       >
         {user.avatarUrl && (
           <Image
@@ -52,7 +54,7 @@ export function UserMenu({
         <span className="hidden text-sm sm:inline">{user.username}</span>
       </button>
 
-      <Sidebar side="right" open={open} onClose={() => setOpen(false)} title={t("title")}>
+      <Drawer side="right" mobileSheet open={open} onClose={() => setOpen(false)} title={t("title")}>
         <div className="flex flex-col items-center gap-3 text-center">
           {user.avatarUrl && (
             <Image
@@ -63,7 +65,7 @@ export function UserMenu({
               className="rounded-full border-2 border-ro-panel-border"
             />
           )}
-          <p className="font-heading text-xs">{user.username}</p>
+          <p className="text-sm font-semibold">{user.username}</p>
         </div>
 
         <dl className="mt-6 flex flex-col gap-3 text-sm">
@@ -111,7 +113,7 @@ export function UserMenu({
 
         <div className="mt-6 flex flex-col gap-2">
           <Link
-            href="/my/listings"
+            href="/market/activity/listings"
             onClick={() => setOpen(false)}
             className={`w-full ${buttonClass("outline")}`}
           >
@@ -123,7 +125,7 @@ export function UserMenu({
             <Link
               href="/admin"
               onClick={() => setOpen(false)}
-              className={`w-full ${buttonClass("discord")}`}
+              className={`w-full ${buttonClass("outline")}`}
             >
               <Settings size={16} />
               {t("settings")}
@@ -137,7 +139,11 @@ export function UserMenu({
             </button>
           </form>
         </div>
-      </Sidebar>
+
+        <p className="mt-6 border-t border-ro-panel-border/30 pt-3 text-center font-mono text-[0.65rem] text-ro-text-muted">
+          {version}
+        </p>
+      </Drawer>
     </>
   );
 }

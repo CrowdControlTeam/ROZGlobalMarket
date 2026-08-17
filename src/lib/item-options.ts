@@ -32,17 +32,27 @@ export async function isOptionsFeatureAvailable(): Promise<boolean> {
 export type RawOption = { slotIndex: number; defId: string; value: number };
 
 // Las options van en campos planos option1DefId/option1Value, etc. (mismo
-// estilo que el resto del form, sin arrays anidados en FormData). Parar en
-// el primer slot vacío garantiza que siempre ocupen las posiciones desde 1
-// en adelante sin huecos, sin necesidad de validarlo aparte. Compartido
-// entre listings.ts (SALE/TRADE/BUY) y gifts.ts (GIFT) — mismo formato de
-// campos en los dos formularios.
-export async function parseOptionsFromFormData(formData: FormData): Promise<RawOption[]> {
+// estilo que el resto del form, sin arrays anidados en FormData). Compartido
+// entre listings.ts (SALE/TRADE/BUY) y gifts.ts (GIFT).
+//
+// allowGaps: por defecto se PARA en el primer slot vacío, garantizando que las
+// options ocupen las posiciones desde 1 sin huecos — correcto para SALE/TRADE/
+// GIFT, que describen una instancia real (un item tiene sus options en orden).
+// En BUY (mínimo deseado) se pasa allowGaps=true: el comprador puede pedir un
+// requisito en un slot concreto (p. ej. "slot 2 = flee") sin llenar los demás,
+// así que los slots vacíos se saltan en vez de cortar.
+export async function parseOptionsFromFormData(
+  formData: FormData,
+  allowGaps = false,
+): Promise<RawOption[]> {
   const t = await getTranslations("errors");
   const options: RawOption[] = [];
   for (let slotIndex = 1; slotIndex <= MAX_OPTION_SLOTS; slotIndex++) {
     const defId = formData.get(`option${slotIndex}DefId`);
-    if (!defId) break;
+    if (!defId) {
+      if (allowGaps) continue;
+      break;
+    }
     const rawValue = formData.get(`option${slotIndex}Value`);
     if (typeof defId !== "string" || typeof rawValue !== "string") {
       throw new Error(t("invalidOptionData"));

@@ -29,8 +29,10 @@ export function ThemeToggle({ initial }: { initial: "light" | "dark" }) {
       className="relative h-7 w-[3.25rem] flex-none rounded-full border border-white/25 bg-white/15 transition-colors hover:bg-white/25"
     >
       <span
-        className={`absolute top-0.5 grid h-6 w-6 place-items-center rounded-full bg-white text-ro-gold-dark shadow transition-transform ${
-          dark ? "translate-x-[1.625rem]" : "translate-x-0.5"
+        className={`absolute top-0.5 grid h-6 w-6 place-items-center rounded-full shadow transition-transform ${
+          dark
+            ? "translate-x-[1.625rem] bg-ro-bg text-ro-gold"
+            : "translate-x-0.5 bg-white text-ro-gold-dark"
         }`}
       >
         {dark ? <Moon size={14} /> : <Sun size={14} />}

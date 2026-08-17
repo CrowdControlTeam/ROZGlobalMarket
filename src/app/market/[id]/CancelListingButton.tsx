@@ -16,9 +16,13 @@ import { getErrorMessage } from "@/lib/errors";
 export function CancelListingButton({
   listingId,
   unlimited = false,
+  hasPendingOffers = false,
 }: {
   listingId: string;
   unlimited?: boolean;
+  // Con ofertas/reservas pendientes no se puede cerrar (el server lo rechaza):
+  // se deshabilita el botón y se explica por qué, en vez de fallar al pulsar.
+  hasPendingOffers?: boolean;
 }) {
   const sync = useListingSync();
   const [isPending, startTransition] = useTransition();
@@ -36,17 +40,31 @@ export function CancelListingButton({
     });
   }
 
+  // Fragment (no <div>): así el botón y sus mensajes son hijos directos del
+  // contenedor flex del detalle, y los mensajes pueden caer en su propia fila
+  // (order-last + w-full) sin ensanchar la fila de botones ni empujar a Editar.
   return (
-    <div>
-      <button
-        type="button"
-        disabled={isPending}
-        onClick={close}
-        className={buttonClass("outline")}
+    <>
+      {/* El title va en un <span> envolvente, no en el <button>: un botón
+          deshabilitado no recibe eventos de puntero, así que su propio title no
+          se mostraría al pasar por encima. */}
+      <span
+        className="inline-block"
+        title={hasPendingOffers ? t("cancelBlockedPending") : undefined}
       >
-        {unlimited ? t("closeListing") : t("cancelListing")}
-      </button>
-      {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
-    </div>
+        <button
+          type="button"
+          disabled={isPending || hasPendingOffers}
+          onClick={close}
+          className={buttonClass("outline")}
+        >
+          {unlimited ? t("closeListing") : t("cancelListing")}
+        </button>
+      </span>
+      {hasPendingOffers && (
+        <p className="order-last w-full text-sm text-ro-text-muted">{t("cancelBlockedPending")}</p>
+      )}
+      {error && <p className="order-last w-full text-sm text-red-700">{error}</p>}
+    </>
   );
 }

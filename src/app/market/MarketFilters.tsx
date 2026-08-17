@@ -1,38 +1,47 @@
 "use client";
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { ItemCategory, EquipSlot, WeaponType, ListingType, type ItemOptionDef } from "@prisma/client";
-import { categoryLabel, slotLabel, weaponTypeLabel, listingTypeLabel } from "@/lib/market-labels";
+import {
+  ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
+  X,
+  Coins,
+  Boxes,
+  Shield,
+  Sword,
+  Sparkles,
+  SquareStack,
+  SlidersHorizontal,
+  User,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { ItemCategory, EquipSlot, WeaponType, type ItemOptionDef } from "@prisma/client";
+import { categoryLabel, slotLabel, weaponTypeLabel } from "@/lib/market-labels";
+import { formatPrice } from "@/lib/price";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
 import { isRefineEligible, DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
-import { getMaxCardSlots, MAX_WEAPON_CARD_SLOTS } from "@/lib/card-slots-constants";
 import {
   getAllOptionChoices,
   getMaxRefineLevel,
   getOptionsFeatureAvailable,
 } from "@/lib/listings";
-import { buttonClass, inputClass, inputBaseClass, selectClass, labelClass } from "@/lib/ui";
+import { inputBaseClass } from "@/lib/ui";
 import { MaskedPriceInput } from "@/components/MaskedPriceInput";
 import { UserPicker, type UserResult } from "@/components/UserPicker";
-import { Panel } from "@/components/Panel";
+import { Drawer } from "@/components/Drawer";
+import { MultiSelectFilter } from "./MultiSelectFilter";
+import { OptionsFilter } from "./OptionsFilter";
+import { useMarketSearch } from "./marketSearchStore";
 
 type OptionFilterSelection = { statCode: string; min: number | ""; max: number | "" };
 
-function emptyOptionFilterSelections(): OptionFilterSelection[] {
-  return Array.from({ length: MAX_OPTION_SLOTS }, () => ({ statCode: "", min: "", max: "" }));
-}
-
-// Un mismo stat (p.ej. "MaxHP %") existe como filas de ItemOptionDef
-// distintas en cada grupo (armadura/prenda/calzado/arma física/arma
-// mágica) — el filtro busca por posición sin importar el grupo, así que
-// aquí se dedupea por statCode, fusionando el rango [min,max] de todas las
-// filas que comparten stat+posición (solo afecta al placeholder, la query
-// real no depende de este rango).
 type StatOption = { statCode: string; label: string; minValue: number; maxValue: number };
 
+// Un mismo stat existe como filas de ItemOptionDef distintas en cada grupo; el
+// filtro busca por posición sin importar el grupo, así que se dedupea por
+// statCode fusionando el rango [min,max] (solo afecta al placeholder).
 function dedupeByStat(defs: ItemOptionDef[]): StatOption[] {
   const byCode = new Map<string, StatOption>();
   for (const d of defs) {
@@ -47,105 +56,45 @@ function dedupeByStat(defs: ItemOptionDef[]): StatOption[] {
   return Array.from(byCode.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
-export function MarketFilters({ screenType }: { screenType: ListingType | null }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const t = useTranslations("market");
-  const tCommon = useTranslations("common");
+type Section = {
+  id: string;
+  Icon: LucideIcon;
+  label: string;
+  count: number;
+  // Resumen de los valores ACTIVOS de la sección (p. ej. "Arma, Armadura" o
+  // "≥ +7"); vacío si no hay ninguno. Lo usa el rail colapsado para el tooltip.
+  summary: string;
+  clear: () => void;
+  content: ReactNode;
+};
 
-  const [q, setQ] = useState(searchParams.get("q") ?? "");
-  // En una pantalla fija (Ventas/Compras/Intercambios, ruta /market/sale|
-  // buy|trade) "type" viene de la ruta, no de la query string, y nunca
-  // cambia — el selector se oculta y no participa en Reset. Fuera de ahí
-  // (Mercado general) es un filtro normal como cualquier otro.
-  const [type, setType] = useState(screenType ?? searchParams.get("type") ?? "");
-  const typeLocked = screenType !== null;
-  // El id resuelto es lo que de verdad filtra (ver posterId en market.ts);
-  // el nombre solo se guarda en la URL para poder repintar el campo ya
-  // seleccionado tras recargar, sin tener que volver a buscar.
-  const [poster, setPoster] = useState<UserResult | null>(() => {
-    const posterId = searchParams.get("posterId");
-    const posterName = searchParams.get("posterName");
-    return posterId && posterName ? { id: posterId, username: posterName, avatarUrl: null } : null;
-  });
-  const [category, setCategory] = useState(searchParams.get("category") ?? "");
-  const [slot, setSlot] = useState(searchParams.get("slot") ?? "");
-  const [weaponType, setWeaponType] = useState(searchParams.get("weaponType") ?? "");
-  const [minPrice, setMinPrice] = useState<number | "">(
-    toNumberOrEmpty(searchParams.get("minPrice")),
-  );
-  const [maxPrice, setMaxPrice] = useState<number | "">(
-    toNumberOrEmpty(searchParams.get("maxPrice")),
-  );
-  const [refineMin, setRefineMin] = useState<number | "">(
-    toNumberOrEmpty(searchParams.get("refineMin")),
-  );
-  const [refineMax, setRefineMax] = useState<number | "">(
-    toNumberOrEmpty(searchParams.get("refineMax")),
-  );
+// Resumen de un rango min/max con el formateador dado; "" si no hay ninguno.
+function formatRange(
+  min: string | number | "",
+  max: string | number | "",
+  fmt: (v: string | number) => string,
+): string {
+  const hasMin = min !== "";
+  const hasMax = max !== "";
+  if (hasMin && hasMax) return `${fmt(min)} – ${fmt(max)}`;
+  if (hasMin) return `≥ ${fmt(min)}`;
+  if (hasMax) return `≤ ${fmt(max)}`;
+  return "";
+}
+
+export function MarketFilters() {
+  const t = useTranslations("market");
+  // El store es la fuente de verdad de los filtros de la pestaña activa; este
+  // panel solo lee de `filters` y escribe con setFilter/setFilters. El store
+  // serializa a la URL (con debounce) y la URL es lo que lee el servidor.
+  const { filters, setFilter, setFilters, mobileFiltersOpen, setMobileFiltersOpen } = useMarketSearch();
+
+  // Metadatos async (no son filtros): límite de refino y catálogo de options.
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
   useEffect(() => {
     getMaxRefineLevel().then(setMaxRefineLevel);
   }, []);
-  const [cardSlotsMin, setCardSlotsMin] = useState<number | "">(
-    toNumberOrEmpty(searchParams.get("cardSlotsMin")),
-  );
-  const [cardSlotsMax, setCardSlotsMax] = useState<number | "">(
-    toNumberOrEmpty(searchParams.get("cardSlotsMax")),
-  );
-
-  const [optionSelections, setOptionSelections] = useState<OptionFilterSelection[]>(() =>
-    Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => {
-      const n = i + 1;
-      return {
-        statCode: searchParams.get(`option${n}Stat`) ?? "",
-        min: toNumberOrEmpty(searchParams.get(`option${n}Min`)),
-        max: toNumberOrEmpty(searchParams.get(`option${n}Max`)),
-      };
-    }),
-  );
-  // Colapsado por defecto salvo que ya llegue con algún filtro de option
-  // aplicado desde la URL — si no, el bloque entero (con hasta 3 filas de
-  // desplegable + inputs) ocuparía sitio en todas las vistas del mercado
-  // aunque casi nunca se use, ahora que ya no depende de elegir categoría
-  // para aparecer.
-  const [optionsExpanded, setOptionsExpanded] = useState(() =>
-    optionSelections.some((sel) => sel.statCode !== ""),
-  );
-
-  // Todo el contenedor de filtros colapsado por defecto (mismo criterio que
-  // Options arriba) — en móvil, con todos los campos desplegados, había que
-  // hacer scroll un buen rato antes de ver un solo resultado. El toggle
-  // "Filtros" vive fuera de cualquier caja (ver return más abajo: el propio
-  // <Panel> solo se monta si está expandido), y se auto-expande si ya llega
-  // con cualquier filtro aplicado desde la URL, para no esconder lo que ya
-  // está filtrando.
-  const [filtersExpanded, setFiltersExpanded] = useState(
-    () =>
-      !!q ||
-      !!poster ||
-      (!typeLocked && !!type) ||
-      !!category ||
-      !!slot ||
-      !!weaponType ||
-      refineMin !== "" ||
-      refineMax !== "" ||
-      cardSlotsMin !== "" ||
-      cardSlotsMax !== "" ||
-      minPrice !== "" ||
-      maxPrice !== "" ||
-      optionSelections.some((sel) => sel.statCode !== ""),
-  );
-  // Catálogo entero (194 filas), cargado una sola vez — a diferencia del
-  // formulario de publicar, el filtro no necesita saber la categoría/slot/
-  // tipo de arma de antemano: busca por stat en una posición concreta sin
-  // importar de qué grupo salga (ver dedupeByStat), así que puede estar
-  // siempre visible en vez de aparecer solo tras elegir categoría.
   const [allOptionDefs, setAllOptionDefs] = useState<ItemOptionDef[]>([]);
-
-  // Toggle + catálogo desde /admin (ver src/lib/item-options.ts) — si está
-  // apagado, la sección de options ni se carga ni se muestra.
   const [optionsFeatureAvailable, setOptionsFeatureAvailable] = useState(true);
   useEffect(() => {
     getOptionsFeatureAvailable().then((available) => {
@@ -153,6 +102,35 @@ export function MarketFilters({ screenType }: { screenType: ListingType | null }
       if (available) getAllOptionChoices().then(setAllOptionDefs);
     });
   }, []);
+
+  // Valores derivados de los filtros de la pestaña activa. El tipo lo fija el
+  // SegmentedTypeSelector; aquí solo se lee para adaptar la semántica de las
+  // options en BUY.
+  const type = filters.type ?? "";
+  const poster: UserResult | null =
+    filters.posterId && filters.posterName
+      ? { id: filters.posterId, username: filters.posterName, avatarUrl: null }
+      : null;
+  // Multi-valor: en el store viajan como CSV (category=WEAPON,ARMOR); aquí se
+  // leen como arrays. El componente MultiSelectFilter devuelve el array ya en
+  // orden canónico (el de los Object.values del enum), así que la CSV es estable.
+  const categories = parseCsv(filters.category);
+  const slots = parseCsv(filters.slot);
+  const weaponTypes = parseCsv(filters.weaponType);
+  const minPrice = toNumberOrEmpty(filters.minPrice);
+  const maxPrice = toNumberOrEmpty(filters.maxPrice);
+  const refineMin = filters.refineMin ?? "";
+  const refineMax = filters.refineMax ?? "";
+  const cardSlotsMin = filters.cardSlotsMin ?? "";
+  const cardSlotsMax = filters.cardSlotsMax ?? "";
+  const optionSelections: OptionFilterSelection[] = Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => {
+    const n = i + 1;
+    return {
+      statCode: filters[`option${n}Stat`] ?? "",
+      min: toNumberOrEmpty(filters[`option${n}Min`]),
+      max: toNumberOrEmpty(filters[`option${n}Max`]),
+    };
+  });
 
   const statsBySlot = useMemo(() => {
     const bySlot: StatOption[][] = [];
@@ -162,457 +140,501 @@ export function MarketFilters({ screenType }: { screenType: ListingType | null }
     return bySlot;
   }, [allOptionDefs]);
 
-  // En BUY, `value` de cada option es el mínimo que pide el comprador, no
-  // el roll real de un item (ver comentario de ListingOption en
-  // schema.prisma) — no tiene sentido acotar por abajo lo que otro pide
-  // como mínimo, así que el filtro "mín." se oculta y el que queda se
-  // relee como "mi item tiene este valor, ¿qué compras cumpliría?"
-  // (mismo `lte` que ya usa el filtro normal, solo cambia qué representa).
+  // Gating "guiado no destructivo": slot y tipo de arma solo se muestran/aplican
+  // cuando ALGUNA categoría elegida los admite (o no hay categoría). Si dejan de
+  // aplicar NO se borran del store —quedan en la URL y reaparecen al volver la
+  // categoría—; el backend ya los ignora fuera de contexto (ver getListings).
   const isBuyFilter = type === "BUY";
+  const noCategory = categories.length === 0;
+  const hasArmor = categories.includes(ItemCategory.ARMOR);
+  const hasCard = categories.includes(ItemCategory.CARD);
+  const hasWeapon = categories.includes(ItemCategory.WEAPON);
+  const showSlot = noCategory || hasArmor || hasCard;
+  const showWeaponType = noCategory || hasWeapon;
+  // Refino/slots de carta: el backend NO los acota por categoría (los aplica sin
+  // más), así que aquí sí se limpian al quedar fuera de contexto (ver el efecto
+  // de normalización) para no devolver 0 resultados; su enabled se deriva de si
+  // hay arma, o armadura con algún slot elegido compatible (o sin slot).
+  const armorRefineEligible =
+    hasArmor &&
+    (slots.length === 0 || slots.some((s) => isRefineEligible({ category: ItemCategory.ARMOR, slot: s as EquipSlot })));
+  const refineFilterEnabled = noCategory || hasWeapon || armorRefineEligible;
+  // Las ranuras son un dato del item (Item.slotCount); el filtro aplica a
+  // armas/armaduras. Máximo global 4 (arma).
+  const cardSlotsFilterEnabled = noCategory || hasWeapon || hasArmor;
+  const cardSlotsFilterMax = 4;
 
-  const showSlot = category === ItemCategory.ARMOR || category === ItemCategory.CARD || category === "";
-  const showWeaponType = category === ItemCategory.WEAPON || category === "";
+  // Normalización: al cambiar categoría/slot/tipo, limpia del store los filtros
+  // dependientes que dejan de aplicar (equivale al "drop" condicional que antes
+  // hacía el efecto de aplicar). Solo escribe si hay algo que limpiar (evita
+  // bucle: tras limpiar ya no queda nada que limpiar).
+  useEffect(() => {
+    const patch: Record<string, string> = {};
+    if (!refineFilterEnabled) {
+      if (filters.refineMin) patch.refineMin = "";
+      if (filters.refineMax) patch.refineMax = "";
+    }
+    if (!cardSlotsFilterEnabled) {
+      if (filters.cardSlotsMin) patch.cardSlotsMin = "";
+      if (filters.cardSlotsMax) patch.cardSlotsMax = "";
+    }
+    if (isBuyFilter) {
+      for (let n = 1; n <= MAX_OPTION_SLOTS; n++) if (filters[`option${n}Min`]) patch[`option${n}Min`] = "";
+    }
+    if (Object.keys(patch).length > 0) setFilters(patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refineFilterEnabled, cardSlotsFilterEnabled, isBuyFilter, filters]);
 
-  // A diferencia de las options, el refine no tiene "pool equivocado" — es
-  // el mismo rango [0, maxRefineLevel] para cualquier equipo elegible, así
-  // que solo hace falta habilitar/deshabilitar, nunca limpiar el valor.
-  const refineFilterEnabled =
-    category === "" ||
-    category === ItemCategory.WEAPON ||
-    (category === ItemCategory.ARMOR &&
-      (slot === "" || isRefineEligible({ category: ItemCategory.ARMOR, slot: slot as EquipSlot })));
-
-  // Mismo patrón que refineFilterEnabled — el tope varía según la categoría
-  // (arma hasta 4, armadura hasta 1, salvo casco inferior 0), así que
-  // también se recalcula el máximo permitido en el input, no solo si está
-  // habilitado.
-  const cardSlotsFilterEnabled =
-    category === "" ||
-    category === ItemCategory.WEAPON ||
-    (category === ItemCategory.ARMOR &&
-      (slot === "" || getMaxCardSlots({ category: ItemCategory.ARMOR, slot: slot as EquipSlot }) > 0));
-  const cardSlotsFilterMax =
-    category === ItemCategory.ARMOR && slot
-      ? getMaxCardSlots({ category: ItemCategory.ARMOR, slot: slot as EquipSlot })
-      : MAX_WEAPON_CARD_SLOTS;
-
+  // Multi-valor → CSV en el store. Array vacío ⇒ "" ⇒ el store elimina la clave
+  // (y con ella el parámetro de la URL). El array llega ya en orden canónico.
+  function setCsvFilter(key: string, values: string[]) {
+    setFilter(key, values.join(","));
+  }
   function handleOptionSelectChange(index: number, statCode: string) {
-    setOptionSelections((prev) => {
-      const next = [...prev];
-      next[index] = { statCode, min: "", max: "" };
-      return next;
-    });
+    const n = index + 1;
+    setFilters({ [`option${n}Stat`]: statCode, [`option${n}Min`]: "", [`option${n}Max`]: "" });
+  }
+  function handleOptionMinChange(index: number, value: string) {
+    setFilter(`option${index + 1}Min`, value);
+  }
+  function handleOptionMaxChange(index: number, value: string) {
+    setFilter(`option${index + 1}Max`, value);
   }
 
-  function handleOptionMinChange(index: number, value: number | "") {
-    setOptionSelections((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], min: value };
-      return next;
-    });
-  }
-
-  function handleOptionMaxChange(index: number, value: number | "") {
-    setOptionSelections((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], max: value };
-      return next;
-    });
-  }
-
-  // El orden vive en la tabla de resultados (ver SortSelect), no aquí:
-  // lo conservamos tal cual esté en la URL al aplicar o resetear filtros.
-  function applyFilters(e: React.FormEvent) {
-    e.preventDefault();
-    const params = new URLSearchParams(searchParams.toString());
-    setOrDelete(params, "q", q.trim());
-    // En pantalla fija, "type" ya lo da la ruta — no se duplica en la query.
-    if (typeLocked) {
-      params.delete("type");
-    } else {
-      setOrDelete(params, "type", type);
-    }
-    setOrDelete(params, "posterId", poster?.id ?? "");
-    setOrDelete(params, "posterName", poster?.username ?? "");
-    setOrDelete(params, "category", category);
-    setOrDelete(params, "slot", slot);
-    setOrDelete(params, "weaponType", weaponType);
-
-    // En BUY, "mín." no se manda nunca — ese input ni se renderiza (ver
-    // isBuyFilter).
-    optionSelections.forEach((sel, i) => {
-      const n = i + 1;
-      setOrDelete(params, `option${n}Stat`, sel.statCode);
-      setOrDelete(params, `option${n}Min`, !isBuyFilter && sel.statCode && sel.min !== "" ? String(sel.min) : "");
-      setOrDelete(params, `option${n}Max`, sel.statCode && sel.max !== "" ? String(sel.max) : "");
-    });
-
-    setOrDelete(
-      params,
-      "refineMin",
-      refineFilterEnabled && refineMin !== "" ? String(refineMin) : "",
-    );
-    setOrDelete(
-      params,
-      "refineMax",
-      refineFilterEnabled && refineMax !== "" ? String(refineMax) : "",
-    );
-
-    setOrDelete(
-      params,
-      "cardSlotsMin",
-      cardSlotsFilterEnabled && cardSlotsMin !== "" ? String(cardSlotsMin) : "",
-    );
-    setOrDelete(
-      params,
-      "cardSlotsMax",
-      cardSlotsFilterEnabled && cardSlotsMax !== "" ? String(cardSlotsMax) : "",
-    );
-
-    setOrDelete(params, "minPrice", minPrice === "" ? "" : String(minPrice));
-    setOrDelete(params, "maxPrice", maxPrice === "" ? "" : String(maxPrice));
-    // Cambiar filtros reinicia la paginación (sin cursor).
-    router.push(`${pathname}?${params.toString()}`);
-  }
-
-  // En pantalla fija, "type" es parte de la ruta (no un filtro), así que
-  // Reset ni lo toca ni hace falta que lo trate como caso especial: fuera
-  // de ahí (Mercado general) se limpia igual que cualquier otro filtro.
-  function resetFilters() {
-    setQ("");
-    if (!typeLocked) setType("");
-    setPoster(null);
-    setCategory("");
-    setSlot("");
-    setWeaponType("");
-    setOptionSelections(emptyOptionFilterSelections());
-    setRefineMin("");
-    setRefineMax("");
-    setCardSlotsMin("");
-    setCardSlotsMax("");
-    setMinPrice("");
-    setMaxPrice("");
-    const params = new URLSearchParams(searchParams.toString());
-    const keys = [
-      "q",
-      "type",
-      "posterId",
-      "posterName",
-      "category",
-      "slot",
-      "weaponType",
-      "refineMin",
-      "refineMax",
-      "cardSlotsMin",
-      "cardSlotsMax",
-      "minPrice",
-      "maxPrice",
-    ];
+  function clearAll() {
+    const patch: Record<string, string> = {
+      posterId: "",
+      posterName: "",
+      category: "",
+      slot: "",
+      weaponType: "",
+      minPrice: "",
+      maxPrice: "",
+      refineMin: "",
+      refineMax: "",
+      cardSlotsMin: "",
+      cardSlotsMax: "",
+    };
     for (let n = 1; n <= MAX_OPTION_SLOTS; n++) {
-      keys.push(`option${n}Stat`, `option${n}Min`, `option${n}Max`);
+      patch[`option${n}Stat`] = "";
+      patch[`option${n}Min`] = "";
+      patch[`option${n}Max`] = "";
     }
-    keys.forEach((key) => params.delete(key));
-    router.push(`${pathname}?${params.toString()}`);
+    setFilters(patch);
   }
 
-  return (
-    <div className="mb-6">
-      {/* Solo en móvil: en desktop hay sitio de sobra para tener los
-          filtros siempre visibles, sin necesidad de colapsarlos. */}
-      <button
-        type="button"
-        onClick={() => setFiltersExpanded((prev) => !prev)}
-        aria-expanded={filtersExpanded}
-        className="flex items-center gap-1 text-xs font-medium text-ro-text-light/80 sm:hidden"
-      >
-        {t("filters.toggle")}
-        {filtersExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-      </button>
-      <Panel className={`mt-2 sm:mt-0 sm:block ${filtersExpanded ? "" : "hidden"}`}>
-        <form onSubmit={applyFilters} className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[160px] flex-1">
-              <label className={labelClass}>{t("filters.name")}</label>
-              <input
-                type="text"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={t("filters.namePlaceholder")}
-                className={inputClass}
+  function clearOptions() {
+    const patch: Record<string, string> = {};
+    for (let n = 1; n <= MAX_OPTION_SLOTS; n++) {
+      patch[`option${n}Stat`] = "";
+      patch[`option${n}Min`] = "";
+      patch[`option${n}Max`] = "";
+    }
+    setFilters(patch);
+  }
+
+  const optionsActive = optionSelections.filter((s) => s.statCode !== "").length;
+
+  // Resúmenes de valores activos por sección, para el tooltip del rail colapsado.
+  const priceSummary = formatRange(minPrice, maxPrice, (v) => formatPrice(Number(v)));
+  const categorySummary = categories.map((c) => categoryLabel(t, c as ItemCategory)).join(", ");
+  const slotSummary = slots.map((s) => slotLabel(t, s as EquipSlot)).join(", ");
+  const weaponTypeSummary = weaponTypes.map((w) => weaponTypeLabel(t, w as WeaponType)).join(", ");
+  const refineSummary = formatRange(refineMin, refineMax, (v) => `+${v}`);
+  const cardSlotsSummary = formatRange(cardSlotsMin, cardSlotsMax, (v) => String(v));
+  const optionsSummary = optionSelections
+    .map((s, i) => {
+      if (!s.statCode) return null;
+      const label = statsBySlot[i]?.find((o) => o.statCode === s.statCode)?.label ?? s.statCode;
+      return s.min !== "" ? `${label} ≥${s.min}` : label;
+    })
+    .filter(Boolean)
+    .join(", ");
+  const posterSummary = poster ? `@${poster.username}` : "";
+
+  const sections: Section[] = [
+    {
+      id: "price",
+      Icon: Coins,
+      label: t("filters.priceSection"),
+      count: (minPrice !== "" ? 1 : 0) + (maxPrice !== "" ? 1 : 0),
+      summary: priceSummary,
+      clear: () => setFilters({ minPrice: "", maxPrice: "" }),
+      content: (
+        <MinMaxRow>
+          <MaskedPriceInput
+            value={minPrice}
+            onChange={(v) => setFilter("minPrice", v === "" ? "" : String(v))}
+            placeholder={t("filters.min")}
+            className={`w-full ${inputBaseClass}`}
+          />
+          <MaskedPriceInput
+            value={maxPrice}
+            onChange={(v) => setFilter("maxPrice", v === "" ? "" : String(v))}
+            placeholder={t("filters.max")}
+            className={`w-full ${inputBaseClass}`}
+          />
+        </MinMaxRow>
+      ),
+    },
+    {
+      id: "category",
+      Icon: Boxes,
+      label: t("filters.category"),
+      count: categories.length,
+      summary: categorySummary,
+      // No destructivo: limpiar categoría no toca slot/tipo de arma (el backend
+      // los ignora fuera de contexto y reaparecen al volver la categoría).
+      clear: () => setFilter("category", ""),
+      content: (
+        <MultiSelectFilter
+          options={Object.values(ItemCategory).map((c) => ({ value: c, label: categoryLabel(t, c) }))}
+          selected={categories}
+          onChange={(next) => setCsvFilter("category", next)}
+          placeholder={t("filters.all")}
+        />
+      ),
+    },
+    {
+      id: "slot",
+      Icon: Shield,
+      label: t("filters.slot"),
+      count: slots.length,
+      summary: slotSummary,
+      clear: () => setFilter("slot", ""),
+      content: (
+        <MultiSelectFilter
+          options={Object.values(EquipSlot).map((s) => ({ value: s, label: slotLabel(t, s) }))}
+          selected={slots}
+          onChange={(next) => setCsvFilter("slot", next)}
+          disabled={!showSlot}
+          placeholder={t("filters.any")}
+        />
+      ),
+    },
+    {
+      id: "weaponType",
+      Icon: Sword,
+      label: t("filters.weaponType"),
+      count: weaponTypes.length,
+      summary: weaponTypeSummary,
+      clear: () => setFilter("weaponType", ""),
+      content: (
+        <MultiSelectFilter
+          options={Object.values(WeaponType).map((w) => ({ value: w, label: weaponTypeLabel(t, w) }))}
+          selected={weaponTypes}
+          onChange={(next) => setCsvFilter("weaponType", next)}
+          disabled={!showWeaponType}
+          placeholder={t("filters.any")}
+        />
+      ),
+    },
+    {
+      id: "refine",
+      Icon: Sparkles,
+      label: t("field.refine"),
+      count: (refineMin !== "" ? 1 : 0) + (refineMax !== "" ? 1 : 0),
+      summary: refineSummary,
+      clear: () => setFilters({ refineMin: "", refineMax: "" }),
+      content: (
+        <MinMaxRow>
+          <input type="number" min={0} max={maxRefineLevel} value={refineMin} disabled={!refineFilterEnabled} placeholder={t("filters.min")}
+            onChange={(e) => setFilter("refineMin", e.target.value)} className={`w-full ${inputBaseClass}`} />
+          <input type="number" min={0} max={maxRefineLevel} value={refineMax} disabled={!refineFilterEnabled} placeholder={t("filters.max")}
+            onChange={(e) => setFilter("refineMax", e.target.value)} className={`w-full ${inputBaseClass}`} />
+        </MinMaxRow>
+      ),
+    },
+    {
+      id: "cardSlots",
+      Icon: SquareStack,
+      label: t("field.cardSlots"),
+      count: (cardSlotsMin !== "" ? 1 : 0) + (cardSlotsMax !== "" ? 1 : 0),
+      summary: cardSlotsSummary,
+      clear: () => setFilters({ cardSlotsMin: "", cardSlotsMax: "" }),
+      content: (
+        <MinMaxRow>
+          <input type="number" min={0} max={cardSlotsFilterMax} value={cardSlotsMin} disabled={!cardSlotsFilterEnabled} placeholder={t("filters.min")}
+            onChange={(e) => setFilter("cardSlotsMin", e.target.value)} className={`w-full ${inputBaseClass}`} />
+          <input type="number" min={0} max={cardSlotsFilterMax} value={cardSlotsMax} disabled={!cardSlotsFilterEnabled} placeholder={t("filters.max")}
+            onChange={(e) => setFilter("cardSlotsMax", e.target.value)} className={`w-full ${inputBaseClass}`} />
+        </MinMaxRow>
+      ),
+    },
+    ...(optionsFeatureAvailable && allOptionDefs.length > 0
+      ? [
+          {
+            id: "options",
+            Icon: SlidersHorizontal,
+            label: t("field.options"),
+            count: optionsActive,
+            summary: optionsSummary,
+            clear: clearOptions,
+            content: (
+              <OptionsFilter
+                statsBySlot={statsBySlot}
+                selections={optionSelections}
+                isBuy={isBuyFilter}
+                onStatChange={handleOptionSelectChange}
+                onMinChange={handleOptionMinChange}
+                onMaxChange={handleOptionMaxChange}
+                onClear={(index) => handleOptionSelectChange(index, "")}
               />
-            </div>
+            ),
+          } satisfies Section,
+        ]
+      : []),
+    {
+      id: "poster",
+      Icon: User,
+      label: t("filters.poster"),
+      count: poster ? 1 : 0,
+      summary: posterSummary,
+      clear: () => setFilters({ posterId: "", posterName: "" }),
+      content: (
+        <UserPicker
+          key={poster?.id ?? "empty"}
+          selected={poster}
+          onSelect={(u) => setFilters({ posterId: u.id, posterName: u.username })}
+          onClear={() => setFilters({ posterId: "", posterName: "" })}
+        />
+      ),
+    },
+  ];
 
-            <div className="min-w-[160px] flex-1">
-              <label className={labelClass}>{t("filters.poster")}</label>
-              <UserPicker
-                key={poster?.id ?? "empty"}
-                selected={poster}
-                onSelect={setPoster}
-                onClear={() => setPoster(null)}
-              />
-            </div>
+  const totalCount = sections.reduce((n, s) => n + s.count, 0);
 
-            {!typeLocked && (
-              <div>
-                <label className={labelClass}>{t("filters.type")}</label>
-                <select value={type} onChange={(e) => setType(e.target.value)} className={selectClass}>
-                  <option value="">{t("filters.all")}</option>
-                  {Object.values(ListingType).map((type) => (
-                    <option key={type} value={type}>
-                      {listingTypeLabel(t, type)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+  // Secciones abiertas dentro del panel. Por defecto TODAS abiertas —incluidas
+  // las que se añaden tras una carga async (p. ej. "options")— así que se tratan
+  // como abiertas salvo que el usuario las colapse explícitamente (`?? true`).
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  function toggleSection(id: string) {
+    setOpenSections((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }));
+  }
+  // Panel (desktop) colapsado a rail o abierto. El bottom-sheet móvil se controla
+  // desde el store (mobileFiltersOpen); el disparador vive en la cabecera.
+  const [collapsed, setCollapsed] = useState(false);
+  // El panel expandido FLOTA sobre los resultados en anchos medios (≥1100px y
+  // <1560px); a ≥1560px cabe embebido en el margen (sidebar permanente). Solo el
+  // flotante se autocierra al clicar fuera (ver efecto más abajo).
+  const [panelFloats, setPanelFloats] = useState(false);
 
-            <div>
-              <label className={labelClass}>{t("filters.category")}</label>
-              <select
-                value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value);
-                  if (e.target.value !== ItemCategory.ARMOR && e.target.value !== ItemCategory.CARD) {
-                    setSlot("");
-                  }
-                  if (e.target.value !== ItemCategory.WEAPON) {
-                    setWeaponType("");
-                  }
-                }}
-                className={selectClass}
-              >
-                <option value="">{t("filters.all")}</option>
-                {Object.values(ItemCategory).map((c) => (
-                  <option key={c} value={c}>
-                    {categoryLabel(t, c)}
-                  </option>
-                ))}
-              </select>
-            </div>
+  // Si el margen no da para el panel embebido (mismo umbral que el layout,
+  // 1560px), arrancar en rail: si no, el panel flotaría sobre los resultados
+  // nada más cargar. Se hace tras montar para evitar desajuste de hidratación.
+  useEffect(() => {
+    if (!window.matchMedia("(min-width: 1560px)").matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCollapsed(true);
+    }
+  }, []);
 
-            <div>
-              <label className={labelClass}>{t("filters.slot")}</label>
-              <select
-                value={slot}
-                disabled={!showSlot}
-                onChange={(e) => setSlot(e.target.value)}
-                className={selectClass}
-              >
-                <option value="">{t("filters.any")}</option>
-                {Object.values(EquipSlot).map((s) => (
-                  <option key={s} value={s}>
-                    {slotLabel(t, s)}
-                  </option>
-                ))}
-              </select>
-            </div>
+  // Rango en el que el panel flota (desktop sin caber embebido). Se sigue en
+  // vivo para (des)activar el autocierre al redimensionar.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1100px) and (max-width: 1559.98px)");
+    function sync() {
+      setPanelFloats(mq.matches);
+    }
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
-            <div>
-              <label className={labelClass}>{t("filters.weaponType")}</label>
-              <select
-                value={weaponType}
-                disabled={!showWeaponType}
-                onChange={(e) => setWeaponType(e.target.value)}
-                className={selectClass}
-              >
-                <option value="">{t("filters.any")}</option>
-                {Object.values(WeaponType).map((w) => (
-                  <option key={w} value={w}>
-                    {weaponTypeLabel(t, w)}
-                  </option>
-                ))}
-              </select>
-            </div>
+  // El panel es `fixed`, así que al llegar al fondo se solaparía con el footer.
+  // Limitamos su altura en cada scroll/resize para que su borde inferior nunca
+  // baje del footer (ni del viewport). Antes de medir, cae en la clase CSS.
+  const asideRef = useRef<HTMLElement>(null);
+  const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const GAP = 16;
+    function update() {
+      const aside = asideRef.current;
+      if (!aside) return;
+      const top = aside.getBoundingClientRect().top;
+      const footer = document.querySelector("footer");
+      const footerTop = footer ? footer.getBoundingClientRect().top : Infinity;
+      const bottomLimit = Math.min(window.innerHeight, footerTop) - GAP;
+      setMaxHeight(Math.max(0, bottomLimit - top));
+    }
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
-            {/* Agrupados para que salten de línea juntos al hacer wrap, en vez de
-                partirse por la mitad. */}
-            <div className="flex gap-3">
-              <div>
-                <label className={labelClass}>{t("filters.refineMin")}</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={maxRefineLevel}
-                  value={refineMin}
-                  disabled={!refineFilterEnabled}
-                  onChange={(e) => setRefineMin(e.target.value === "" ? "" : Number(e.target.value))}
-                  className={`w-20 ${inputBaseClass}`}
-                />
-              </div>
+  // Autocerrar el panel flotante al clicar fuera, para no tener que colapsarlo a
+  // mano. Solo cuando FLOTA y está abierto; el embebido (cabe en pantalla) se
+  // mantiene. En móvil el bottom-sheet ya cierra por su propio backdrop.
+  useEffect(() => {
+    if (collapsed || !panelFloats) return;
+    function onDown(e: MouseEvent) {
+      if (asideRef.current && !asideRef.current.contains(e.target as Node)) {
+        setCollapsed(true);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [collapsed, panelFloats]);
 
-              <div>
-                <label className={labelClass}>{t("filters.refineMax")}</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={maxRefineLevel}
-                  value={refineMax}
-                  disabled={!refineFilterEnabled}
-                  onChange={(e) => setRefineMax(e.target.value === "" ? "" : Number(e.target.value))}
-                  className={`w-20 ${inputBaseClass}`}
-                />
-              </div>
-            </div>
+  // Al pulsar un icono del rail: abrir el panel y expandir esa sección.
+  function openFromRail(id: string) {
+    setCollapsed(false);
+    setOpenSections((prev) => ({ ...prev, [id]: true }));
+  }
 
-            {/* Agrupados para que salten de línea juntos al hacer wrap, en vez de
-                partirse por la mitad. */}
-            <div className="flex gap-3">
-              <div>
-                <label className={labelClass}>{t("filters.cardSlotsMin")}</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={cardSlotsFilterMax}
-                  value={cardSlotsMin}
-                  disabled={!cardSlotsFilterEnabled}
-                  onChange={(e) => setCardSlotsMin(e.target.value === "" ? "" : Number(e.target.value))}
-                  className={`w-20 ${inputBaseClass}`}
-                />
-              </div>
+  const panelBody = (
+    <div className="flex flex-col">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-sm font-bold text-ro-text">{t("filters.toggle")}</span>
+        {totalCount > 0 && (
+          <button type="button" onClick={clearAll} className="inline-flex items-center gap-1 text-xs text-ro-red hover:underline">
+            <X size={12} />
+            {t("filters.clearN", { count: totalCount })}
+          </button>
+        )}
+      </div>
 
-              <div>
-                <label className={labelClass}>{t("filters.cardSlotsMax")}</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={cardSlotsFilterMax}
-                  value={cardSlotsMax}
-                  disabled={!cardSlotsFilterEnabled}
-                  onChange={(e) => setCardSlotsMax(e.target.value === "" ? "" : Number(e.target.value))}
-                  className={`w-20 ${inputBaseClass}`}
-                />
-              </div>
-            </div>
-
-            {/* Agrupados para que salten de línea juntos al hacer wrap, en vez de
-                partirse por la mitad. */}
-            <div className="flex gap-3">
-              <div>
-                <label className={labelClass}>{t("filters.priceMin")}</label>
-                <MaskedPriceInput
-                  value={minPrice}
-                  onChange={setMinPrice}
-                  className={`w-36 ${inputBaseClass}`}
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>{t("filters.priceMax")}</label>
-                <MaskedPriceInput
-                  value={maxPrice}
-                  onChange={setMaxPrice}
-                  className={`w-36 ${inputBaseClass}`}
-                />
-              </div>
-            </div>
-
-            {/* Agrupados para que salten de línea juntos al hacer wrap, en vez de
-                quedar cada uno en una línea distinta. */}
-            <div className="flex gap-3">
-              <button type="submit" className={buttonClass("primary")}>
-                {tCommon("search")}
-              </button>
-              <button type="button" onClick={resetFilters} className={buttonClass("outline")}>
-                {tCommon("reset")}
-              </button>
-            </div>
-
-            {optionsFeatureAvailable && allOptionDefs.length > 0 && (
-              <div className="flex w-full flex-col gap-2">
+      <div className="flex flex-col">
+        {sections.map((s) => {
+          const open = openSections[s.id] ?? true;
+          return (
+            <div key={s.id} className="border-t border-ro-panel-border/60 first:border-t-0">
+              {/* El botón de colapsar (etiqueta) y el badge de limpiar son
+                  HERMANOS, no anidados: un <button> dentro de otro es HTML
+                  inválido y rompe la hidratación. */}
+              <div className="flex items-center gap-2 py-2">
+                <button type="button" onClick={() => toggleSection(s.id)} aria-expanded={open} className="flex flex-1 items-center gap-2 text-left text-sm font-medium text-ro-text">
+                  <s.Icon size={16} className="shrink-0 text-ro-accent" aria-hidden />
+                  <span className="flex-1">{s.label}</span>
+                </button>
+                {s.count > 0 && (
+                  <button
+                    type="button"
+                    onClick={s.clear}
+                    title={t("filters.clearSection")}
+                    className="grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-ro-accent px-1 text-[10px] font-bold text-ro-accent-contrast"
+                  >
+                    {s.count}
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => setOptionsExpanded((prev) => !prev)}
-                  aria-expanded={optionsExpanded}
-                  className={`flex items-center gap-1 ${labelClass}`}
+                  onClick={() => toggleSection(s.id)}
+                  aria-label={open ? t("filters.collapse") : t("filters.expand")}
+                  className="grid shrink-0 place-items-center text-ro-text-muted"
                 >
-                  {t("field.options")}
-                  {optionsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
                 </button>
-                {optionsExpanded && isBuyFilter && (
-                  <p className="-mt-1 text-xs italic text-ro-text-muted">{t("filters.buyOptionsHint")}</p>
-                )}
-                {optionsExpanded &&
-                Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
-                  const index = slotIndex - 1;
-                  const sel = optionSelections[index];
-                  const statsForSlot = statsBySlot[index];
-                  const selectedStat = statsForSlot.find((s) => s.statCode === sel.statCode);
-                  // Mismo criterio que NewPublicationForm: solo se marca en rojo si
-                  // hay un valor escrito y se sale del rango real de esa stat,
-                  // nunca por estar vacío.
-                  const isMinOutOfRange =
-                    selectedStat !== undefined &&
-                    sel.min !== "" &&
-                    (sel.min < selectedStat.minValue || sel.min > selectedStat.maxValue);
-                  const isMaxOutOfRange =
-                    selectedStat !== undefined &&
-                    sel.max !== "" &&
-                    (sel.max < selectedStat.minValue || sel.max > selectedStat.maxValue);
-
-                  return (
-                    <div key={slotIndex} className="flex items-center gap-2">
-                      <select
-                        value={sel.statCode}
-                        onChange={(e) => handleOptionSelectChange(index, e.target.value)}
-                        className={`min-w-0 flex-1 ${selectClass}`}
-                      >
-                        <option value="">{t("filters.optionPlaceholder", { slot: slotIndex })}</option>
-                        {statsForSlot.map((s) => (
-                          <option key={s.statCode} value={s.statCode}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                      {!isBuyFilter && (
-                        <input
-                          type="number"
-                          placeholder={selectedStat ? String(selectedStat.minValue) : t("filters.min")}
-                          value={sel.min}
-                          disabled={!sel.statCode}
-                          onChange={(e) =>
-                            handleOptionMinChange(index, e.target.value === "" ? "" : Number(e.target.value))
-                          }
-                          className={`w-20 ${inputBaseClass}`}
-                          // Un className condicional no basta aquí — ver el mismo
-                          // comentario en NewPublicationForm.tsx.
-                          style={isMinOutOfRange ? { borderColor: "#dc2626" } : undefined}
-                        />
-                      )}
-                      <input
-                        type="number"
-                        placeholder={
-                          selectedStat
-                            ? isBuyFilter
-                              ? `${selectedStat.minValue}-${selectedStat.maxValue}`
-                              : String(selectedStat.maxValue)
-                            : isBuyFilter
-                              ? t("filters.value")
-                              : t("filters.max")
-                        }
-                        value={sel.max}
-                        disabled={!sel.statCode}
-                        onChange={(e) =>
-                          handleOptionMaxChange(index, e.target.value === "" ? "" : Number(e.target.value))
-                        }
-                        className={`w-20 ${inputBaseClass}`}
-                        style={isMaxOutOfRange ? { borderColor: "#dc2626" } : undefined}
-                      />
-                    </div>
-                  );
-                })}
               </div>
-            )}
-        </form>
-      </Panel>
+              {open && <div className="pb-3">{s.content}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop: fijo en el margen izquierdo. Panel embebido cuando el margen
+          da de sí (≳1560px) o flotando sobre los resultados en anchos medios;
+          rail al colapsar. Posiciones aproximadas — ajuste fino pendiente. */}
+      <aside
+        ref={asideRef}
+        style={maxHeight !== undefined ? { maxHeight } : undefined}
+        className={`fixed top-[9.5rem] z-30 hidden max-h-[calc(100dvh-11rem)] overflow-y-auto min-[1100px]:block ${
+          collapsed
+            ? "left-[calc(50vw-36.25rem)]"
+            : "left-[calc(50vw-32rem)] min-[1560px]:left-[calc(50vw-48.75rem)]"
+        }`}
+      >
+        {collapsed ? (
+          <FilterRail sections={sections} onIcon={openFromRail} onExpand={() => setCollapsed(false)} expandLabel={t("filters.expand")} />
+        ) : (
+          <div className="w-64 rounded-xl border border-ro-panel-border bg-ro-panel p-3 shadow-lg">
+            {panelBody}
+            <div className="mt-2 flex justify-end border-t border-ro-panel-border/60 pt-2">
+              <button type="button" onClick={() => setCollapsed(true)} title={t("filters.collapse")} aria-label={t("filters.collapse")} className="grid h-7 w-7 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel-alt hover:text-ro-text">
+                <ChevronsLeft size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* Móvil: bottom-sheet de filtros. El disparador (icono "Filtros") está en
+          la cabecera de resultados; aquí solo vive el panel. */}
+      <Drawer side="bottom" open={mobileFiltersOpen} onClose={() => setMobileFiltersOpen(false)} title={t("filters.toggle")}>
+        {panelBody}
+      </Drawer>
+    </>
+  );
+}
+
+function FilterRail({
+  sections,
+  onIcon,
+  onExpand,
+  expandLabel,
+}: {
+  sections: Section[];
+  onIcon: (id: string) => void;
+  onExpand: () => void;
+  expandLabel: string;
+}) {
+  return (
+    <div className="flex w-14 flex-col items-center gap-2 rounded-xl border border-ro-panel-border bg-ro-panel py-2 shadow-sm">
+      {sections.map((s) => {
+        // Con filtros activos, el tooltip muestra sus valores ("Categoría: Arma,
+        // Armadura"); si no, solo el nombre de la sección.
+        const tip = s.summary ? `${s.label}: ${s.summary}` : s.label;
+        return (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => onIcon(s.id)}
+          title={tip}
+          aria-label={tip}
+          className={`relative grid h-9 w-9 place-items-center rounded-lg border ${
+            s.count > 0 ? "border-ro-accent bg-ro-accent/10 text-ro-accent" : "border-ro-panel-border bg-ro-panel-alt text-ro-text-muted"
+          }`}
+        >
+          <s.Icon size={18} aria-hidden />
+          {s.count > 0 && (
+            <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-ro-accent px-0.5 text-[9px] font-bold text-ro-accent-contrast">
+              {s.count}
+            </span>
+          )}
+        </button>
+        );
+      })}
+      <button type="button" onClick={onExpand} title={expandLabel} aria-label={expandLabel} className="mt-1 grid h-7 w-9 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel-alt hover:text-ro-text">
+        <ChevronsRight size={16} />
+      </button>
     </div>
   );
 }
 
-function setOrDelete(params: URLSearchParams, key: string, value: string) {
-  if (value) params.set(key, value);
-  else params.delete(key);
+function MinMaxRow({ children }: { children: ReactNode }) {
+  const [minEl, maxEl] = Array.isArray(children) ? children : [children, null];
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1">{minEl}</div>
+      <span className="text-ro-text-muted">–</span>
+      <div className="flex-1">{maxEl}</div>
+    </div>
+  );
 }
 
-function toNumberOrEmpty(value: string | null): number | "" {
+function parseCsv(value: string | null | undefined): string[] {
+  return value ? value.split(",").filter(Boolean) : [];
+}
+
+function toNumberOrEmpty(value: string | null | undefined): number | "" {
   if (!value) return "";
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : "";

@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 const TABS = [
-  { href: "/my/listings", key: "listings" },
-  { href: "/my/pending", key: "pending" },
-  { href: "/my/gifts", key: "gifts" },
+  { href: "/market/activity/listings", key: "listings" },
+  { href: "/market/activity/pending", key: "pending" },
+  { href: "/market/activity/gifts", key: "gifts" },
 ] as const;
 
 export function MyActivityTabs() {
@@ -24,7 +24,7 @@ export function MyActivityTabs() {
             href={tab.href}
             className={`-mb-0.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
               active
-                ? "border-ro-red text-ro-text"
+                ? "border-ro-accent text-ro-text"
                 : "border-transparent text-ro-text-muted hover:text-ro-text"
             }`}
           >

@@ -2,10 +2,10 @@
 
 import { useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
+import { ItemIcon } from "@/components/ItemIcon";
 import { useTranslations } from "next-intl";
 import { sendContactMessage } from "@/lib/contact-messages";
-import { Sidebar } from "./Sidebar";
+import { Drawer } from "./Drawer";
 import { buttonClass, inputBaseClass, labelClass } from "@/lib/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { useIsClient } from "@/lib/use-is-client";
@@ -26,6 +26,7 @@ export function UserMention({
   item,
   listingId,
   dmAvailable = false,
+  onContactClick,
 }: {
   userId: string;
   username: string;
@@ -37,6 +38,10 @@ export function UserMention({
   // menciones tienen una (p.ej. en Regalos no hay listing que enlazar).
   listingId?: string;
   dmAvailable?: boolean;
+  // Si el padre gestiona el panel de contacto (p.ej. la tarjeta lo comparte
+  // con la opción "Contactar" del kebab), el click del nombre lo delega en
+  // vez de abrir su propio ContactModal.
+  onContactClick?: () => void;
 }) {
   const t = useTranslations("common");
   const isSelf = userId === viewerId;
@@ -56,25 +61,28 @@ export function UserMention({
           // Y ADEMÁS navega a la página de detalle por el bubbling al <Link>.
           e.preventDefault();
           e.stopPropagation();
-          setOpen(true);
+          if (onContactClick) onContactClick();
+          else setOpen(true);
         }}
-        className="underline decoration-dotted underline-offset-2 hover:text-ro-gold"
+        className="underline decoration-dotted underline-offset-2 hover:text-ro-accent"
       >
         {label}
       </button>
-      <ContactModal
-        open={open}
-        onClose={() => setOpen(false)}
-        recipientId={userId}
-        recipientUsername={username}
-        item={item}
-        listingId={listingId}
-      />
+      {!onContactClick && (
+        <ContactModal
+          open={open}
+          onClose={() => setOpen(false)}
+          recipientId={userId}
+          recipientUsername={username}
+          item={item}
+          listingId={listingId}
+        />
+      )}
     </>
   );
 }
 
-function ContactModal({
+export function ContactModal({
   open,
   onClose,
   recipientId,
@@ -119,7 +127,7 @@ function ContactModal({
 
   // Portal a document.body: UserMention aparece dentro de texto en línea
   // (<p>, <dd>) e incluso dentro del <Link> que envuelve toda la tarjeta en
-  // MarketResults.tsx — el overlay de pantalla completa de Sidebar (con su
+  // MarketResults.tsx — el overlay de pantalla completa de Drawer (con su
   // <form>/<h2>/<div>) no puede vivir ahí sin romper el HTML (un <p> no
   // puede contener un <div>). El propio portal resuelve el problema del HTML,
   // pero React sigue burbujeando los eventos por el árbol de React (no el
@@ -127,10 +135,10 @@ function ContactModal({
   // llegando al <Link> ancestro y navegando a la tarjeta por debajo.
   return createPortal(
     <div onClick={(e) => e.stopPropagation()}>
-    <Sidebar side="right" open={open} onClose={handleClose} title={t("writeTo", { username: recipientUsername })}>
+    <Drawer side="right" mobileSheet open={open} onClose={handleClose} title={t("writeTo", { username: recipientUsername })}>
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 rounded-md border-2 border-ro-panel-border/30 p-2">
-          <Image src={item.iconUrl} alt={item.name} width={32} height={32} />
+          <ItemIcon item={item} width={32} height={32} />
           <span className="text-sm">{item.name}</span>
         </div>
         {sent ? (
@@ -173,7 +181,7 @@ function ContactModal({
           </form>
         )}
       </div>
-    </Sidebar>
+    </Drawer>
     </div>,
     document.body
   );

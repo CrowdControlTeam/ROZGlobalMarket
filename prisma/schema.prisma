@@ -17,22 +17,31 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Categorías tal cual las clasifica el cliente del juego (nueva DB de items),
+// cada una propia (sin colapsar). Ver prisma/importItems.mjs para el mapeo.
 enum ItemCategory {
   WEAPON
   ARMOR
   CARD
-  CONSUMABLE
-  COSTUME
-  PET
   ENCHANT
+  COSTUME
+  HEALING
+  USABLE
+  DELAY_CONSUME
+  AMMO
   ETC
+  PET_EGG
+  PET_ARMOR
+  CASH
+  GET_PORING
 }
 
 // Slot que ocupa una armadura, o slot compatible de una carta.
 enum EquipSlot {
-  UPPER_HEADGEAR
-  MID_HEADGEAR
-  LOWER_HEADGEAR
+  // Cabeza unificada (upper/mid/lower colapsados): la nueva DB de items ya trae
+  // la posición concreta en `Item.position` como metadato; para slotear no se
+  // distinguen (igual que en BiS).
+  HEADGEAR
   ARMOR
   SHIELD
   GARMENT
@@ -126,40 +135,94 @@ model User {
   // Tratos donde este usuario es la contraparte (comprador/vendedor/oferente/
   // reclamante) — ver model Deal.
   deals    Deal[]
+  // BiS que ha creado (página /bis).
+  bisEntries BisEntry[]
+  // Búsquedas de mercado guardadas (menú de la lupa / pestañas).
+  savedSearches SavedSearch[]
 }
 
+// Búsqueda de mercado guardada por un usuario: una pestaña de "Mis búsquedas"
+// persistida. `filters` es el query string de filtros (mismas claves y orden que
+// la URL, ver FILTER_KEYS) — se reutiliza la semántica de la URL en vez de JSON.
+model SavedSearch {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  name      String
+  filters   String
+  // Orden estable en la lista (para el menú de carga; base para reordenar luego).
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Catálogo de items extraído del cliente del juego (ver prisma/importItems.mjs).
+// El id es el id de item de RO (p.ej. "501"), estable: sirve en BD, bundle de
+// búsqueda, iconos y Listing/Deal/BiS.itemId. La app nunca crea Items (solo el
+// import), que hace upsert por id. Se guardan TODOS los campos para poder montar
+// una preview del item tal cual en el juego.
 model Item {
-  // ID estable del catálogo (el id de item de RO, p.ej. "501") — no un cuid
-  // generado: así el mismo id sirve en catálogo, BD, bundle de búsqueda y en
-  // Listing/TradeOffer/Gift.itemId, y el import puede hacer upsert idempotente
-  // por id. La app nunca crea Items (solo el import), así que no necesita default.
-  id          String       @id
-  name        String
-  description String?
-  category    ItemCategory
-  // Slot de equipo (armaduras) o slot en el que se puede montar (cartas).
-  slot        EquipSlot?
-  // Solo relevante para category = WEAPON — ver comentario del enum.
-  // Nullable: armas aún sin clasificar (o sin tipo, p.ej. munición) no
-  // muestran random options todavía.
-  weaponType WeaponType?
-  // Copia propia del icono (sin hotlink a la fuente externa).
-  iconUrl     String
-  // Ficha de origen de la carga de datos, para trazabilidad.
-  sourceUrl   String?
-  // false si el generador no pudo verificar el item (nombre duplicado o fallo
-  // de red al consultar la fuente) — se importa igual, es solo una marca de
-  // calidad del dato para repasarlo luego. Ver prisma/importCatalog.mjs.
-  verified    Boolean      @default(true)
-  importedAt  DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id               String       @id
+  name             String // identifiedName
+  unidentifiedName String?
+  // Líneas de la descripción del juego, con markup [color=hex]…[/color] para la
+  // preview (el resto de corchetes son literales: [Costume], [Event], etc.).
+  description      String[]
+  category         ItemCategory
+  // De dónde salió la clasificación de categoría (item_db/client/derived/…).
+  categorySource   String?
+  // Slot de equipo, DERIVADO de category+type (armaduras) o WEAPON (armas).
+  slot             EquipSlot?
+  // weaponType DERIVADO de subType (solo armas) — dirige el grupo de random
+  // options físico/mágico.
+  weaponType       WeaponType?
+  // Tokens crudos del cliente (subType máquina "1hSword"; itemType humano "Sword").
+  subType          String?
+  itemType         String?
+  // Nº de ranuras de carta del item — FUENTE DE VERDAD (ya no se pide al publicar).
+  slotCount        Int          @default(0)
+  // Para CARTAS: slot de equipo donde se monta (crudo del cliente).
+  cardSlot         String?
+  // Posición(es) de casco como metadato ("Upper", "Upper, Middle", …); no se usa
+  // para slotear (headgear va unificado).
+  position         String?
+  // Icono propio por id (convención /icons/items/<id>.png; el import siempre lo
+  // rellena).
+  iconUrl          String
+  // ¿Comerciable entre jugadores? = restrictions.trade !== false. Se precalcula
+  // para filtrar rápido el catálogo de publicación.
+  tradeable        Boolean      @default(true)
+  // Objeto de restricciones del cliente completo: { drop, trade, storage, cart,
+  // npcSell, mail, auction, guildStorage }. null = sin restricción.
+  restrictions     Json?
+  costume          Boolean      @default(false)
+  // Stats/metadata para tooltips y preview.
+  attack           Int?
+  defense          Int?
+  weight           Int?
+  weaponLevel      Int?
+  armorLevel       Int?
+  requiredLevel    Int?
+  jobs             String? // "Novice Class, Swordsman Class, …"
+  element          String?
+  classNum         Int?
+  effectId         Int?
+  cooldown         String?
+  petTarget        String?
+  importedAt       DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   listings       Listing[]
   // Deals en los que este item es la contraoferta de un trade (Deal.offeredItem).
   offeredInDeals Deal[]
+  // BiS que apuntan a este item concreto (ver BisEntry).
+  bisEntries     BisEntry[]
 
   @@index([category, slot])
   @@index([name])
+  @@index([tradeable])
 }
 
 // Fase 1 del plan original: solo venta directa. La Fase 3 añade el tipo TRADE (ver ListingType).
@@ -196,12 +259,13 @@ model Listing {
   // cualquier otro item, y no se muestra como prefijo "+N" hasta 1.
   refineLevel Int @default(0)
 
-  // Número de slots de carta del ejemplar concreto (no del catálogo: dos
-  // unidades del mismo item pueden tener distinto número) — arma hasta 4,
-  // armadura hasta 1 salvo casco inferior (0). Ver
-  // src/lib/card-slots-constants.ts. Se muestra como sufijo "[N]" pegado al
-  // nombre, nunca en 0.
-  cardSlots Int @default(0)
+  // (cardSlots eliminado: las ranuras son fijas por item y salen de
+  // Item.slotCount, ya no las indica el vendedor.)
+
+  // Notas libres opcionales que escribe quien publica (cualquier tipo): detalles
+  // del trato, horario de conexión, condiciones, etc. Se muestran en el detalle.
+  // Longitud acotada en las acciones (ver MAX_LISTING_NOTES_LENGTH).
+  notes String?
 
   options ListingOption[]
   deals   Deal[]
@@ -246,7 +310,8 @@ model Deal {
   offeredItemId    String?
   offeredQuantity  Int?
   offeredRefine    Int?
-  offeredCardSlots Int?
+  // (offeredCardSlots eliminado: las ranuras del item ofertado salen de
+  // offeredItem.slotCount.)
   zenyOffered      Int     @default(0)
 
   createdAt DateTime @default(now())
@@ -308,6 +373,18 @@ model MarketConfig {
   // (DISCORD_BOT_TOKEN, nunca en base de datos), o como entrada manual si no.
   adminRoleIds String[] @default([])
 
+  // Rol de Discord requerido para ACCEDER a la app (distinto del panel). Si
+  // está puesto, en el login no basta con pertenecer al guild: hay que tener
+  // además este rol. Los admins están exentos (para no auto-bloquearse). Null
+  // = sin restricción, acceso solo por pertenencia como hasta ahora. Ver
+  // el callback signIn de src/auth.ts.
+  accessRoleId String?
+
+  // Rol de Discord que puede añadir/editar/reordenar los BiS (página pública
+  // /bis), además de los administradores (que siempre pueden). Ver canEditBis
+  // en src/lib/bis.ts. Null = solo administradores; para el resto, solo lectura.
+  bisEditorRoleId String?
+
   // Nombre de la app mostrado en la cabecera (enlaza a /market) y como
   // <title> de la pestaña — cada guild pone el suyo. Null hasta
   // configurarse la primera vez: el placeholder/fallback "ROZ Global
@@ -315,6 +392,14 @@ model MarketConfig {
   // no aquí, para no confundir "sin configurar" con "configurado
   // literalmente a ROZ Global Market".
   siteName String?
+
+  // Imágenes de marca subidas desde /admin, guardadas como data-URI base64
+  // (no hay object storage; ver AdminConfigForm / branding-constants.ts).
+  // logoUrl se muestra junto al título en la cabecera (solo PC); homeImageUrl
+  // en el hub de inicio, entre el saludo y "¿A dónde vamos?". Null = sin
+  // configurar (no se muestran).
+  logoUrl      String?
+  homeImageUrl String?
 }
 
 // Qué WeaponType cuentan como "arma mágica" (pool WEAPON_MAGICAL) en vez de
@@ -342,7 +427,8 @@ model ItemOptionDef {
   // Igual a minValue cuando el valor es fijo (p.ej. ASPD siempre +1).
   maxValue  Int
 
-  selections ListingOption[]
+  selections      ListingOption[]
+  bisEntryOptions BisEntryOption[]
 
   @@unique([group, slotIndex, statCode])
   @@index([group, slotIndex])
@@ -377,4 +463,101 @@ model RateLimit {
   key         String   @id
   count       Int      @default(0)
   windowStart DateTime @default(now())
+}
+
+// ── BiS (Best in Slot) ─────────────────────────────────────────────────────
+// Página pública /bis: sets de equipo recomendados por etapa del juego, slot,
+// rol y job. Ver src/lib/bis.ts.
+
+// Tier de job. En EC solo hay 1st jobs; los 2nd (y siguientes) se añaden luego
+// y apuntan a su 1st job vía parentJob.
+enum JobTier {
+  FIRST
+  SECOND
+  THIRD
+}
+
+// Etapa/periodo del juego (EC = Early Content, etc.). La página muestra por
+// defecto la de mayor `order` (la última) y deja elegir anteriores.
+model BisStage {
+  id        String     @id @default(cuid())
+  key       String     @unique
+  label     String
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+  entries   BisEntry[]
+}
+
+// Rol de combate (tank/dps/support/healer). Configurable (seed inicial), igual
+// que los jobs. Se llama CombatRole para no confundir con los roles de Discord.
+model CombatRole {
+  id      String     @id @default(cuid())
+  key     String     @unique
+  label   String
+  order   Int        @default(0)
+  entries BisEntry[]
+}
+
+// Job/clase de RO. Jerarquía por tier (1st -> 2nd...) vía parentJob. Seed con
+// los 6 1st jobs; el resto se añade cuando salgan.
+model Job {
+  id          String     @id @default(cuid())
+  key         String     @unique
+  label       String
+  tier        JobTier    @default(FIRST)
+  parentJob   Job?       @relation("JobHierarchy", fields: [parentJobId], references: [id])
+  parentJobId String?
+  children    Job[]      @relation("JobHierarchy")
+  order       Int        @default(0)
+  entries     BisEntry[]
+}
+
+// Un BiS: recomendación para un slot de equipo en una etapa, etiquetada con
+// rol(es) y/o job(s) (al menos una etiqueta — se valida en la acción). Dos
+// modos EXCLUYENTES:
+//   - CONCRETO: `itemId` (+ refino/slots objetivo), sin options.
+//   - GENÉRICO: sin item, con `options` posicionales ("cualquier pieza con
+//     estas stats"; cada una con mínimo opcional).
+model BisEntry {
+  id          String   @id @default(cuid())
+  stage       BisStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  stageId     String
+  slot        EquipSlot
+  // Modo concreto.
+  item        Item?    @relation(fields: [itemId], references: [id])
+  itemId      String?
+  refineLevel Int?
+  // (cardSlots eliminado: sale de Item.slotCount.)
+  // Modo genérico de ARMA: en vez de un item concreto, un tipo de arma
+  // ("cualquier Daga"). Determina el pool de options (físico/mágico). Null en
+  // concretos y en slots que no son arma.
+  weaponType  WeaponType?
+  // Modo genérico (options posicionales, ver BisEntryOption).
+  options     BisEntryOption[]
+  // Etiquetas (M2M implícito). >=1 entre roles y jobs (validado en la acción).
+  roles       CombatRole[]
+  jobs        Job[]
+  note        String?
+  // Orden de visualización dentro de (stage, slot) — el drag&drop lo actualiza.
+  position    Int      @default(0)
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([stageId, slot, position])
+}
+
+// Requisito de option de un BiS genérico: posicional (slotIndex) + stat (def),
+// con valor mínimo opcional (null = "solo esta stat", sin exigir valor).
+model BisEntryOption {
+  id        String        @id @default(cuid())
+  entry     BisEntry      @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId   String
+  slotIndex Int
+  def       ItemOptionDef @relation(fields: [defId], references: [id])
+  defId     String
+  minValue  Int?
+
+  @@unique([entryId, slotIndex])
 }

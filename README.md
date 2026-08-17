@@ -2,7 +2,43 @@
 
 Mercado para la comunidad de Ragnarok Zero, con login por Discord.
 
-> Este proyecto parte del código de [ROGuildMarket](https://github.com/CrowdControlTeam/ROGuildMarket) tal como estaba en su **v0.2.0**, del que se separa para evolucionar de forma independiente y con **su propio versionado desde 0.0.1**. La especificación funcional de aquel proyecto (el «plan original» al que hacen referencia algunos comentarios del código) pertenece a ROGuildMarket, no a este repositorio.
+> Este proyecto parte del código de [ROGuildMarket](https://github.com/CrowdControlTeam/ROGuildMarket) tal como estaba en su **v0.2.0**, del que se separa para evolucionar de forma independiente con **su propio versionado**. La especificación funcional de aquel proyecto (el «plan original» al que hacen referencia algunos comentarios del código) pertenece a ROGuildMarket, no a este repositorio.
+
+## Versionado
+
+Se sigue [SemVer](https://semver.org/lang/es/). La **última tag publicada** (`vX.Y.Z`) es la fuente de verdad de lo que hay en producción; `package.json` guarda la versión que se **muestra** en la web (al fondo del menú de usuario) y de la que se taggea al publicar.
+
+- **`main`** lleva la versión publicada (`X.Y.Z`).
+- **`develop`** lleva la **siguiente minor con sufijo `-dev`** (`X.(Y+1).0-dev`): es la versión «en desarrollo» y es lo que muestra el Worker de dev.
+
+### Publicar una release (desde `develop`)
+
+Todas las releases salen de `develop`. El salto es solo el paso de SemVer, no un flujo distinto:
+
+- **`patch`** — release de solo correcciones (bugs acumulados, sin features nuevas).
+- **`minor`** — features nuevas (**por defecto**).
+- **`major`** — cambios incompatibles.
+
+1. Lanza el workflow **Prepare release** (Actions → *Run workflow*) y elige el salto (o una versión exacta en `exact_version` para forzarla). La versión se calcula desde **la última tag + el salto**.
+2. El workflow crea una rama `release/<version>` **desde `develop`**, fija esa versión en `package.json` y abre una PR a `main`.
+3. Al mergear esa PR a `main`: se despliega a producción (`ci.yml`) y se crea el tag `v<version>` + Release (`release.yml`).
+4. `release.yml` abre y **auto-mergea** (squash) una PR `chore/next-dev-* → develop` que adelanta `develop` a la siguiente `-dev`. Como solo cambia el número de versión, se mergea sola: **nunca se mergea `main` en `develop`** (develop ya tiene el código; la release salió de ahí).
+
+### Hotfix urgente (desde `main`)
+
+Solo si producción está rota y no puede esperar al ciclo de `develop`. Es un flujo **manual** (no usa *Prepare release*, que siempre parte de `develop`):
+
+1. `git switch -c hotfix/<desc> main`, aplica el arreglo y bumpea a patch: `npm version patch --no-git-tag-version`.
+2. Abre PR a `main` y mergéala: se despliega y se taggea `vX.Y.Z+1`.
+3. Lleva el arreglo a `develop` con un **cherry-pick** del commit del fix (no mergees `main` en `develop`). La versión de `develop` no cambia.
+
+> Regla de oro: a `develop` solo llegan cambios por ramas **cortadas de `develop`** (el bump de versión lo escribe el workflow; el hotfix lo cherry-pickeas). Nunca se mergea la rama o historia de `main` dentro de `develop`, para no arrastrar su ceremonia de versionado.
+
+### Arranque en un repo nuevo
+
+Sin tags, **Prepare release** parte de `v0.0.0`, así que el primer `minor` publica `0.1.0`. El único paso de _bootstrap_ es dejar `develop` con su `-dev` inicial (`0.1.0-dev`).
+
+> Los pasos que abren PRs desde Actions (`prepare-release.yml` y el `sync-develop` de `release.yml`) requieren activar **Settings → Actions → General → «Allow GitHub Actions to create and approve pull requests»**.
 
 ## Requisitos
 
@@ -71,10 +107,7 @@ El deploy lo hace la integración Git nativa de Cloudflare (**Workers Builds**),
 
 En ambas: build command `npx opennextjs-cloudflare build`, *"Builds for non-production branches"* **desactivado** (cada conexión solo despliega su rama de producción), y los secretos de runtime se ponen a nivel de cada Worker. El `env.dev` de `wrangler.jsonc` es lo que resuelve el `--env dev`. Al construirse en Linux, no aplica el problema de symlinks de Windows.
 
-### Versionado (SemVer)
-
-- **`release.yml`**: en cada push a `main`, tagea la versión y publica un GitHub Release con notas automáticas. El *bump* se controla con un token `#major` / `#minor` / `#patch` en el mensaje del commit de merge (patch por defecto).
-- **`prerelease.yml`**: on-demand desde `develop` (Actions → *Run workflow*), saca un tag de prerelease `vX.Y.Z-rc.N`.
+El deploy de Cloudflare es independiente del tag/Release de GitHub (ver [Versionado](#versionado)): Cloudflare despliega al hacer push a la rama, y `release.yml` solo taggea.
 
 ## Prisma
 

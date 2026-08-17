@@ -1,4 +1,49 @@
 {
+  "db": {
+    "nav": {
+      "items": "Items",
+      "skills": "Skills"
+    },
+    "items": {
+      "searchPlaceholder": "Buscar item por nombre…",
+      "allCategories": "Todas las categorías",
+      "count": "{total} items",
+      "empty": "Ningún item coincide con la búsqueda.",
+      "prev": "Anterior",
+      "next": "Siguiente",
+      "pageOf": "{page} / {pages}",
+      "loadingDetail": "Cargando…",
+      "close": "Cerrar"
+    },
+    "skills": {
+      "chooseJob": "Elige un job…",
+      "firstJobs": "1st jobs",
+      "secondJobs": "2nd jobs",
+      "firstPoints": "Puntos 1ª",
+      "secondPoints": "Puntos 2ª",
+      "reset": "Reiniciar",
+      "emptyHint": "Elige un job para empezar a planificar sus skills.",
+      "selectHint": "Selecciona una skill para ver su información.",
+      "level": "Nivel",
+      "platinum": "Platinum",
+      "decrease": "Bajar nivel",
+      "increase": "Subir nivel",
+      "requires": "Requiere",
+      "lvShort": "Nv",
+      "close": "Cerrar",
+      "showTooltip": "Mostrar descripción",
+      "import": "Importar",
+      "export": "Exportar",
+      "share": "Compartir",
+      "copy": "Copiar",
+      "copied": "¡Copiado!",
+      "exportTitle": "Exportar build",
+      "exportHint": "Copia este código para guardar o compartir tu build.",
+      "importTitle": "Importar build",
+      "importPlaceholder": "Pega aquí el código del build…",
+      "importError": "Código no válido."
+    }
+  },
   "common": {
     "cancel": "Cancelar",
     "close": "Cerrar",
@@ -16,6 +61,12 @@
     "openMenu": "Abrir menú del mercado",
     "newPublication": "Nueva publicación",
     "comingSoon": "(próximamente)",
+    "sections": {
+      "label": "Secciones",
+      "market": "Mercado",
+      "bis": "BiS",
+      "db": "DB"
+    },
     "account": {
       "title": "Tu cuenta",
       "discordId": "ID de Discord",
@@ -32,6 +83,11 @@
   "myActivity": {
     "title": "Mi actividad",
     "listingsEmpty": "Todavía no has publicado nada.",
+    "listingsNoneMatch": "No hay publicaciones con ese filtro.",
+    "statusFilter": {
+      "active": "Activos",
+      "inactive": "No activos"
+    },
     "pendingEmpty": "No tienes nada pendiente.",
     "pendingIncoming": "Por confirmar",
     "pendingOutgoing": "Mis solicitudes",
@@ -43,16 +99,29 @@
   },
   "home": {
     "welcome": "Bienvenido",
-    "greeting": "Hola, <strong>{username}</strong>. ¿Qué se cuece hoy en el mercado de la guild?",
-    "goToMarket": "Ir al mercado",
+    "hubWelcome": "Bienvenido, <strong>{username}</strong>",
+    "hubGreeting": "Hola, <strong>{username}</strong>",
+    "whereTo": "¿A dónde vamos?",
     "intro": "Mercado privado para miembros de la guild. Inicia sesión con Discord para entrar.",
-    "signIn": "Entrar con Discord"
+    "signIn": "Entrar con Discord",
+    "tiles": {
+      "market": { "label": "Mercado", "desc": "Explora y filtra todo lo que hay a la venta, compra e intercambio." },
+      "activity": { "label": "Mi actividad", "desc": "Tus publicaciones, solicitudes y regalos." },
+      "publish": { "label": "Publicar", "desc": "Pon un objeto a la venta, compra o intercambio." },
+      "stats": { "label": "Estadísticas", "desc": "Rankings y actividad del mercado." },
+      "settings": { "label": "Ajustes", "desc": "Configuración del mercado." },
+      "bis": { "label": "BiSes", "desc": "Listado de los mejores items por slot." },
+      "items": { "label": "Items", "desc": "Base de datos de objetos con su ficha de juego." },
+      "skills": { "label": "Skills", "desc": "Planifica tu árbol de skills por clase." },
+      "comingSoon": "Próximamente"
+    }
   },
   "maintenancePage": {
     "title": "En mantenimiento",
-    "message": "El mercado está temporalmente en mantenimiento. Vuelve dentro de un rato.",
+    "message": "El mercado está temporalmente en mantenimiento. Mientras tanto puedes seguir usando BiS y la base de datos.",
     "adminNote": "Eres admin: sigues teniendo acceso completo.",
-    "backToMarket": "Ir al mercado"
+    "backToMarket": "Ir al mercado",
+    "backHome": "Volver al inicio"
   },
   "authError": {
     "title": "Acceso denegado",
@@ -69,6 +138,8 @@
       "message": "Esta página no existe o el elemento que buscas ya no está disponible."
     },
     "invalidData": "Datos inválidos",
+    "invalidImage": "La imagen no es válida (formato no admitido).",
+    "imageTooLarge": "La imagen supera el tamaño máximo permitido.",
     "selectItem": "Selecciona un item",
     "selectRecipient": "Selecciona un destinatario",
     "positiveQuantity": "La cantidad debe ser mayor que 0",
@@ -81,8 +152,15 @@
     "refineTooHigh": "El refine no puede ser mayor que +{max}",
     "positiveCardSlots": "Los slots deben ser un número entero positivo",
     "cardSlotsTooHigh": "Este item admite como máximo {max} slots",
+    "notesTooLong": "Las notas no pueden superar {max} caracteres",
     "listingNotFound": "Publicación no encontrada",
     "onlyPosterCancel": "Solo quien la publicó puede cancelarla",
+    "notYourListing": "No tienes permiso sobre esta publicación",
+    "savedSearchLimit": "Has alcanzado el máximo de búsquedas guardadas ({max})",
+    "savedSearchNotFound": "La búsqueda guardada no existe",
+    "notYourSavedSearch": "No tienes permiso sobre esta búsqueda guardada",
+    "listingHasDeals": "No se puede editar: la publicación ya tiene ofertas o ventas",
+    "listingHasPendingOffers": "No se puede cerrar con ofertas pendientes: acéptalas o recházalas primero",
     "listingNotActive": "Esta publicación ya no está activa",
     "cannotBuyOwn": "No puedes comprar tu propia publicación",
     "notDirectSale": "Esta publicación no es una venta directa",
@@ -113,16 +191,45 @@
     "noImageReceived": "No se ha recibido ninguna imagen",
     "imageTooLarge": "La imagen no puede superar los {max} MB",
     "rateLimited": "Demasiadas peticiones. Espera {seconds} s e inténtalo de nuevo.",
-    "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano."
+    "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano.",
+    "notBisEditor": "No tienes permiso para editar BiS",
+    "stageNotFound": "La etapa no existe",
+    "bisEntryNotFound": "El BiS no existe o ya se ha eliminado",
+    "bisNeedTag": "Selecciona al menos un rol o un job",
+    "bisNeedItemOrOption": "Elige un item o al menos una option",
+    "bisNoOptionsForSlot": "Este slot no admite random options",
+    "bisWeaponTypeRequired": "Elige un tipo de arma para las options",
+    "bisItemSlotMismatch": "El item no corresponde a este slot de equipo"
   },
   "admin": {
     "title": "Configuración",
     "statsLink": "Estadísticas",
+    "nav": {
+      "general": "General",
+      "features": "Funcionalidades"
+    },
+    "features": {
+      "bis": {
+        "title": "BiS",
+        "hint": "Etapas del juego que aparecen en la página de BiS. La primera (arriba) es la que sale por defecto.",
+        "empty": "No hay etapas todavía.",
+        "entryCount": "{count} BiS",
+        "moveUp": "Subir",
+        "moveDown": "Bajar",
+        "rename": "Renombrar",
+        "save": "Guardar",
+        "delete": "Borrar etapa",
+        "confirmDelete": "Borrar etapa y {count} BiS",
+        "addPlaceholder": "Nueva etapa…",
+        "add": "Añadir"
+      }
+    },
     "stats": {
       "title": "Estadísticas del mercado",
       "backToConfig": "Volver",
       "period": {
         "label": "Periodo",
+        "7d": "Última semana",
         "30d": "Últimos 30 días"
       },
       "totals": {
@@ -157,12 +264,37 @@
       "siteNameLabel": "Nombre de la aplicación",
       "siteNameHint": "Se muestra en la cabecera y en la pestaña del navegador. Vacío = usar \"{placeholder}\" por defecto."
     },
+    "appearance": {
+      "legend": "Apariencia",
+      "logoLabel": "Logo de la cabecera",
+      "logoHint": "Se muestra junto al título, solo en PC. Máx. 150 KB (admite GIF).",
+      "homeImageLabel": "Imagen de inicio",
+      "homeImageHint": "Se muestra en el inicio, entre el saludo y los accesos. Máx. 512 KB.",
+      "choose": "Seleccionar archivo",
+      "change": "Cambiar",
+      "remove": "Quitar",
+      "tooLarge": "El archivo supera el máximo de {kb} KB."
+    },
     "access": {
       "legend": "Acceso al panel",
       "hint": "Quien tenga el permiso \"Administrator\" del servidor de Discord ya entra siempre. Estos roles se SUMAN como vía adicional, no lo sustituyen.",
       "rolesFetchError": "No se pudo listar los roles del servidor con nombre ({message}).",
       "roleIdsPlaceholder": "Un ID de rol por línea (o separados por comas)",
-      "roleIdsHint": "Sin bot configurado (DISCORD_BOT_TOKEN) no se pueden mostrar los nombres de los roles — copia el ID de cada rol desde Discord (Ajustes del servidor → Roles → clic derecho → Copiar ID, con el modo desarrollador activado)."
+      "roleIdsHint": "Sin bot configurado (DISCORD_BOT_TOKEN) no se pueden mostrar los nombres de los roles — copia el ID de cada rol desde Discord (Ajustes del servidor → Roles → clic derecho → Copiar ID, con el modo desarrollador activado).",
+      "noneSelected": "Sin roles seleccionados",
+      "noRoles": "No hay roles"
+    },
+    "appAccess": {
+      "legend": "Acceso a la aplicación",
+      "hint": "Rol necesario para entrar. Si eliges uno, para acceder hará falta pertenecer al servidor Y tener ese rol; los administradores entran igualmente. Sin rol = acceso solo por pertenencia, como hasta ahora.",
+      "none": "Sin restricción (solo pertenencia)",
+      "roleIdPlaceholder": "ID del rol de acceso (vacío = sin restricción)"
+    },
+    "bisEditor": {
+      "legend": "Editor de BiS",
+      "hint": "Rol que puede crear y modificar objetos BiS, además de los administradores (que siempre pueden). Sin rol = solo los administradores; para el resto, BiS de solo lectura.",
+      "none": "Solo administradores",
+      "roleIdPlaceholder": "ID del rol de editor (vacío = solo lectura)"
     },
     "webhook": {
       "legend": "Notificaciones a Discord",
@@ -211,7 +343,7 @@
     },
     "market": {
       "legend": "Mercado",
-      "maintenanceToggleLabel": "Modo mantenimiento (bloquea crear ventas y comprar para todos menos administradores)",
+      "maintenanceToggleLabel": "Modo mantenimiento (bloquea el acceso al mercado para todos menos administradores; BiS y DB siguen abiertos)",
       "maxRefineLabel": "Refine máximo permitido"
     }
   },
@@ -239,7 +371,8 @@
       "quantity": "Cantidad",
       "message": "Mensaje",
       "refine": "Refine",
-      "cardSlots": "Slots de carta",
+      "cardSlots": "Slots",
+      "notes": "Notas",
       "minStats": "Stats mínimos",
       "payUpTo": "Pago/ud",
       "bestOffer": "Hacer oferta",
@@ -254,8 +387,10 @@
       "type": "Tipo",
       "all": "Todas",
       "category": "Categoría",
-      "slot": "Armadura",
+      "slot": "Slot de equipo",
       "any": "Cualquiera",
+      "addMore": "Añadir…",
+      "removeValue": "Quitar {value}",
       "weaponType": "Tipo de arma",
       "refineMin": "Refine mín.",
       "refineMax": "Refine máx.",
@@ -264,9 +399,49 @@
       "priceMin": "Precio mín.",
       "priceMax": "Precio máx.",
       "optionPlaceholder": "-- Option {slot} --",
+      "optionSlotLabel": "Op {slot}",
       "min": "Mín",
       "max": "Máx",
-      "value": "Valor"
+      "value": "Valor",
+      "priceSection": "Precio",
+      "clearN": "Limpiar ({count})",
+      "clearSection": "Limpiar sección",
+      "expand": "Expandir filtros",
+      "collapse": "Colapsar filtros"
+    },
+    "typeSelector": {
+      "label": "Tipo de anuncio",
+      "all": "Todo"
+    },
+    "searchTabs": {
+      "indicator": "Búsquedas de esta sesión",
+      "add": "Nueva búsqueda",
+      "close": "Cerrar búsqueda",
+      "untitled": "Búsqueda {n}",
+      "menuLabel": "Búsquedas guardadas",
+      "load": "Cargar filtro",
+      "loadAll": "Cargar todos los filtros",
+      "noneSaved": "No tienes búsquedas guardadas",
+      "save": "Guardar",
+      "rename": "Renombrar",
+      "update": "Actualizar búsqueda guardada",
+      "deleteSaved": "Borrar de guardados",
+      "modified": "Filtros modificados respecto a lo guardado",
+      "namePlaceholder": "Nombre de la búsqueda"
+    },
+    "view": {
+      "label": "Vista",
+      "grid": "Cuadrícula",
+      "list": "Lista"
+    },
+    "card": {
+      "menu": "Opciones del anuncio",
+      "edit": "Editar",
+      "editBlocked": "No puedes editar una publicación con ofertas o ventas.",
+      "repost": "Republicar",
+      "viewDetail": "Ver detalle",
+      "share": "Compartir",
+      "contact": "Contactar"
     },
     "sort": {
       "label": "Orden",
@@ -282,16 +457,20 @@
         "WEAPON": "Arma",
         "ARMOR": "Armadura",
         "CARD": "Carta",
-        "CONSUMABLE": "Consumible",
-        "COSTUME": "Costume",
-        "PET": "Mascota",
         "ENCHANT": "Encantamiento",
-        "ETC": "Miscelánea"
+        "COSTUME": "Costume",
+        "HEALING": "Curación",
+        "USABLE": "Usable",
+        "DELAY_CONSUME": "Consumible (delay)",
+        "AMMO": "Munición",
+        "ETC": "Miscelánea",
+        "PET_EGG": "Huevo de mascota",
+        "PET_ARMOR": "Equipo de mascota",
+        "CASH": "Cash",
+        "GET_PORING": "GetPoring"
       },
       "slot": {
-        "UPPER_HEADGEAR": "Casco superior",
-        "MID_HEADGEAR": "Casco medio",
-        "LOWER_HEADGEAR": "Casco inferior",
+        "HEADGEAR": "Casco",
         "ARMOR": "Cuerpo",
         "SHIELD": "Escudo",
         "GARMENT": "Prenda",
@@ -375,8 +554,10 @@
       "tradedBy": "intercambiado por",
       "giftedBy": "regalado por",
       "available": "x{count} disponibles",
-      "wanted": "x{count}",
+      "wanted": "x{count} unidades",
       "availableUnlimited": "∞",
+      "count": "<b>{shown}</b> de <b>{total}</b>",
+      "free": "Gratis",
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
     },
@@ -389,6 +570,7 @@
       "of": "de",
       "cancelListing": "Cancelar",
       "closeListing": "Cerrar",
+      "cancelBlockedPending": "Resuelve las ofertas pendientes (acéptalas o recházalas) antes de cerrar.",
       "tradedWith": "Intercambiado con",
       "forItem": "por {item}",
       "offersReceived": "Ofertas recibidas",
@@ -458,6 +640,13 @@
     },
     "form": {
       "typeLabel": "Tipo de publicación",
+      "or": "O",
+      "notes": "Notas",
+      "confirm": "Confirmar",
+      "previewHint": "La ficha tal cual saldrá en el mercado.",
+      "tabs": {
+        "info": "Info"
+      },
       "typeOptions": {
         "SALE": "Venta",
         "BUY": "Compra",
@@ -470,11 +659,15 @@
         "TRADE": "Publicar",
         "GIFT": "Regalar"
       },
+      "saveLabel": "Guardar",
+      "editTitle": "Editar publicación",
+      "repostTitle": "Republicar publicación",
       "publishing": "Publicando...",
       "recognitionLabel": "Reconocer desde captura (opcional)",
       "itemLabel": "Item",
       "priceLabel": "Precio/ud",
       "payUpToLabel": "Pago/ud",
+      "notesPlaceholder": "Notas opcionales: detalles del trato, horario de conexión, condiciones…",
       "unlimitedLabel": "Ilimitados",
       "noPriceLabel": "Sin precio",
       "recipientLabel": "Destinatario (opcional — sin él, cualquiera puede reclamarlo)",
@@ -493,7 +686,8 @@
     },
     "itemPicker": {
       "placeholder": "Busca un item por nombre...",
-      "removeSelected": "Quitar item seleccionado"
+      "removeSelected": "Quitar item seleccionado",
+      "change": "Cambiar"
     },
     "userPicker": {
       "placeholder": "Busca un usuario por nombre...",
@@ -549,6 +743,72 @@
       "giftClaimAccepted": "{username} te ha entregado el regalo de {item}",
       "giftClaimRejected": "{username} ha rechazado tu reclamación de {item}",
       "contactMessage": "{username} te ha escrito sobre {item}"
+    }
+  },
+  "bis": {
+    "title": "BiS · Best in Slot",
+    "subtitle": "Los mejores objetos por slot de equipo para cada etapa del juego.",
+    "stageLabel": "Etapa",
+    "filters": {
+      "roleLegend": "Rol",
+      "jobLegend": "Job",
+      "clear": "Quitar filtros"
+    },
+    "cells": {
+      "head": "Cabeza",
+      "weapon": "Arma",
+      "garment": "Manto",
+      "accessory": "Accesorio",
+      "armor": "Armadura",
+      "shield": "Escudo",
+      "footgear": "Calzado"
+    },
+    "cell": {
+      "empty": "Sin BiS todavía",
+      "noMatches": "Sin coincidencias"
+    },
+    "detail": {
+      "close": "Cerrar",
+      "options": "Options",
+      "roles": "Roles",
+      "jobs": "Jobs",
+      "note": "Nota"
+    },
+    "showAll": "Ver todas ({count})",
+    "showLess": "Ver menos",
+    "anyItem": "Cualquiera",
+    "noStages": "Todavía no hay etapas configuradas.",
+    "add": "Añadir",
+    "edit": "Editar",
+    "kebabLabel": "Opciones",
+    "deleteConfirm": "¿Borrar este BiS?",
+    "hasNotes": "Tiene notas",
+    "searchInMarket": "Buscar en el mercado",
+    "form": {
+      "addTitle": "Añadir BiS",
+      "editTitle": "Editar BiS",
+      "slotLabel": "Slot",
+      "itemLabel": "Item",
+      "itemOrOptionHint": "Opcional. Elige un item, unas options, o ambos (item con options concretas).",
+      "refine": "Refine",
+      "cardSlots": "Slots",
+      "weaponType": "Tipo de arma",
+      "weaponTypeNone": "Sin especificar",
+      "optionsLabel": "Options",
+      "optionNone": "— Sin option —",
+      "optionsHint": "El valor es un mínimo opcional; vacío = cualquier valor.",
+      "optionOutOfRange": "Cada valor debe estar dentro del rango de su option.",
+      "min": "Mín",
+      "rolesLabel": "Roles",
+      "jobsLabel": "Jobs",
+      "needTag": "Selecciona al menos un rol o un job.",
+      "noteLabel": "Nota",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "delete": "Borrar",
+      "confirmDelete": "¿Seguro? Borrar",
+      "saveError": "No se pudo guardar. Inténtalo de nuevo."
     }
   }
 }

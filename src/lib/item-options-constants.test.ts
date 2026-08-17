@@ -31,9 +31,9 @@ describe("getItemOptionGroup", () => {
 
   it("devuelve null para armaduras sin pool (escudo, casco) y otras categorías", () => {
     expect(getItemOptionGroup({ category: ItemCategory.ARMOR, slot: EquipSlot.SHIELD, weaponType: null }, magical)).toBeNull();
-    expect(getItemOptionGroup({ category: ItemCategory.ARMOR, slot: EquipSlot.UPPER_HEADGEAR, weaponType: null }, magical)).toBeNull();
+    expect(getItemOptionGroup({ category: ItemCategory.ARMOR, slot: EquipSlot.HEADGEAR, weaponType: null }, magical)).toBeNull();
     expect(getItemOptionGroup({ category: ItemCategory.CARD, slot: null, weaponType: null }, magical)).toBeNull();
-    expect(getItemOptionGroup({ category: ItemCategory.CONSUMABLE, slot: null, weaponType: null }, magical)).toBeNull();
+    expect(getItemOptionGroup({ category: ItemCategory.HEALING, slot: null, weaponType: null }, magical)).toBeNull();
   });
 });
 

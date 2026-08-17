@@ -15,9 +15,12 @@ export type { MarketSort };
 
 export type MarketFilters = {
   q?: string;
-  category?: ItemCategory;
-  slot?: EquipSlot;
-  weaponType?: WeaponType;
+  // Filtros multi-valor: se combinan con `{ in: [...] }` (categoría X o Y). En
+  // la URL viajan como CSV (category=WEAPON,ARMOR) y el servidor los parsea a
+  // array validado (ver searchParamsSchema en MarketPageContent).
+  category?: ItemCategory[];
+  slot?: EquipSlot[];
+  weaponType?: WeaponType[];
   type?: ListingType;
   // Filtro por quien publica (poster) — resuelto a un id concreto en
   // cliente vía UserPicker, no un "contiene" de texto libre, para no
@@ -192,15 +195,20 @@ function optionSlotWhere(
 export async function getListings(filters: MarketFilters) {
   const cursor = decodeCursor(filters.cursor);
 
+  // Gating "guiado no destructivo": slot solo se aplica si hay slots elegidos y
+  // alguna categoría elegida es equipo/carta (o no hay categoría); tipo de arma
+  // solo si hay arma (o ninguna). Un valor fuera de contexto se conserva en la
+  // URL pero NO se aplica — así al volver la categoría reaparece sin haberlo
+  // borrado. Con categoría múltiple basta que ALGUNA case (`some`).
+  const hasCategory = (filters.category?.length ?? 0) > 0;
   const needsSlotFilter =
-    filters.slot &&
-    (filters.category === ItemCategory.ARMOR ||
-      filters.category === ItemCategory.CARD ||
-      !filters.category);
+    (filters.slot?.length ?? 0) > 0 &&
+    (!hasCategory ||
+      filters.category!.some((c) => c === ItemCategory.ARMOR || c === ItemCategory.CARD));
 
   const needsWeaponTypeFilter =
-    filters.weaponType &&
-    (filters.category === ItemCategory.WEAPON || !filters.category);
+    (filters.weaponType?.length ?? 0) > 0 &&
+    (!hasCategory || filters.category!.some((c) => c === ItemCategory.WEAPON));
 
   const optionConditions = [
     optionSlotWhere(1, filters.option1Stat, filters.option1Min, filters.option1Max),
@@ -223,7 +231,7 @@ export async function getListings(filters: MarketFilters) {
     ...(isPriceSort ? { not: null } : {}),
   };
 
-  const where: Prisma.ListingWhereInput = {
+  const baseWhere: Prisma.ListingWhereInput = {
     status: "ACTIVE",
     ...(filters.type ? { type: filters.type } : {}),
     ...(filters.posterId ? { posterId: filters.posterId } : {}),
@@ -236,33 +244,50 @@ export async function getListings(filters: MarketFilters) {
           },
         }
       : {}),
-    ...(filters.cardSlotsMin !== undefined || filters.cardSlotsMax !== undefined
-      ? {
-          cardSlots: {
-            ...(filters.cardSlotsMin !== undefined ? { gte: filters.cardSlotsMin } : {}),
-            ...(filters.cardSlotsMax !== undefined ? { lte: filters.cardSlotsMax } : {}),
-          },
-        }
-      : {}),
     item: {
       ...(filters.q ? { name: { contains: filters.q, mode: "insensitive" } } : {}),
-      ...(filters.category ? { category: filters.category } : {}),
-      ...(needsSlotFilter ? { slot: filters.slot } : {}),
-      ...(needsWeaponTypeFilter ? { weaponType: filters.weaponType } : {}),
+      ...(hasCategory ? { category: { in: filters.category } } : {}),
+      ...(needsSlotFilter ? { slot: { in: filters.slot } } : {}),
+      ...(needsWeaponTypeFilter ? { weaponType: { in: filters.weaponType } } : {}),
+      // Las ranuras son del item (Item.slotCount), no del listing.
+      ...(filters.cardSlotsMin !== undefined || filters.cardSlotsMax !== undefined
+        ? {
+            slotCount: {
+              ...(filters.cardSlotsMin !== undefined ? { gte: filters.cardSlotsMin } : {}),
+              ...(filters.cardSlotsMax !== undefined ? { lte: filters.cardSlotsMax } : {}),
+            },
+          }
+        : {}),
     },
-    ...(andConditions.length > 0 ? { AND: andConditions } : {}),
   };
 
-  const listings = await prisma.listing.findMany({
-    where,
-    orderBy: orderByFor(filters.sort),
-    take: PAGE_SIZE + 1,
-    include: {
-      item: true,
-      poster: true,
-      options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
-    },
-  });
+  // El listado pagina por cursor; el total (para "X de Y") cuenta lo mismo
+  // pero SIN la condición de cursor — es todo lo que casa, no solo lo que
+  // queda por paginar. Las condiciones de option sí van en ambos.
+  const where: Prisma.ListingWhereInput = {
+    ...baseWhere,
+    ...(andConditions.length > 0 ? { AND: andConditions } : {}),
+  };
+  const countWhere: Prisma.ListingWhereInput = {
+    ...baseWhere,
+    ...(optionConditions.length > 0 ? { AND: optionConditions } : {}),
+  };
+
+  // El count solo en la primera página (sin cursor): al "cargar más" el total
+  // no cambia, así que se devuelve null y el cliente conserva el que ya tenía.
+  const [listings, total] = await Promise.all([
+    prisma.listing.findMany({
+      where,
+      orderBy: orderByFor(filters.sort),
+      take: PAGE_SIZE + 1,
+      include: {
+        item: true,
+        poster: true,
+        options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
+      },
+    }),
+    cursor ? Promise.resolve<number | null>(null) : prisma.listing.count({ where: countWhere }),
+  ]);
 
   const hasMore = listings.length > PAGE_SIZE;
   const page = hasMore ? listings.slice(0, PAGE_SIZE) : listings;
@@ -289,16 +314,23 @@ export async function getListings(filters: MarketFilters) {
   });
   const soldMap = new Map<string, number>();
   const reservedMap = new Map<string, number>();
+  // Listings con algún Deal VIVO (PENDING o ACCEPTED), sea del modo que sea —a
+  // diferencia de `reserved`, que es 0 en competitivo/trade aunque haya PENDING.
+  // Se usa para el gate de "editar" (editable solo sin deals vivos): mode-
+  // independiente, así el botón no aparece cuando el server lo rechazaría.
+  const dealsMap = new Set<string>();
   for (const g of dealAgg) {
     const q = g._sum.quantity ?? 0;
     if (g.status === "ACCEPTED") soldMap.set(g.listingId, (soldMap.get(g.listingId) ?? 0) + q);
     else if (g.status === "PENDING") reservedMap.set(g.listingId, (reservedMap.get(g.listingId) ?? 0) + q);
+    dealsMap.add(g.listingId);
   }
   const pageWithSold = page.map((l) => ({
     ...l,
     sold: soldMap.get(l.id) ?? 0,
     reserved: reservedMap.get(l.id) ?? 0,
+    hasLiveDeals: dealsMap.has(l.id),
   }));
 
-  return { listings: pageWithSold, nextCursor };
+  return { listings: pageWithSold, nextCursor, total };
 }

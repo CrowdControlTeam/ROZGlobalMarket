@@ -47,8 +47,8 @@ export function LocaleSwitcher({ initial }: { initial: AppLocale }) {
             onClick={() => select(o.value)}
             className={`px-3 py-1 text-sm uppercase transition-colors disabled:opacity-60 ${
               active
-                ? "bg-ro-gold font-semibold text-ro-navy"
-                : "text-ro-text-muted hover:bg-white/5"
+                ? "bg-ro-type-all font-semibold text-ro-on-type"
+                : "text-ro-text-muted hover:bg-ro-text/5"
             }`}
           >
             {o.value}

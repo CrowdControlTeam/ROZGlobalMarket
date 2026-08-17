@@ -17,7 +17,7 @@ export async function MarketListingsSection({
   currentUserId: string;
   isAdmin: boolean;
 }) {
-  const [{ listings, nextCursor }, { maintenanceModeEnabled }, dmAvailable, t] = await Promise.all([
+  const [{ listings, nextCursor, total }, { maintenanceModeEnabled }, dmAvailable, t] = await Promise.all([
     getListings(filters),
     loadMarketConfig(),
     isDmFeatureAvailable(),
@@ -27,13 +27,14 @@ export async function MarketListingsSection({
   return (
     <>
       {maintenanceModeEnabled && (
-        <p className="mb-4 rounded-md border-2 border-ro-gold-dark bg-ro-gold/10 px-4 py-2 text-sm text-ro-text">
+        <p className="mb-4 rounded-md border border-ro-accent/40 bg-ro-accent/10 px-4 py-2 text-sm text-ro-text">
           {isAdmin ? t("maintenance.admin") : t("maintenance.user")}
         </p>
       )}
       <MarketResults
         initialListings={listings}
         initialCursor={nextCursor}
+        total={total ?? 0}
         filters={filters}
         currentUserId={currentUserId}
         dmAvailable={dmAvailable}

@@ -1,0 +1,83 @@
+name: Prepare release
+
+# Manually-triggered release cut. Always cuts from `develop`: computes the next
+# version from the latest published tag plus the chosen bump, writes it to
+# package.json on a fresh `release/<version>` branch, and opens a PR to main.
+#
+# The bump is just the semver step, not a different flow:
+#   - patch -> a fix-only release (bug corrections, no new features)
+#   - minor -> new features (the default)
+#   - major -> incompatible changes
+# (An urgent hotfix straight off main is a separate manual flow — see README.)
+#
+# It does NOT deploy or tag: merging the PR to main triggers the production
+# deploy (ci.yml) and the tag/release (release.yml). release.yml then opens a
+# follow-up PR advancing develop to the next `-dev` version, so there is never a
+# `main -> develop` merge.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump (semver) — ignored if 'exact_version' is set"
+        type: choice
+        options: [patch, minor, major]
+        default: minor
+        required: true
+      exact_version:
+        description: "Force an exact version (e.g. 1.0.0 or 1.0.0-rc.1). Leave empty to use 'bump'."
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Compute and write the new version
+        id: bump
+        env:
+          BUMP: ${{ inputs.bump }}
+          EXACT: ${{ inputs.exact_version }}
+        run: |
+          if [ -n "$EXACT" ]; then
+            # Force path: use the exact version verbatim. npm validates semver
+            # and fails on garbage.
+            npm version "$EXACT" --no-git-tag-version --allow-same-version
+          else
+            # Compute from the highest existing tag (the source of truth for
+            # what is released), then apply the bump. No tags yet -> base
+            # v0.0.0, so the first minor release is 0.1.0. package.json is
+            # briefly set to the base so npm bumps from the right number.
+            LATEST=$(git tag --sort=-v:refname | head -n1)
+            LATEST=${LATEST:-v0.0.0}
+            npm pkg set "version=${LATEST#v}"
+            npm version "$BUMP" --no-git-tag-version
+          fi
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create release branch and open PR to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          BRANCH="release/$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git commit -am "chore(release): v$VERSION"
+          git push origin "$BRANCH"
+          BODY="Release **v$VERSION**, cut from \`develop\`. Merging this to \`main\` triggers the production deploy (ci.yml) and tags v$VERSION (release.yml). release.yml then opens a follow-up PR advancing \`develop\` to the next \`-dev\` version — no \`main -> develop\` merge needed."
+          gh pr create --base main --head "$BRANCH" --title "Release v$VERSION" --body "$BODY"
