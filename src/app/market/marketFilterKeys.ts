@@ -31,6 +31,32 @@ export const FILTER_KEYS: string[] = [
 
 export type Filters = Record<string, string>;
 
+// Serializa un objeto de filtros a query string en orden estable (FILTER_KEYS),
+// quedándose solo con las claves conocidas y no vacías. Fuente de verdad
+// compartida por el store (estado → URL) y el guardado de búsquedas (estado →
+// DB), para que ambos produzcan exactamente el mismo string comparable.
+export function serializeFilters(filters: Filters): string {
+  const p = new URLSearchParams();
+  for (const k of FILTER_KEYS) {
+    const v = filters[k];
+    if (v) p.set(k, v);
+  }
+  return p.toString();
+}
+
+// Inverso de serializeFilters: de un query string a objeto de filtros, tomando
+// solo las claves conocidas (ignora basura). Se usa al cargar una búsqueda
+// guardada de la DB en una pestaña.
+export function parseFilters(query: string): Filters {
+  const sp = new URLSearchParams(query);
+  const f: Filters = {};
+  for (const k of FILTER_KEYS) {
+    const v = sp.get(k);
+    if (v) f[k] = v;
+  }
+  return f;
+}
+
 // Param NO-filtro: señala que el mercado debe abrir estos filtros en una PESTAÑA
 // NUEVA (append) en vez de reemplazar la activa. Lo pone el enlace desde BiS y lo
 // consume marketSearchStore al montar; nunca forma parte de FILTER_KEYS.

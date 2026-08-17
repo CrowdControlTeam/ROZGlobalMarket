@@ -62,6 +62,23 @@
   color: var(--c-d);
 }
 
+/* Carril de pestañas del mercado con scroll horizontal: barra fina y discreta
+   (la rueda del ratón se traduce a horizontal por JS en SearchTabs). */
+.market-tabs-rail {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ro-panel-border) transparent;
+}
+.market-tabs-rail::-webkit-scrollbar {
+  height: 6px;
+}
+.market-tabs-rail::-webkit-scrollbar-thumb {
+  background: var(--ro-panel-border);
+  border-radius: 3px;
+}
+.market-tabs-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 :root[data-theme="dark"] {
   color-scheme: dark;
   --ro-bg: #0a0e1a;

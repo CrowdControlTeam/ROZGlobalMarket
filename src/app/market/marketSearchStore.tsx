@@ -2,7 +2,14 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { FILTER_KEYS, NEW_TAB_PARAM, type Filters } from "./marketFilterKeys";
+import { FILTER_KEYS, NEW_TAB_PARAM, parseFilters, type Filters } from "./marketFilterKeys";
+import {
+  createSavedSearch,
+  renameSavedSearch,
+  updateSavedSearch,
+  deleteSavedSearch,
+  type SavedSearchDTO,
+} from "@/lib/saved-searches";
 
 // Estado central de la búsqueda del mercado. Modelo por PESTAÑA: cada pestaña
 // guarda su propio objeto de filtros; la pestaña activa es la FUENTE DE VERDAD.
@@ -20,7 +27,10 @@ import { FILTER_KEYS, NEW_TAB_PARAM, type Filters } from "./marketFilterKeys";
 // El objeto de filtros es además el sustrato para, más adelante, persistir
 // búsquedas por usuario en DB.
 
-export type MarketTab = { id: string; seq: number; filters: Filters };
+// `savedId`/`name` solo están presentes cuando la pestaña está GUARDADA en DB
+// (ver saved-searches). El nombre de una guardada es fijo (no se re-deriva de
+// los filtros); las no guardadas usan el label automático.
+export type MarketTab = { id: string; seq: number; filters: Filters; savedId?: string; name?: string };
 
 // Id determinista de la pestaña inicial: debe coincidir en servidor y cliente
 // (crypto.randomUUID no serviría, daría valores distintos). Las siguientes
@@ -89,6 +99,18 @@ type MarketSearchContextValue = {
   switchTab: (id: string) => void;
   addTab: () => void;
   closeTab: (id: string) => void;
+  // Búsquedas guardadas del usuario (DB) y acciones sobre ellas. Guardar /
+  // renombrar / actualizar / borrar operan sobre la propia pestaña; cargar abre
+  // pestañas nuevas (no destructivo). Ver saved-searches.ts.
+  savedSearches: SavedSearchDTO[];
+  openSaved: (s: SavedSearchDTO) => void;
+  openAllSaved: () => void;
+  saveTab: (tabId: string, name: string) => Promise<void>;
+  renameTab: (tabId: string, name: string) => Promise<void>;
+  updateSaved: (tabId: string) => Promise<void>;
+  deleteSaved: (savedId: string) => Promise<void>;
+  // ¿Los filtros de una pestaña guardada difieren de lo persistido en DB?
+  isModified: (tab: MarketTab) => boolean;
   // Bottom-sheet de filtros en móvil: el disparador (icono "Filtros") vive en la
   // cabecera de resultados (MarketResults) y el panel en MarketFilters, así que
   // el estado abierto/cerrado se comparte aquí.
@@ -106,6 +128,7 @@ export function useMarketSearch(): MarketSearchContextValue {
 
 export function MarketSearchProvider({
   initialFilters,
+  initialSavedSearches,
   children,
 }: {
   // Filtros iniciales tomados de la URL POR EL SERVIDOR (MarketPageContent ya
@@ -113,6 +136,8 @@ export function MarketSearchProvider({
   // useSearchParams() aquí —el provider envuelve el boundary de la página— opta
   // toda la página a CSR y rompe la hidratación en carga dura.
   initialFilters: Filters;
+  // Búsquedas guardadas del usuario, cargadas en el servidor (MarketPageContent).
+  initialSavedSearches: SavedSearchDTO[];
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -123,6 +148,7 @@ export function MarketSearchProvider({
   ]);
   const [activeId, setActiveId] = useState<string>(INITIAL_TAB_ID);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [savedSearches, setSavedSearches] = useState<SavedSearchDTO[]>(initialSavedSearches);
 
   // Última query que ESTE store empujó a la URL. Se inicializa a lo que ya hay
   // en la URL (initialFilters) para no re-empujar en el montaje. El valor del
@@ -272,6 +298,77 @@ export function MarketSearchProvider({
     }
   }
 
+  // Abre una búsqueda guardada en una pestaña NUEVA (no destructivo), vinculada
+  // a su id para poder renombrar/actualizar/borrar después.
+  function openSaved(s: SavedSearchDTO) {
+    const filters = parseFilters(s.filters);
+    const seq = tabs.reduce((m, x) => Math.max(m, x.seq), 0) + 1;
+    const tab: MarketTab = { id: crypto.randomUUID(), seq, filters, savedId: s.id, name: s.name };
+    setTabs((prev) => [...prev, tab]);
+    setActiveId(tab.id);
+    pushImmediate(filters);
+  }
+
+  // Abre TODAS las guardadas, una pestaña por cada una (append); activa la 1ª.
+  function openAllSaved() {
+    if (savedSearches.length === 0) return;
+    let seq = tabs.reduce((m, x) => Math.max(m, x.seq), 0);
+    const newTabs: MarketTab[] = savedSearches.map((s) => ({
+      id: crypto.randomUUID(),
+      seq: ++seq,
+      filters: parseFilters(s.filters),
+      savedId: s.id,
+      name: s.name,
+    }));
+    setTabs((prev) => [...prev, ...newTabs]);
+    setActiveId(newTabs[0].id);
+    pushImmediate(newTabs[0].filters);
+  }
+
+  // Guarda los filtros de una pestaña como búsqueda nueva y la vincula.
+  async function saveTab(tabId: string, name: string) {
+    const tab = tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    const dto = await createSavedSearch(name, serialize(tab.filters));
+    setSavedSearches((prev) => [...prev, dto]);
+    setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, savedId: dto.id, name: dto.name } : t)));
+  }
+
+  // Renombra: solo tiene sentido en una pestaña guardada (persiste en DB).
+  async function renameTab(tabId: string, name: string) {
+    const tab = tabs.find((t) => t.id === tabId);
+    if (!tab?.savedId) return;
+    const trimmed = name.trim();
+    await renameSavedSearch(tab.savedId, trimmed);
+    setSavedSearches((prev) => prev.map((s) => (s.id === tab.savedId ? { ...s, name: trimmed } : s)));
+    setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, name: trimmed } : t)));
+  }
+
+  // Persiste los filtros actuales de una pestaña guardada modificada (baseline).
+  async function updateSaved(tabId: string) {
+    const tab = tabs.find((t) => t.id === tabId);
+    if (!tab?.savedId) return;
+    const filters = serialize(tab.filters);
+    await updateSavedSearch(tab.savedId, filters);
+    setSavedSearches((prev) => prev.map((s) => (s.id === tab.savedId ? { ...s, filters } : s)));
+  }
+
+  // Borra de la DB. La(s) pestaña(s) abierta(s) con ese id se DESVINCULAN (pierden
+  // savedId/name → vuelven a label automático), pero NO se cierran.
+  async function deleteSaved(savedId: string) {
+    await deleteSavedSearch(savedId);
+    setSavedSearches((prev) => prev.filter((s) => s.id !== savedId));
+    setTabs((prev) =>
+      prev.map((t) => (t.savedId === savedId ? { ...t, savedId: undefined, name: undefined } : t)),
+    );
+  }
+
+  function isModified(tab: MarketTab): boolean {
+    if (!tab.savedId) return false;
+    const saved = savedSearches.find((s) => s.id === tab.savedId);
+    return !!saved && serialize(tab.filters) !== saved.filters;
+  }
+
   const value: MarketSearchContextValue = {
     tabs,
     activeId,
@@ -281,6 +378,14 @@ export function MarketSearchProvider({
     switchTab,
     addTab,
     closeTab,
+    savedSearches,
+    openSaved,
+    openAllSaved,
+    saveTab,
+    renameTab,
+    updateSaved,
+    deleteSaved,
+    isModified,
     mobileFiltersOpen,
     setMobileFiltersOpen,
   };
