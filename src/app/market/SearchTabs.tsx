@@ -221,8 +221,15 @@ export function SearchTabs() {
       >
         {/* px-2 = FLARE (8px): deja hueco para el flare izquierdo de la 1ª
             pestaña y el derecho de la última, que si no se recortan en el borde
-            del carril. */}
-        <div className="flex w-max min-w-full items-end gap-1 border-b-2 border-ro-accent px-2">
+            del carril. Doble click en el HUECO vacío del track (no sobre una
+            pestaña) abre una pestaña nueva, como en un navegador; el
+            e.target===e.currentTarget garantiza que sea el propio track. */}
+        <div
+          className="flex w-max min-w-full items-end gap-1 border-b-2 border-ro-accent px-2"
+          onDoubleClick={(e) => {
+            if (e.target === e.currentTarget) addTab();
+          }}
+        >
           {tabs.map((tab) => {
           const active = tab.id === activeId;
           const count = countFilters(tab.filters ?? {});
