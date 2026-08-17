@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { updateMarketConfig, type getMarketConfig } from "@/lib/admin-config";
 import { buttonClass, inputClass, selectClass } from "@/lib/ui";
@@ -16,21 +16,31 @@ type Config = Awaited<ReturnType<typeof getMarketConfig>>;
 export function AdminConfigForm({ config }: { config: Config }) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [pending, startTransition] = useTransition();
   const t = useTranslations("admin");
   const tButton = useTranslations("market.button");
   const tStatus = useTranslations("market.status");
 
   return (
+    // onSubmit + preventDefault en vez del `action` del form: en React 19 el
+    // `action` RESETEA el formulario al terminar, revirtiendo los campos no
+    // controlados (selects con defaultValue) a su valor previo tras guardar —
+    // parecía que "no se guardaba" cuando en realidad sí. Con submit manual el
+    // form no se resetea y los valores permanecen.
     <form
-      action={async (formData) => {
+      onSubmit={(e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
         setError(null);
         setSaved(false);
-        try {
-          await updateMarketConfig(formData);
-          setSaved(true);
-        } catch (err) {
-          setError(getErrorMessage(err));
-        }
+        startTransition(async () => {
+          try {
+            await updateMarketConfig(formData);
+            setSaved(true);
+          } catch (err) {
+            setError(getErrorMessage(err));
+          }
+        });
       }}
       className="flex flex-col gap-6"
     >
@@ -287,7 +297,7 @@ export function AdminConfigForm({ config }: { config: Config }) {
       {error && <p className="text-sm text-red-700">{error}</p>}
       {saved && !error && <p className="text-sm text-green-700">{tStatus("saved")}</p>}
 
-      <button type="submit" className={buttonClass("primary")}>
+      <button type="submit" disabled={pending} className={buttonClass("primary")}>
         {tButton("save")}
       </button>
     </form>
