@@ -405,8 +405,7 @@
       "editBlocked": "You can't edit a listing with offers or sales.",
       "viewDetail": "View detail",
       "share": "Share",
-      "contact": "Contact",
-      "hasNotes": "Has notes"
+      "contact": "Contact"
     },
     "sort": {
       "label": "Sort",

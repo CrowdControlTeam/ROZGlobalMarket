@@ -405,8 +405,7 @@
       "editBlocked": "No puedes editar una publicación con ofertas o ventas.",
       "viewDetail": "Ver detalle",
       "share": "Compartir",
-      "contact": "Contactar",
-      "hasNotes": "Tiene notas"
+      "contact": "Contactar"
     },
     "sort": {
       "label": "Orden",
