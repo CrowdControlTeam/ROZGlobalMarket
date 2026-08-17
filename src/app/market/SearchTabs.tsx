@@ -200,7 +200,11 @@ export function SearchTabs() {
       <div
         ref={railRef}
         onWheel={onWheel}
-        className="market-tabs-rail flex min-w-0 flex-1 flex-nowrap items-end gap-1 overflow-x-auto"
+        // Scroll SOLO horizontal: overflow-y-hidden evita que los ~2px que la
+        // pestaña activa sobresale por abajo (para fundirse con la línea de
+        // acento) generen un scroll vertical parásito. Los flares quedan tocando
+        // la línea igualmente (se recortan justo en el borde del carril).
+        className="market-tabs-rail flex min-w-0 flex-1 flex-nowrap items-end gap-1 overflow-x-auto overflow-y-hidden"
       >
         {tabs.map((tab) => {
           const active = tab.id === activeId;
