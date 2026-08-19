@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
 import { getItemOptionGroup, loadMagicalWeaponTypes, isOptionsFeatureAvailable } from "@/lib/item-options";
+import { isImageRecognitionAvailable } from "@/lib/item-recognition";
 import { buildOptionSelectionsFromDetected } from "@/lib/item-options-constants";
 import { PublishModal } from "../PublishModal";
 import type { EditListingData } from "../PublishForm";
@@ -42,9 +43,10 @@ export async function EditSlot({
     return null;
   }
 
-  const [magicalTypes, optionsAvailable] = await Promise.all([
+  const [magicalTypes, optionsAvailable, recognitionEnabled] = await Promise.all([
     loadMagicalWeaponTypes(),
     isOptionsFeatureAvailable(),
+    isImageRecognitionAvailable(),
   ]);
 
   // Mismo shape que devuelve searchItems (CatalogItem + optionGroup derivado),
@@ -74,6 +76,7 @@ export async function EditSlot({
     ),
   };
 
-  // Sin escáner en edición (recognitionEnabled=false → modal de una columna).
-  return <PublishModal recognitionEnabled={false} initialType={editListing.type} editListing={editListing} />;
+  // Editar = mismo modal que crear: con escáner (si está disponible) e item
+  // editable; solo el TIPO queda fijo (ver PublishForm).
+  return <PublishModal recognitionEnabled={recognitionEnabled} initialType={editListing.type} editListing={editListing} />;
 }

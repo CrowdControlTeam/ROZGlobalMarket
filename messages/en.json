@@ -710,7 +710,8 @@
     "listingTitle": {
       "SALE": "New sale",
       "TRADE": "New trade",
-      "BUY": "New buy request"
+      "BUY": "New buy request",
+      "GIFT": "New gift"
     },
     "fields": {
       "price": "Price/ea",

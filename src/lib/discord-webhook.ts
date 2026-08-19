@@ -7,8 +7,8 @@ import { formatOptionAmount } from "@/lib/market-labels";
 type ListingWebhookPayload = {
   itemName: string;
   itemIconUrl: string; // absoluta
-  type: "SALE" | "TRADE" | "BUY";
-  price: number | null; // null cuando type = TRADE; en BUY es el precio máximo a pagar
+  type: "SALE" | "TRADE" | "BUY" | "GIFT";
+  price: number | null; // null en TRADE/GIFT (sin precio); en BUY es el precio máximo a pagar
   quantity: number | null; // null = ilimitado ("los que tengas"), solo SALE/BUY
   posterUsername: string;
   posterAvatarUrl: string | null;
@@ -40,7 +40,9 @@ export async function sendListingCreatedWebhook(payload: ListingWebhookPayload) 
           icon_url: payload.posterAvatarUrl ?? undefined,
         },
         fields: [
-          ...(payload.type === "TRADE"
+          // TRADE y GIFT no llevan precio (intercambio / gratis): el propio
+          // título del embed ("Nuevo intercambio" / "Nuevo regalo") ya lo dice.
+          ...(payload.type === "TRADE" || payload.type === "GIFT"
             ? []
             : [
                 {
