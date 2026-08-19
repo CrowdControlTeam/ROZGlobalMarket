@@ -710,7 +710,8 @@
     "listingTitle": {
       "SALE": "Nueva venta",
       "TRADE": "Nuevo intercambio",
-      "BUY": "Nueva compra"
+      "BUY": "Nueva compra",
+      "GIFT": "Nuevo regalo"
     },
     "fields": {
       "price": "Precio/ud",

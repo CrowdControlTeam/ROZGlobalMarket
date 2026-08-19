@@ -4,8 +4,8 @@
 // venta, azul = trade, rojo = regalo. Mismos nombres que ListingType donde
 // aplica (SALE/TRADE/BUY) — GIFT es aparte, no forma parte de ese enum.
 //
-// GIFT queda de referencia — los regalos no se anuncian por webhook público
-// (ver spec 2.6/2.7), solo quedan en el historial.
+// GIFT: los regalos RECLAMABLES (públicos) sí se anuncian por webhook; el
+// regalo DIRECTO (con destinatario) va por DM privado, no por webhook.
 //
 // MESSAGE es aparte de las cuatro anteriores: no es una transacción, es una
 // consulta libre desde un nombre clicable (ver src/lib/contact-messages.ts)
