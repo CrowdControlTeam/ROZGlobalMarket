@@ -361,26 +361,24 @@ export async function createListing(formData: FormData) {
     return { id: listing.id, directGift: true };
   }
 
-  // SALE/BUY/TRADE: anuncio en el webhook de "publicación creada". El regalo
-  // RECLAMABLE no se anuncia por webhook (como antes con sendGift: se "anuncia"
-  // apareciendo en el mercado).
-  if (parsed.data.type !== "GIFT") {
-    await sendListingCreatedWebhook({
-      itemName: formatItemDisplayName(item.name, refineLevel, item.slotCount),
-      itemIconUrl: `${appUrl}${item.iconUrl}`,
-      type: parsed.data.type,
-      price: listing.price,
-      quantity: listing.quantity,
-      posterUsername: session.user.username,
-      posterAvatarUrl: session.user.avatarUrl,
-      posterId: session.user.discordId,
-      listingUrl: `${appUrl}/market/${listing.id}`,
-      options: rawOptions.map((o) => ({
-        label: defsById.get(o.defId)!.label,
-        value: o.value,
-      })),
-    });
-  }
+  // Anuncio en el webhook de "publicación creada" para TODOS los tipos, incluido
+  // el regalo RECLAMABLE (público, cualquiera lo reclama). El regalo DIRECTO ya
+  // retornó arriba con su DM al destinatario, así que aquí nunca es directo.
+  await sendListingCreatedWebhook({
+    itemName: formatItemDisplayName(item.name, refineLevel, item.slotCount),
+    itemIconUrl: `${appUrl}${item.iconUrl}`,
+    type: parsed.data.type,
+    price: listing.price,
+    quantity: listing.quantity,
+    posterUsername: session.user.username,
+    posterAvatarUrl: session.user.avatarUrl,
+    posterId: session.user.discordId,
+    listingUrl: `${appUrl}/market/${listing.id}`,
+    options: rawOptions.map((o) => ({
+      label: defsById.get(o.defId)!.label,
+      value: o.value,
+    })),
+  });
 
   revalidatePath("/market");
   return { id: listing.id, directGift: false };
@@ -401,16 +399,21 @@ export async function updateListing(listingId: string, formData: FormData) {
 
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
-    include: { item: true },
   });
   if (!listing) throw new Error(t("listingNotFound"));
   if (listing.posterId !== session.user.discordId) throw new Error(t("notYourListing"));
   if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
 
-  // Tipo e item se toman del listing (bloqueados en edición), así el parseo usa
-  // la misma semántica con la que se creó.
+  // El TIPO se mantiene fijo (bloqueado en edición). El ITEM sí puede cambiar
+  // (editar = como crear, con escáner): se lee del form y se valida. El parseo
+  // usa el tipo original y el item nuevo (options/refine se validan contra él).
+  const itemId = ((formData.get("itemId") as string) || "").trim();
+  if (!itemId) throw new Error(t("selectItem"));
+  const item = await prisma.item.findUnique({ where: { id: itemId } });
+  if (!item) throw new Error(t("itemNotFound"));
+
   const { price, quantity, refineLevel, notes, rawOptions } =
-    await parseListingFields(formData, listing.type, listing.item, t);
+    await parseListingFields(formData, listing.type, item, t);
 
   // Editable solo SIN deals vivos (PENDING o ACCEPTED); CANCELLED/REJECTED no
   // cuentan. Se comprueba DENTRO de la transacción para cerrar la ventana con
@@ -427,6 +430,7 @@ export async function updateListing(listingId: string, formData: FormData) {
     await tx.listing.update({
       where: { id: listingId },
       data: {
+        itemId: item.id,
         quantity,
         price,
         refineLevel,

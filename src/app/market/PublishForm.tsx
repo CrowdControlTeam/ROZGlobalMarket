@@ -363,7 +363,9 @@ export function PublishForm({
   const formColumn = (
     <div className="flex min-w-0 flex-col gap-3 sm:h-full">
       {/* Ítem. */}
-      <ItemPicker selected={selectedItem} onSelect={handleItemSelect} onClear={handleItemClear} locked={isEdit} />
+      {/* Item editable también al editar (edición = como crear, con escáner);
+          solo el tipo queda fijo (los botones de tipo abajo van disabled). */}
+      <ItemPicker selected={selectedItem} onSelect={handleItemSelect} onClear={handleItemClear} />
       <input type="hidden" name="itemId" value={selectedItem?.id ?? ""} />
 
       {/* Tipo (fuera de las pestañas). */}
