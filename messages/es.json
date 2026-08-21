@@ -6,6 +6,7 @@
     },
     "items": {
       "searchPlaceholder": "Buscar item por nombre…",
+      "clearSearch": "Limpiar búsqueda",
       "allCategories": "Todas las categorías",
       "count": "{total} items",
       "empty": "Ningún item coincide con la búsqueda.",

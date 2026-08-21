@@ -37,6 +37,7 @@ export function ItemsBrowser({
   const [selected, setSelected] = useState<DbItemDetail | null>(null);
   const [isLoadingDetail, startDetail] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   // Último `q` que empujamos NOSOTROS a la URL (ver pushParams). Distingue un
   // cambio de URL propio (nuestra búsqueda con debounce) de uno externo. Es
   // state (no ref) para poder leerlo en render sin romper react-hooks/refs.
@@ -84,6 +85,15 @@ export function ItemsBrowser({
     debounceRef.current = setTimeout(() => pushParams({ q: value }), 300);
   }
 
+  // Reset inmediato del buscador (sin esperar al debounce): cancela la búsqueda
+  // pendiente, limpia el input, quita `q` de la URL y devuelve el foco.
+  function clearSearch() {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setQ("");
+    pushParams({ q: "" });
+    inputRef.current?.focus();
+  }
+
   function openDetail(id: string) {
     startDetail(async () => {
       const detail = await fetchDbItemDetail(id);
@@ -94,13 +104,26 @@ export function ItemsBrowser({
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder={t("searchPlaceholder")}
-          className={`${inputClass} h-10 min-w-[12rem] flex-1`}
-        />
+        <div className="relative min-w-[12rem] flex-1">
+          <input
+            ref={inputRef}
+            type="text"
+            value={q}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className={`${inputClass} h-10 ${q ? "pr-9" : ""}`}
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label={t("clearSearch")}
+              className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-ro-text-muted transition-colors hover:text-ro-text"
+            >
+              <X size={16} aria-hidden />
+            </button>
+          )}
+        </div>
         <select
           value={category}
           onChange={(e) => pushParams({ category: e.target.value })}
