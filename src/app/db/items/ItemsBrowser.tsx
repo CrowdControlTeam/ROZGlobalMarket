@@ -37,13 +37,21 @@ export function ItemsBrowser({
   const [selected, setSelected] = useState<DbItemDetail | null>(null);
   const [isLoadingDetail, startDetail] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Último `q` que empujamos NOSOTROS a la URL (ver pushParams). Distingue un
+  // cambio de URL propio (nuestra búsqueda con debounce) de uno externo. Es
+  // state (no ref) para poder leerlo en render sin romper react-hooks/refs.
+  const [lastPushedQuery, setLastPushedQuery] = useState(query);
 
   // Si la URL cambia por fuera (atrás/adelante), re-sincroniza el input. Ajuste
   // de estado EN RENDER (patrón recomendado por React) en vez de un effect.
   const [syncedQuery, setSyncedQuery] = useState(query);
   if (query !== syncedQuery) {
     setSyncedQuery(query);
-    setQ(query);
+    // Solo re-sincronizar el input ante un cambio EXTERNO. Si la URL cambió por
+    // nuestra propia búsqueda con debounce, NO pisamos `q`: el usuario puede
+    // haber seguido tecleando mientras la navegación estaba en vuelo y
+    // perderíamos esas últimas letras (bug de "solo coge la primera parte").
+    if (query !== lastPushedQuery) setQ(query);
   }
 
   useEffect(() => () => {
@@ -52,9 +60,17 @@ export function ItemsBrowser({
 
   function pushParams(next: { q?: string; category?: string; page?: number }) {
     const params = new URLSearchParams(searchParams.toString());
-    if (next.q !== undefined) next.q ? params.set("q", next.q) : params.delete("q");
-    if (next.category !== undefined)
-      next.category ? params.set("category", next.category) : params.delete("category");
+    if (next.q !== undefined) {
+      // Recordar lo que empujamos para no re-sincronizar el input con nuestro
+      // propio cambio de URL (ver el bloque de sync arriba).
+      setLastPushedQuery(next.q);
+      if (next.q) params.set("q", next.q);
+      else params.delete("q");
+    }
+    if (next.category !== undefined) {
+      if (next.category) params.set("category", next.category);
+      else params.delete("category");
+    }
     // Cambiar búsqueda o filtro vuelve a la página 1 (se borra el param); solo
     // la paginación fija una página explícita.
     if (next.page !== undefined) params.set("page", String(next.page));
