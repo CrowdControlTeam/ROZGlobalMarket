@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { auth, signIn } from "@/auth";
-import { loadMarketConfig } from "@/lib/market-config";
+import { loadHomeImage } from "@/lib/market-config";
 import { Panel } from "@/components/Panel";
 import { Hub } from "@/components/Hub";
 import { DiscordIcon } from "@/components/DiscordIcon";
@@ -17,7 +17,7 @@ export default async function Home({
   // accesible en mantenimiento (solo se cierra el mercado); desde aquí se puede
   // ir a BiS/DB. Cuenta, admin, tema e idioma viven en el menú de usuario.
   if (session?.user) {
-    const { homeImageUrl } = await loadMarketConfig();
+    const homeImageUrl = await loadHomeImage();
     return (
       <Hub
         username={session.user.username}
