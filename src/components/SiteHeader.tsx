@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getLocale } from "next-intl/server";
 import pkg from "../../package.json";
 import { prisma } from "@/lib/prisma";
-import { loadMarketConfig, DEFAULT_SITE_NAME } from "@/lib/market-config";
+import { loadMarketConfig, loadBrandingLogo, DEFAULT_SITE_NAME } from "@/lib/market-config";
 import { isAppLocale, DEFAULT_LOCALE } from "@/lib/locale-constants";
 import { loadGuildRoleNames } from "@/lib/discord-bot";
 import { UserMenu } from "./UserMenu";
@@ -49,9 +49,10 @@ export async function SiteHeader({
   user: SessionUser | null;
   theme: "light" | "dark";
 }) {
-  const [fullUser, { siteName, logoUrl }, rawLocale] = await Promise.all([
+  const [fullUser, { siteName }, logoUrl, rawLocale] = await Promise.all([
     user ? prisma.user.findUnique({ where: { id: user.discordId } }) : null,
     loadMarketConfig(),
+    loadBrandingLogo(),
     getLocale(),
   ]);
   const locale = isAppLocale(rawLocale) ? rawLocale : DEFAULT_LOCALE;

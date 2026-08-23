@@ -32,7 +32,12 @@ export async function getMarketConfig() {
     getOptionsCatalogCount(),
     fetchGuildRoles(),
     getBotStatus(),
-    prisma.marketConfig.findUnique({ where: { id: 1 }, select: { siteName: true } }),
+    // logoUrl/homeImageUrl ya no vienen de loadMarketConfig (se dejaron fuera
+    // por egress); aquí sí se leen (admin-only, poco tráfico) para el formulario.
+    prisma.marketConfig.findUnique({
+      where: { id: 1 },
+      select: { siteName: true, logoUrl: true, homeImageUrl: true },
+    }),
     getTranslations("admin.recognition.models"),
   ]);
 
@@ -66,8 +71,8 @@ export async function getMarketConfig() {
     guildRolesResult,
     // Se devuelven completos (admin-only): el formulario los reenvía tal cual
     // si no se cambian (así "sin tocar" = conservar; vacío = borrar).
-    logoUrl: config.logoUrl,
-    homeImageUrl: config.homeImageUrl,
+    logoUrl: rawConfig?.logoUrl ?? null,
+    homeImageUrl: rawConfig?.homeImageUrl ?? null,
   };
 }
 
