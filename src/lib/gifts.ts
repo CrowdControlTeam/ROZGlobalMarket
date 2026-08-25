@@ -49,7 +49,9 @@ export async function getMyGifts() {
     },
     orderBy: { createdAt: "desc" },
     include: {
-      item: true,
+      // select en item (no fila completa): la UI de regalos solo usa nombre/
+      // icono/slots. poster/user (pequeños) se dejan completos.
+      item: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
       poster: true,
       options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
       deals: { include: { user: true } },

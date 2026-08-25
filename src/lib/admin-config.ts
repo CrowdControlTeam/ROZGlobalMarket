@@ -6,7 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-guard";
-import { loadMarketConfig } from "@/lib/market-config";
+import { loadMarketConfig, bustConfigCache } from "@/lib/market-config";
 import { getOptionsCatalogCount } from "@/lib/item-options";
 import { fetchGuildRoles, getBotStatus } from "@/lib/discord-bot";
 import { GEMINI_MODEL_VALUES, isGeminiModel } from "@/lib/gemini-model-constants";
@@ -168,5 +168,8 @@ export async function setMarketConfigField(update: ConfigFieldUpdate): Promise<v
     create: { id: 1, ...data } as Prisma.MarketConfigUncheckedCreateInput,
     update: data,
   });
+  // Invalida el cache en memoria para que el cambio se refleje ya (al menos en
+  // este isolate; el resto caduca en <=TTL).
+  bustConfigCache();
   revalidatePath("/admin");
 }

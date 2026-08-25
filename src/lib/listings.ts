@@ -81,7 +81,8 @@ export async function getMyListings() {
     where: { posterId: session.user.discordId },
     orderBy: { createdAt: "desc" },
     include: {
-      item: true,
+      // select en item (no fila completa): la card solo usa nombre/icono/slots.
+      item: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
       options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
       // Deals vivos (PENDING/ACCEPTED): >0 ⇒ no editable, gate del kebab "Editar"
       // (misma regla que la card del mercado y updateListing).
@@ -116,12 +117,19 @@ export async function getMyPendingDeals() {
     prisma.deal.findMany({
       where: { status: "PENDING", listing: { posterId: me } },
       orderBy: { createdAt: "asc" },
-      include: { listing: { include: { item: true } }, user: true, offeredItem: true },
+      include: {
+        listing: { include: { item: { select: { id: true, name: true, iconUrl: true, slotCount: true } } } },
+        user: true,
+        offeredItem: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
+      },
     }),
     prisma.deal.findMany({
       where: { status: "PENDING", userId: me },
       orderBy: { createdAt: "desc" },
-      include: { listing: { include: { item: true, poster: true } }, offeredItem: true },
+      include: {
+        listing: { include: { item: { select: { id: true, name: true, iconUrl: true, slotCount: true } }, poster: true } },
+        offeredItem: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
+      },
     }),
   ]);
 
