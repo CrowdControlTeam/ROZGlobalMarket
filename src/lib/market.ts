@@ -280,10 +280,24 @@ export async function getListings(filters: MarketFilters) {
       where,
       orderBy: orderByFor(filters.sort),
       take: PAGE_SIZE + 1,
-      include: {
-        item: true,
-        poster: true,
-        options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
+      // `select` (no `include`): la card del grid solo usa estos campos. Con
+      // `include` se traían filas COMPLETAS de Item (incl. description[] y el
+      // JSON de restrictions) ×20/página — el mayor desperdicio de egress. El
+      // tooltip completo se pide aparte al hacer click (fetchDbItemDetail).
+      select: {
+        id: true,
+        type: true,
+        quantity: true,
+        price: true,
+        refineLevel: true,
+        notes: true,
+        createdAt: true, // para el cursor de paginación
+        item: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
+        poster: { select: { id: true, username: true } },
+        options: {
+          select: { slotIndex: true, value: true, def: { select: { label: true } } },
+          orderBy: { slotIndex: "asc" },
+        },
       },
     }),
     cursor ? Promise.resolve<number | null>(null) : prisma.listing.count({ where: countWhere }),

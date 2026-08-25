@@ -68,12 +68,18 @@ export async function ListingDetailContent({ id }: { id: string }) {
     isDmFeatureAvailable(),
     prisma.listing.findUnique({
       where: { id },
+      // `select` en las relaciones pesadas (item/offeredItem) para no traer la
+      // fila completa de Item (description[]/restrictions). Los escalares de
+      // Listing/Deal van con el include; def es pequeño.
       include: {
-        item: true,
-        poster: true,
+        item: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
+        poster: { select: { id: true, username: true } },
         options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
         deals: {
-          include: { user: true, offeredItem: true },
+          include: {
+            user: { select: { id: true, username: true } },
+            offeredItem: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
+          },
           orderBy: { createdAt: "desc" },
         },
       },
