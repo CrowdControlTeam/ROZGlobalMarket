@@ -1,4 +1,4 @@
-import type { ItemCategory, EquipSlot, WeaponType } from "@prisma/client";
+import type { ItemCategory, EquipSlot, WeaponType } from "@/db/schema";
 import catalogData from "@/data/catalog-search.json";
 
 // Catálogo de items recortado a los campos de búsqueda, empaquetado con la app

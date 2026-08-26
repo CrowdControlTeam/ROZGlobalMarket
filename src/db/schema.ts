@@ -1,5 +1,6 @@
 import { pgTable, varchar, timestamp, text, integer, index, foreignKey, uniqueIndex, boolean, jsonb, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
+import { createId } from "../lib/id"
 
 export const dealStatus = pgEnum("DealStatus", ['PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED'])
 export const equipSlot = pgEnum("EquipSlot", ['HEADGEAR', 'ARMOR', 'SHIELD', 'GARMENT', 'FOOTGEAR', 'ACCESSORY', 'WEAPON'])
@@ -26,22 +27,25 @@ export const user = pgTable("User", {
 	id: text().notNull(),
 	username: text().notNull(),
 	avatarUrl: text(),
-	guildRoles: text().array().default([]),
+	guildRoles: text().array().default([]).notNull(),
 	createdAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const listing = pgTable("Listing", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	posterId: text().notNull(),
 	itemId: text().notNull(),
 	quantity: integer(),
 	price: integer(),
 	status: listingStatus().default('ACTIVE').notNull(),
 	createdAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull(),
+	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 	refineLevel: integer().default(0).notNull(),
 	type: listingType().default('SALE').notNull(),
 	notes: text(),
+	// updatedAt: Prisma lo rellenaba en cliente (@updatedAt); en la DB no hay
+	// default ni trigger, así que Drizzle lo pone al insertar y actualizar.
+	// (idem en el resto de tablas con updatedAt.)
 }, (table) => [
 	index("Listing_price_idx").using("btree", table.price.asc().nullsLast().op("int4_ops")),
 	index("Listing_status_createdAt_idx").using("btree", table.status.asc().nullsLast().op("timestamp_ops"), table.createdAt.asc().nullsLast().op("timestamp_ops")),
@@ -58,7 +62,7 @@ export const listing = pgTable("Listing", {
 ]);
 
 export const listingOption = pgTable("ListingOption", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	listingId: text().notNull(),
 	slotIndex: integer().notNull(),
 	defId: text().notNull(),
@@ -78,7 +82,7 @@ export const listingOption = pgTable("ListingOption", {
 ]);
 
 export const itemOptionDef = pgTable("ItemOptionDef", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	group: itemOptionGroup().notNull(),
 	slotIndex: integer().notNull(),
 	statCode: text().notNull(),
@@ -102,7 +106,7 @@ export const marketConfig = pgTable("MarketConfig", {
 	webhookEnabled: boolean().default(false).notNull(),
 	webhookUrl: text(),
 	optionsEnabled: boolean().default(true).notNull(),
-	adminRoleIds: text().array().default([]),
+	adminRoleIds: text().array().default([]).notNull(),
 	geminiModel: text().default('gemini-flash-latest').notNull(),
 	dmNotificationsEnabled: boolean().default(true).notNull(),
 	siteName: text(),
@@ -119,7 +123,7 @@ export const rateLimit = pgTable("RateLimit", {
 });
 
 export const job = pgTable("Job", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	key: text().notNull(),
 	label: text().notNull(),
 	tier: jobTier().default('FIRST').notNull(),
@@ -135,7 +139,7 @@ export const job = pgTable("Job", {
 ]);
 
 export const bisStage = pgTable("BisStage", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	key: text().notNull(),
 	label: text().notNull(),
 	order: integer().default(0).notNull(),
@@ -145,7 +149,7 @@ export const bisStage = pgTable("BisStage", {
 ]);
 
 export const bisEntryOption = pgTable("BisEntryOption", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	entryId: text().notNull(),
 	slotIndex: integer().notNull(),
 	defId: text().notNull(),
@@ -182,7 +186,7 @@ export const bisEntryToCombatRole = pgTable("_BisEntryToCombatRole", {
 ]);
 
 export const combatRole = pgTable("CombatRole", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	key: text().notNull(),
 	label: text().notNull(),
 	order: integer().default(0).notNull(),
@@ -208,7 +212,7 @@ export const bisEntryToJob = pgTable("_BisEntryToJob", {
 ]);
 
 export const deal = pgTable("Deal", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	listingId: text().notNull(),
 	userId: text().notNull(),
 	quantity: integer().notNull(),
@@ -218,7 +222,7 @@ export const deal = pgTable("Deal", {
 	offeredRefine: integer(),
 	zenyOffered: integer().default(0).notNull(),
 	createdAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull(),
+	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 	offeredQuantity: integer(),
 }, (table) => [
 	index("Deal_listingId_status_idx").using("btree", table.listingId.asc().nullsLast().op("text_ops"), table.status.asc().nullsLast().op("text_ops")),
@@ -241,13 +245,13 @@ export const deal = pgTable("Deal", {
 ]);
 
 export const savedSearch = pgTable("SavedSearch", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	userId: text().notNull(),
 	name: text().notNull(),
 	filters: text().notNull(),
 	sortOrder: integer().default(0).notNull(),
 	createdAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull(),
+	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 }, (table) => [
 	index("SavedSearch_userId_idx").using("btree", table.userId.asc().nullsLast().op("text_ops")),
 	foreignKey({
@@ -264,7 +268,7 @@ export const item = pgTable("Item", {
 	slot: equipSlot(),
 	iconUrl: text().notNull(),
 	importedAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull(),
+	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 	weaponType: weaponType(),
 	armorLevel: integer(),
 	attack: integer(),
@@ -288,7 +292,7 @@ export const item = pgTable("Item", {
 	unidentifiedName: text(),
 	weaponLevel: integer(),
 	weight: integer(),
-	description: text().array(),
+	description: text().array().default([]).notNull(),
 }, (table) => [
 	index("Item_category_slot_idx").using("btree", table.category.asc().nullsLast().op("enum_ops"), table.slot.asc().nullsLast().op("enum_ops")),
 	index("Item_name_idx").using("btree", table.name.asc().nullsLast().op("text_ops")),
@@ -296,7 +300,7 @@ export const item = pgTable("Item", {
 ]);
 
 export const bisEntry = pgTable("BisEntry", {
-	id: text().notNull(),
+	id: text().notNull().$defaultFn(createId),
 	stageId: text().notNull(),
 	slot: equipSlot().notNull(),
 	itemId: text(),
@@ -305,7 +309,7 @@ export const bisEntry = pgTable("BisEntry", {
 	position: integer().default(0).notNull(),
 	createdById: text().notNull(),
 	createdAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull(),
+	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 	weaponType: weaponType(),
 }, (table) => [
 	index("BisEntry_stageId_slot_position_idx").using("btree", table.stageId.asc().nullsLast().op("int4_ops"), table.slot.asc().nullsLast().op("int4_ops"), table.position.asc().nullsLast().op("int4_ops")),
@@ -325,3 +329,40 @@ export const bisEntry = pgTable("BisEntry", {
 			name: "BisEntry_createdById_fkey"
 		}).onUpdate("cascade").onDelete("restrict"),
 ]);
+
+// Compatibilidad con los enums de Prisma: la app los usa como VALOR
+// (p. ej. `EquipSlot.WEAPON`) además de como tipo. Drizzle solo expone
+// `<enum>.enumValues` (array), así que reconstruimos el objeto { CLAVE: "CLAVE" }
+// que generaba Prisma. Cada enum queda declarado a la vez como const (valor) y
+// como type (unión), igual que en `@prisma/client`.
+function enumObject<const T extends readonly string[]>(values: T): { [K in T[number]]: K } {
+  return Object.fromEntries(values.map((v) => [v, v])) as { [K in T[number]]: K };
+}
+
+export const ItemCategory = enumObject(itemCategory.enumValues);
+export type ItemCategory = (typeof itemCategory.enumValues)[number];
+export const EquipSlot = enumObject(equipSlot.enumValues);
+export type EquipSlot = (typeof equipSlot.enumValues)[number];
+export const WeaponType = enumObject(weaponType.enumValues);
+export type WeaponType = (typeof weaponType.enumValues)[number];
+export const ListingType = enumObject(listingType.enumValues);
+export type ListingType = (typeof listingType.enumValues)[number];
+export const ListingStatus = enumObject(listingStatus.enumValues);
+export type ListingStatus = (typeof listingStatus.enumValues)[number];
+export const DealStatus = enumObject(dealStatus.enumValues);
+export type DealStatus = (typeof dealStatus.enumValues)[number];
+export const ItemOptionGroup = enumObject(itemOptionGroup.enumValues);
+export type ItemOptionGroup = (typeof itemOptionGroup.enumValues)[number];
+export const JobTier = enumObject(jobTier.enumValues);
+export type JobTier = (typeof jobTier.enumValues)[number];
+
+// Tipos de fila de los modelos (equivalen a los tipos que generaba Prisma).
+export type Item = typeof item.$inferSelect;
+export type ItemOptionDef = typeof itemOptionDef.$inferSelect;
+export type Listing = typeof listing.$inferSelect;
+export type ListingOption = typeof listingOption.$inferSelect;
+export type Deal = typeof deal.$inferSelect;
+export type User = typeof user.$inferSelect;
+export type BisEntry = typeof bisEntry.$inferSelect;
+export type SavedSearch = typeof savedSearch.$inferSelect;
+export type MarketConfig = typeof marketConfig.$inferSelect;

@@ -1,7 +1,13 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool } from "@neondatabase/serverless";
 import { cache } from "react";
-import * as schema from "./schema";
+import * as tables from "./schema";
+import * as relations from "./relations";
+
+// El schema del cliente incluye tablas + relaciones, para habilitar el query API
+// relacional (`db.query.<tabla>.findFirst({ with: { … } })`), que sustituye a los
+// `include` de Prisma.
+const schema = { ...tables, ...relations };
 
 // Cliente Drizzle. En Cloudflare Workers (prod) se usa el driver serverless de
 // Neon vía Pool (WebSocket) — soporta transacciones interactivas (compras,

@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { user } from "@/db/schema";
 import { loadMarketConfig } from "@/lib/market-config";
 
 // optionGroupForSlot vive en bis-constants.ts (client-safe); se reexporta aquí
@@ -22,9 +24,10 @@ export async function canEditBis(): Promise<boolean> {
 
   // Los roles del guild viven en el User (los guarda/actualiza el login, ver
   // src/auth.ts); la sesión no los lleva, así que se leen de BD.
-  const user = await prisma.user.findUnique({
-    where: { id: discordId },
-    select: { guildRoles: true },
-  });
-  return user?.guildRoles.includes(bisEditorRoleId) ?? false;
+  const [row] = await db
+    .select({ guildRoles: user.guildRoles })
+    .from(user)
+    .where(eq(user.id, discordId))
+    .limit(1);
+  return row?.guildRoles.includes(bisEditorRoleId) ?? false;
 }

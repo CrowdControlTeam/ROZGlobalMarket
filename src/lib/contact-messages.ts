@@ -2,7 +2,9 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { item as itemTable, user } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { sendDirectMessage, isDmFeatureAvailable } from "@/lib/discord-bot";
 import { getAppUrl } from "@/lib/app-url";
@@ -47,10 +49,12 @@ export async function sendContactMessage(formData: FormData) {
     throw new Error(t("cannotMessageSelf"));
   }
 
-  const [recipient, item] = await Promise.all([
-    prisma.user.findUnique({ where: { id: parsed.data.recipientId } }),
-    prisma.item.findUnique({ where: { id: parsed.data.itemId } }),
+  const [recipientRows, itemRows] = await Promise.all([
+    db.select().from(user).where(eq(user.id, parsed.data.recipientId)).limit(1),
+    db.select().from(itemTable).where(eq(itemTable.id, parsed.data.itemId)).limit(1),
   ]);
+  const recipient = recipientRows[0] ?? null;
+  const item = itemRows[0] ?? null;
   if (!recipient) throw new Error(t("userNotFound"));
   if (!item) throw new Error(t("itemNotFound"));
 

@@ -3,8 +3,20 @@
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
-import { EquipSlot, ItemOptionGroup, WeaponType } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { and, eq, inArray, max } from "drizzle-orm";
+import { db } from "@/db";
+import {
+  EquipSlot,
+  ItemOptionGroup,
+  WeaponType,
+  bisEntry,
+  bisEntryOption,
+  bisEntryToCombatRole,
+  bisEntryToJob,
+  bisStage,
+  item as itemTable,
+  itemOptionDef,
+} from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { requireAdmin } from "@/lib/admin-guard";
 import { canEditBis, optionGroupForSlot } from "@/lib/bis";
@@ -44,9 +56,10 @@ function parseBisOptions(formData: FormData, t: Translator): ParsedOption[] {
 }
 
 async function validateBisOptions(options: ParsedOption[], group: ItemOptionGroup, t: Translator): Promise<void> {
-  const defs = await prisma.itemOptionDef.findMany({
-    where: { id: { in: options.map((o) => o.defId) } },
-  });
+  const defs = await db
+    .select()
+    .from(itemOptionDef)
+    .where(inArray(itemOptionDef.id, options.map((o) => o.defId)));
   const byId = new Map(defs.map((d) => [d.id, d]));
   for (const o of options) {
     const def = byId.get(o.defId);
@@ -92,7 +105,11 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
   const { stageId, slot, note } = parsed.data;
 
-  const stage = await prisma.bisStage.findUnique({ where: { id: stageId }, select: { id: true } });
+  const [stage] = await db
+    .select({ id: bisStage.id })
+    .from(bisStage)
+    .where(eq(bisStage.id, stageId))
+    .limit(1);
   if (!stage) throw new Error(t("stageNotFound"));
 
   const roleIds = uniqueStrings(formData.getAll("roleIds"));
@@ -112,10 +129,16 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
   const hasItem = typeof rawItemId === "string" && rawItemId !== "";
 
   if (hasItem) {
-    const item = await prisma.item.findUnique({
-      where: { id: rawItemId as string },
-      select: { id: true, category: true, slot: true, weaponType: true },
-    });
+    const [item] = await db
+      .select({
+        id: itemTable.id,
+        category: itemTable.category,
+        slot: itemTable.slot,
+        weaponType: itemTable.weaponType,
+      })
+      .from(itemTable)
+      .where(eq(itemTable.id, rawItemId as string))
+      .limit(1);
     if (!item) throw new Error(t("itemNotFound"));
     // Integridad: el item debe encajar en el slot del BiS (mismo criterio que el
     // filtro del buscador). Defensa por si llega un itemId manipulado.
@@ -177,37 +200,48 @@ async function parseEntryForm(formData: FormData, t: Translator): Promise<Normal
   };
 }
 
-function optionCreateData(options: ParsedOption[]) {
-  return options.length > 0
-    ? { create: options.map((o) => ({ slotIndex: o.slotIndex, defId: o.defId, minValue: o.minValue })) }
-    : undefined;
+// Prisma resolvía roles/jobs (m2m implícita) y options (relación anidada) con
+// `connect`/`set`/`create`; en Drizzle se insertan a mano en las tablas puente
+// (_BisEntryToCombatRole/_BisEntryToJob: a=entryId, b=rol/job) y en BisEntryOption.
+type BisTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+async function insertEntryRelations(tx: BisTx, entryId: string, d: NormalizedEntry): Promise<void> {
+  if (d.roleIds.length > 0) {
+    await tx.insert(bisEntryToCombatRole).values(d.roleIds.map((id) => ({ a: entryId, b: id })));
+  }
+  if (d.jobIds.length > 0) {
+    await tx.insert(bisEntryToJob).values(d.jobIds.map((id) => ({ a: entryId, b: id })));
+  }
+  if (d.options.length > 0) {
+    await tx.insert(bisEntryOption).values(
+      d.options.map((o) => ({ entryId, slotIndex: o.slotIndex, defId: o.defId, minValue: o.minValue })),
+    );
+  }
 }
 
 export async function createBisEntry(formData: FormData): Promise<void> {
   const t = await getTranslations("errors");
   const d = await parseEntryForm(formData, t);
 
-  await prisma.$transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     // Se añade al final de su slot (position = máxima + 1).
-    const max = await tx.bisEntry.aggregate({
-      where: { stageId: d.stageId, slot: d.slot },
-      _max: { position: true },
-    });
-    await tx.bisEntry.create({
-      data: {
+    const [{ maxPos } = { maxPos: null }] = await tx
+      .select({ maxPos: max(bisEntry.position) })
+      .from(bisEntry)
+      .where(and(eq(bisEntry.stageId, d.stageId), eq(bisEntry.slot, d.slot)));
+    const [created] = await tx
+      .insert(bisEntry)
+      .values({
         stageId: d.stageId,
         slot: d.slot,
         itemId: d.itemId,
         weaponType: d.weaponType,
         refineLevel: d.refineLevel,
         note: d.note,
-        position: (max._max.position ?? -1) + 1,
+        position: (maxPos ?? -1) + 1,
         createdById: d.discordId,
-        roles: { connect: d.roleIds.map((id) => ({ id })) },
-        jobs: { connect: d.jobIds.map((id) => ({ id })) },
-        options: optionCreateData(d.options),
-      },
-    });
+      })
+      .returning({ id: bisEntry.id });
+    await insertEntryRelations(tx, created.id, d);
   });
 
   revalidatePath("/bis");
@@ -217,26 +251,30 @@ export async function updateBisEntry(entryId: string, formData: FormData): Promi
   const t = await getTranslations("errors");
   const d = await parseEntryForm(formData, t);
 
-  const existing = await prisma.bisEntry.findUnique({ where: { id: entryId }, select: { id: true } });
+  const [existing] = await db
+    .select({ id: bisEntry.id })
+    .from(bisEntry)
+    .where(eq(bisEntry.id, entryId))
+    .limit(1);
   if (!existing) throw new Error(t("bisEntryNotFound"));
 
   // stageId/slot/position son inmutables por entrada (el form los abre desde su
-  // slot y etapa); editar solo cambia contenido y etiquetas. Options =
+  // slot y etapa); editar solo cambia contenido y etiquetas. Options y etiquetas =
   // borrar-y-recrear, como en el mercado (más simple que diff).
-  await prisma.$transaction(async (tx) => {
-    await tx.bisEntryOption.deleteMany({ where: { entryId } });
-    await tx.bisEntry.update({
-      where: { id: entryId },
-      data: {
+  await db.transaction(async (tx) => {
+    await tx.delete(bisEntryOption).where(eq(bisEntryOption.entryId, entryId));
+    await tx.delete(bisEntryToCombatRole).where(eq(bisEntryToCombatRole.a, entryId));
+    await tx.delete(bisEntryToJob).where(eq(bisEntryToJob.a, entryId));
+    await tx
+      .update(bisEntry)
+      .set({
         itemId: d.itemId,
         weaponType: d.weaponType,
         refineLevel: d.refineLevel,
         note: d.note,
-        roles: { set: d.roleIds.map((id) => ({ id })) },
-        jobs: { set: d.jobIds.map((id) => ({ id })) },
-        options: optionCreateData(d.options),
-      },
-    });
+      })
+      .where(eq(bisEntry.id, entryId));
+    await insertEntryRelations(tx, entryId, d);
   });
 
   revalidatePath("/bis");
@@ -247,11 +285,8 @@ export async function deleteBisEntry(entryId: string): Promise<void> {
   await requireSession();
   if (!(await canEditBis())) throw new Error(t("notBisEditor"));
 
-  try {
-    await prisma.bisEntry.delete({ where: { id: entryId } });
-  } catch {
-    throw new Error(t("bisEntryNotFound"));
-  }
+  const deleted = await db.delete(bisEntry).where(eq(bisEntry.id, entryId)).returning({ id: bisEntry.id });
+  if (deleted.length === 0) throw new Error(t("bisEntryNotFound"));
 
   revalidatePath("/bis");
 }
@@ -268,18 +303,18 @@ export async function reorderBisEntries(
   await requireSession();
   if (!(await canEditBis())) throw new Error(t("notBisEditor"));
 
-  const existing = await prisma.bisEntry.findMany({
-    where: { stageId, slot },
-    select: { id: true },
-  });
+  const existing = await db
+    .select({ id: bisEntry.id })
+    .from(bisEntry)
+    .where(and(eq(bisEntry.stageId, stageId), eq(bisEntry.slot, slot)));
   const valid = new Set(existing.map((e) => e.id));
   const ordered = orderedIds.filter((id) => valid.has(id));
 
-  await prisma.$transaction(
-    ordered.map((id, index) =>
-      prisma.bisEntry.update({ where: { id }, data: { position: index } }),
-    ),
-  );
+  await db.transaction(async (tx) => {
+    for (const [index, id] of ordered.entries()) {
+      await tx.update(bisEntry).set({ position: index }).where(eq(bisEntry.id, id));
+    }
+  });
 
   revalidatePath("/bis");
 }
@@ -308,7 +343,9 @@ function slugifyStage(label: string): string {
 async function freeStageKey(base: string): Promise<string> {
   let key = base;
   let n = 2;
-  while (await prisma.bisStage.findUnique({ where: { key }, select: { id: true } })) {
+  while (
+    (await db.select({ id: bisStage.id }).from(bisStage).where(eq(bisStage.key, key)).limit(1)).length > 0
+  ) {
     key = `${base}-${n++}`;
   }
   return key;
@@ -325,8 +362,10 @@ export async function createBisStage(label: string): Promise<void> {
   const trimmed = label.trim();
   if (!trimmed || trimmed.length > MAX_STAGE_LABEL) throw new Error(t("invalidData"));
   const key = await freeStageKey(slugifyStage(trimmed));
-  const max = await prisma.bisStage.aggregate({ _max: { order: true } });
-  await prisma.bisStage.create({ data: { key, label: trimmed, order: (max._max.order ?? 0) + 1 } });
+  const [{ maxOrder } = { maxOrder: null }] = await db
+    .select({ maxOrder: max(bisStage.order) })
+    .from(bisStage);
+  await db.insert(bisStage).values({ key, label: trimmed, order: (maxOrder ?? 0) + 1 });
   revalidateStages();
 }
 
@@ -335,9 +374,9 @@ export async function renameBisStage(id: string, label: string): Promise<void> {
   await requireAdmin();
   const trimmed = label.trim();
   if (!trimmed || trimmed.length > MAX_STAGE_LABEL) throw new Error(t("invalidData"));
-  const exists = await prisma.bisStage.findUnique({ where: { id }, select: { id: true } });
+  const [exists] = await db.select({ id: bisStage.id }).from(bisStage).where(eq(bisStage.id, id)).limit(1);
   if (!exists) throw new Error(t("stageNotFound"));
-  await prisma.bisStage.update({ where: { id }, data: { label: trimmed } });
+  await db.update(bisStage).set({ label: trimmed }).where(eq(bisStage.id, id));
   revalidateStages();
 }
 
@@ -346,9 +385,9 @@ export async function renameBisStage(id: string, label: string): Promise<void> {
 export async function deleteBisStage(id: string): Promise<void> {
   const t = await getTranslations("errors");
   await requireAdmin();
-  const exists = await prisma.bisStage.findUnique({ where: { id }, select: { id: true } });
+  const [exists] = await db.select({ id: bisStage.id }).from(bisStage).where(eq(bisStage.id, id)).limit(1);
   if (!exists) throw new Error(t("stageNotFound"));
-  await prisma.bisStage.delete({ where: { id } });
+  await db.delete(bisStage).where(eq(bisStage.id, id));
   revalidateStages();
 }
 
@@ -357,12 +396,14 @@ export async function deleteBisStage(id: string): Promise<void> {
 // primero). Solo se tocan ids válidos (defensa).
 export async function reorderBisStages(orderedIds: string[]): Promise<void> {
   await requireAdmin();
-  const existing = await prisma.bisStage.findMany({ select: { id: true } });
+  const existing = await db.select({ id: bisStage.id }).from(bisStage);
   const valid = new Set(existing.map((s) => s.id));
   const ordered = orderedIds.filter((id) => valid.has(id));
   const n = ordered.length;
-  await prisma.$transaction(
-    ordered.map((id, i) => prisma.bisStage.update({ where: { id }, data: { order: n - i } })),
-  );
+  await db.transaction(async (tx) => {
+    for (const [i, id] of ordered.entries()) {
+      await tx.update(bisStage).set({ order: n - i }).where(eq(bisStage.id, id));
+    }
+  });
   revalidateStages();
 }

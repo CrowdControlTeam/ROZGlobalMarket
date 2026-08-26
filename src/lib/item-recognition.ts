@@ -1,8 +1,10 @@
 "use server";
 
-import { ItemCategory, EquipSlot, WeaponType, ItemOptionGroup } from "@prisma/client";
+import { eq } from "drizzle-orm";
+import { ItemCategory, EquipSlot, WeaponType, ItemOptionGroup } from "@/db/schema";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { itemOptionDef } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import {
   MAX_OPTION_SLOTS,
@@ -206,7 +208,7 @@ export async function recognizeItemFromScreenshot(formData: FormData): Promise<R
   }
 
   // Todo lo de aquí en adelante puede fallar por motivos que no controlamos
-  // (Gemini caído, un fallo de Prisma, un bug) — se envuelve entero (antes
+  // (Gemini caído, un fallo de la BD, un bug) — se envuelve entero (antes
   // solo cubría la llamada a Gemini) para que CUALQUIER fallo termine en un
   // status "error" con mensaje genérico, nunca en una excepción sin
   // controlar. El mensaje real solo se registra en el log del servidor —
@@ -273,7 +275,7 @@ export async function recognizeItemFromScreenshot(formData: FormData): Promise<R
 
     const options: { slotIndex: number; defId: string; value: number }[] = [];
     if (optionGroup) {
-      const defs = await prisma.itemOptionDef.findMany({ where: { group: optionGroup } });
+      const defs = await db.select().from(itemOptionDef).where(eq(itemOptionDef.group, optionGroup));
       for (let i = 0; i < extraction.options.length && i < MAX_OPTION_SLOTS; i++) {
         const slotIndex = i + 1;
         const defsForSlot = defs.filter((d) => d.slotIndex === slotIndex);

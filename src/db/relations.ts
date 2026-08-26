@@ -6,11 +6,13 @@ export const listingRelations = relations(listing, ({one, many}) => ({
 		fields: [listing.itemId],
 		references: [item.id]
 	}),
-	user: one(user, {
+	// Nombres alineados con Prisma (poster/options) para no tocar el código
+	// consumidor.
+	poster: one(user, {
 		fields: [listing.posterId],
 		references: [user.id]
 	}),
-	listingOptions: many(listingOption),
+	options: many(listingOption),
 	deals: many(deal),
 }));
 
@@ -32,7 +34,8 @@ export const listingOptionRelations = relations(listingOption, ({one}) => ({
 		fields: [listingOption.listingId],
 		references: [listing.id]
 	}),
-	itemOptionDef: one(itemOptionDef, {
+	// `def` como en Prisma (ListingOption.def).
+	def: one(itemOptionDef, {
 		fields: [listingOption.defId],
 		references: [itemOptionDef.id]
 	}),
@@ -60,7 +63,8 @@ export const bisEntryOptionRelations = relations(bisEntryOption, ({one}) => ({
 		fields: [bisEntryOption.entryId],
 		references: [bisEntry.id]
 	}),
-	itemOptionDef: one(itemOptionDef, {
+	// `def` como en Prisma (BisEntryOption.def).
+	def: one(itemOptionDef, {
 		fields: [bisEntryOption.defId],
 		references: [itemOptionDef.id]
 	}),
@@ -119,7 +123,9 @@ export const dealRelations = relations(deal, ({one}) => ({
 		fields: [deal.userId],
 		references: [user.id]
 	}),
-	item: one(item, {
+	// Item de contraoferta en un TRADE (Deal.offeredItemId). Nombre alineado con
+	// el `offeredItem` que usaba Prisma.
+	offeredItem: one(item, {
 		fields: [deal.offeredItemId],
 		references: [item.id]
 	}),
