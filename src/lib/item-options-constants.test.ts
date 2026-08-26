@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ItemCategory, EquipSlot, WeaponType } from "@prisma/client";
+import { ItemCategory, EquipSlot, WeaponType } from "@/db/enums";
 import {
   getItemOptionGroup,
   buildOptionSelectionsFromDetected,

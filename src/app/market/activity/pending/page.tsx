@@ -1,6 +1,6 @@
 import { ItemIcon } from "@/components/ItemIcon";
 import { ListingLink } from "@/components/ListingLink";
-import type { ListingType } from "@prisma/client";
+import type { ListingType } from "@/db/enums";
 import { getTranslations } from "next-intl/server";
 import { getMyPendingDeals } from "@/lib/listings";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";

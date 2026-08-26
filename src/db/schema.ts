@@ -1,15 +1,25 @@
 import { pgTable, varchar, timestamp, text, integer, index, foreignKey, uniqueIndex, boolean, jsonb, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { createId } from "../lib/id"
+import {
+  DEAL_STATUS_VALUES,
+  EQUIP_SLOT_VALUES,
+  ITEM_CATEGORY_VALUES,
+  ITEM_OPTION_GROUP_VALUES,
+  JOB_TIER_VALUES,
+  LISTING_STATUS_VALUES,
+  LISTING_TYPE_VALUES,
+  WEAPON_TYPE_VALUES,
+} from "./enums"
 
-export const dealStatus = pgEnum("DealStatus", ['PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED'])
-export const equipSlot = pgEnum("EquipSlot", ['HEADGEAR', 'ARMOR', 'SHIELD', 'GARMENT', 'FOOTGEAR', 'ACCESSORY', 'WEAPON'])
-export const itemCategory = pgEnum("ItemCategory", ['WEAPON', 'ARMOR', 'CARD', 'ENCHANT', 'COSTUME', 'HEALING', 'USABLE', 'DELAY_CONSUME', 'AMMO', 'ETC', 'PET_EGG', 'PET_ARMOR', 'CASH', 'GET_PORING'])
-export const itemOptionGroup = pgEnum("ItemOptionGroup", ['ARMOR', 'GARMENT', 'FOOTGEAR', 'WEAPON_PHYSICAL', 'WEAPON_MAGICAL'])
-export const jobTier = pgEnum("JobTier", ['FIRST', 'SECOND', 'THIRD'])
-export const listingStatus = pgEnum("ListingStatus", ['ACTIVE', 'COMPLETED', 'CANCELLED', 'EXPIRED'])
-export const listingType = pgEnum("ListingType", ['SALE', 'TRADE', 'BUY', 'GIFT'])
-export const weaponType = pgEnum("WeaponType", ['DAGGER', 'ONE_HAND_SWORD', 'TWO_HAND_SWORD', 'ONE_HAND_SPEAR', 'TWO_HAND_SPEAR', 'ONE_HAND_AXE', 'TWO_HAND_AXE', 'MACE', 'ROD', 'TWO_HAND_ROD', 'BOW', 'KNUCKLE', 'INSTRUMENT', 'WHIP', 'BOOK', 'KATAR', 'REVOLVER', 'RIFLE', 'GATLING_GUN', 'SHOTGUN', 'GRENADE_LAUNCHER', 'FUUMA_SHURIKEN'])
+export const dealStatus = pgEnum("DealStatus", DEAL_STATUS_VALUES)
+export const equipSlot = pgEnum("EquipSlot", EQUIP_SLOT_VALUES)
+export const itemCategory = pgEnum("ItemCategory", ITEM_CATEGORY_VALUES)
+export const itemOptionGroup = pgEnum("ItemOptionGroup", ITEM_OPTION_GROUP_VALUES)
+export const jobTier = pgEnum("JobTier", JOB_TIER_VALUES)
+export const listingStatus = pgEnum("ListingStatus", LISTING_STATUS_VALUES)
+export const listingType = pgEnum("ListingType", LISTING_TYPE_VALUES)
+export const weaponType = pgEnum("WeaponType", WEAPON_TYPE_VALUES)
 
 
 export const prismaMigrations = pgTable("_prisma_migrations", {
@@ -330,31 +340,19 @@ export const bisEntry = pgTable("BisEntry", {
 		}).onUpdate("cascade").onDelete("restrict"),
 ]);
 
-// Compatibilidad con los enums de Prisma: la app los usa como VALOR
-// (p. ej. `EquipSlot.WEAPON`) además de como tipo. Drizzle solo expone
-// `<enum>.enumValues` (array), así que reconstruimos el objeto { CLAVE: "CLAVE" }
-// que generaba Prisma. Cada enum queda declarado a la vez como const (valor) y
-// como type (unión), igual que en `@prisma/client`.
-function enumObject<const T extends readonly string[]>(values: T): { [K in T[number]]: K } {
-  return Object.fromEntries(values.map((v) => [v, v])) as { [K in T[number]]: K };
-}
-
-export const ItemCategory = enumObject(itemCategory.enumValues);
-export type ItemCategory = (typeof itemCategory.enumValues)[number];
-export const EquipSlot = enumObject(equipSlot.enumValues);
-export type EquipSlot = (typeof equipSlot.enumValues)[number];
-export const WeaponType = enumObject(weaponType.enumValues);
-export type WeaponType = (typeof weaponType.enumValues)[number];
-export const ListingType = enumObject(listingType.enumValues);
-export type ListingType = (typeof listingType.enumValues)[number];
-export const ListingStatus = enumObject(listingStatus.enumValues);
-export type ListingStatus = (typeof listingStatus.enumValues)[number];
-export const DealStatus = enumObject(dealStatus.enumValues);
-export type DealStatus = (typeof dealStatus.enumValues)[number];
-export const ItemOptionGroup = enumObject(itemOptionGroup.enumValues);
-export type ItemOptionGroup = (typeof itemOptionGroup.enumValues)[number];
-export const JobTier = enumObject(jobTier.enumValues);
-export type JobTier = (typeof jobTier.enumValues)[number];
+// Enums (valor + tipo): viven en ./enums (client-safe) y se re-exportan aquí
+// (nombre = valor y tipo a la vez) para que el código de servidor pueda
+// importarlos junto a las tablas.
+export {
+  ItemCategory,
+  EquipSlot,
+  WeaponType,
+  ListingType,
+  ListingStatus,
+  DealStatus,
+  ItemOptionGroup,
+  JobTier,
+} from "./enums";
 
 // Tipos de fila de los modelos (equivalen a los tipos que generaba Prisma).
 export type Item = typeof item.$inferSelect;

@@ -17,7 +17,8 @@ import {
   User,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { ItemCategory, EquipSlot, WeaponType, type ItemOptionDef } from "@prisma/client";
+import { ItemCategory, EquipSlot, WeaponType } from "@/db/enums";
+import type { ItemOptionDef } from "@/db/schema";
 import { categoryLabel, slotLabel, weaponTypeLabel } from "@/lib/market-labels";
 import { formatPrice } from "@/lib/price";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";

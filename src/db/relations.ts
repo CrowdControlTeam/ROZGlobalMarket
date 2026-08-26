@@ -71,7 +71,8 @@ export const bisEntryOptionRelations = relations(bisEntryOption, ({one}) => ({
 }));
 
 export const bisEntryRelations = relations(bisEntry, ({one, many}) => ({
-	bisEntryOptions: many(bisEntryOption),
+	// `options` como en Prisma (BisEntry.options).
+	options: many(bisEntryOption),
 	bisEntryToCombatRoles: many(bisEntryToCombatRole),
 	bisEntryToJobs: many(bisEntryToJob),
 	bisStage: one(bisStage, {

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { ListingType, DealStatus } from "@prisma/client";
+import { ListingType, DealStatus } from "@/db/enums";
 import { requireAdmin } from "@/lib/admin-guard";
 import { getMarketStats } from "@/lib/admin-stats";
 import { isStatsPeriod, type StatsPeriod } from "@/lib/admin-stats-constants";

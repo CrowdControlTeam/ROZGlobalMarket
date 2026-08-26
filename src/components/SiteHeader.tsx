@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { getLocale } from "next-intl/server";
+import { eq } from "drizzle-orm";
 import pkg from "../../package.json";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { user as userTable } from "@/db/schema";
 import { loadMarketConfig, loadBrandingLogo, DEFAULT_SITE_NAME } from "@/lib/market-config";
 import { isAppLocale, DEFAULT_LOCALE } from "@/lib/locale-constants";
 import { loadGuildRoleNames } from "@/lib/discord-bot";
@@ -50,7 +52,9 @@ export async function SiteHeader({
   theme: "light" | "dark";
 }) {
   const [fullUser, { siteName }, logoUrl, rawLocale] = await Promise.all([
-    user ? prisma.user.findUnique({ where: { id: user.discordId } }) : null,
+    user
+      ? db.select().from(userTable).where(eq(userTable.id, user.discordId)).limit(1).then((r) => r[0] ?? null)
+      : Promise.resolve(null),
     loadMarketConfig(),
     loadBrandingLogo(),
     getLocale(),

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ItemIcon } from "@/components/ItemIcon";
 import { useTranslations } from "next-intl";
-import type { EquipSlot } from "@prisma/client";
+import type { EquipSlot } from "@/db/enums";
 import { searchItems } from "@/lib/listings";
 import { inputClass } from "@/lib/ui";
 import { categoryLabel, weaponTypeLabel } from "@/lib/market-labels";

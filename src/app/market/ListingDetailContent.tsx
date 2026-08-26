@@ -1,7 +1,9 @@
 import { ItemIcon } from "@/components/ItemIcon";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
+import { asc, desc, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { listing as listingTable } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
@@ -66,21 +68,21 @@ export async function ListingDetailContent({ id }: { id: string }) {
   // de en serie.
   const [dmAvailable, listing] = await Promise.all([
     isDmFeatureAvailable(),
-    prisma.listing.findUnique({
-      where: { id },
-      // `select` en las relaciones pesadas (item/offeredItem) para no traer la
+    db.query.listing.findFirst({
+      where: eq(listingTable.id, id),
+      // `columns` en las relaciones pesadas (item/offeredItem) para no traer la
       // fila completa de Item (description[]/restrictions). Los escalares de
-      // Listing/Deal van con el include; def es pequeño.
-      include: {
-        item: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
-        poster: { select: { id: true, username: true } },
-        options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
+      // Listing/Deal van completos; def es pequeño.
+      with: {
+        item: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
+        poster: { columns: { id: true, username: true } },
+        options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
         deals: {
-          include: {
-            user: { select: { id: true, username: true } },
-            offeredItem: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
+          with: {
+            user: { columns: { id: true, username: true } },
+            offeredItem: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: (d) => desc(d.createdAt),
         },
       },
     }),

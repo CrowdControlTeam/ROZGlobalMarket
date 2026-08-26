@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { z } from "zod";
-import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@prisma/client";
+import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@/db/enums";
 import { isMarketSort, type MarketFilters as MarketFiltersType } from "@/lib/market";
 import { requireSession } from "@/lib/guard";
 import { listSavedSearches } from "@/lib/saved-searches";

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { EquipSlot, ItemOptionGroup, WeaponType, type ItemOptionDef } from "@prisma/client";
+import { EquipSlot, ItemOptionGroup, WeaponType } from "@/db/enums";
+import type { ItemOptionDef } from "@/db/schema";
 import { ItemPicker, type ItemResult } from "@/app/market/ItemPicker";
 import { getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
 import { createBisEntry, updateBisEntry, deleteBisEntry } from "@/lib/bis-actions";

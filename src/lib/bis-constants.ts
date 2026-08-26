@@ -1,7 +1,7 @@
 // Puro y sin dependencias de servidor (a diferencia de bis.ts, que importa
 // prisma/auth), para poder usarse también desde componentes cliente — mismo
 // patrón que item-options-constants.ts.
-import { EquipSlot, ItemCategory, ItemOptionGroup } from "@prisma/client";
+import { EquipSlot, ItemCategory, ItemOptionGroup } from "@/db/enums";
 
 // Grupo de random options fijado SOLO por el slot de equipo, para BiS
 // "genéricos" (cualquier pieza con estas options) donde no hay un item concreto

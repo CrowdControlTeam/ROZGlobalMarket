@@ -33,7 +33,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { EquipSlot, ItemCategory, ItemOptionGroup, WeaponType } from "@prisma/client";
+import type { EquipSlot, ItemCategory, ItemOptionGroup, WeaponType } from "@/db/enums";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { formatOptionAmount, weaponTypeLabel } from "@/lib/market-labels";
 import { reorderBisEntries, deleteBisEntry } from "@/lib/bis-actions";
