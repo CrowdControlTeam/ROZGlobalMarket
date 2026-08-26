@@ -1,11 +1,11 @@
-// Valores y tipos de los enums, SIN dependencias de Drizzle (client-safe): los
-// importan tanto el schema del servidor (para definir los pgEnum) como los
-// componentes cliente, que no deben arrastrar drizzle-orm/pg-core al bundle del
-// navegador. Reemplazan a los enums que generaba `@prisma/client`.
+// Enum values and types, with NO Drizzle dependency (client-safe): imported both
+// by the server schema (to define the pgEnums) and by client components, which
+// must not pull drizzle-orm/pg-core into the browser bundle. These replace the
+// enums that `@prisma/client` used to generate.
 //
-// La app usa estos enums como VALOR (p. ej. `EquipSlot.WEAPON`) además de como
-// tipo, así que cada uno se declara a la vez como const (objeto { CLAVE: "CLAVE" })
-// y como type (unión), igual que hacía Prisma.
+// The app uses these enums as a VALUE (e.g. `EquipSlot.WEAPON`) as well as a
+// type, so each is declared both as a const (object { KEY: "KEY" }) and as a type
+// (union), just like Prisma did.
 
 export const ITEM_CATEGORY_VALUES = [
   "WEAPON", "ARMOR", "CARD", "ENCHANT", "COSTUME", "HEALING", "USABLE",
@@ -28,8 +28,8 @@ export const ITEM_OPTION_GROUP_VALUES = [
 ] as const;
 export const JOB_TIER_VALUES = ["FIRST", "SECOND", "THIRD"] as const;
 
-// Reconstruye el objeto { CLAVE: "CLAVE" } que generaba Prisma para poder usar
-// el enum como valor (EquipSlot.WEAPON).
+// Rebuilds the { KEY: "KEY" } object Prisma generated, so the enum can be used as
+// a value (EquipSlot.WEAPON).
 function enumObject<const T extends readonly string[]>(values: T): { [K in T[number]]: K } {
   return Object.fromEntries(values.map((v) => [v, v])) as { [K in T[number]]: K };
 }

@@ -1,8 +1,8 @@
-// Script puntual (no hook de build) para poblar ItemOptionDef con los 194
-// registros reales de random options, extraídos de https://ragnarokze.ro/options
-// el 2026-07-19. Idempotente: upsert sobre (group, slotIndex, statCode).
+// One-off script (not a build hook) to seed ItemOptionDef with the 194 real
+// random-option records, scraped from https://ragnarokze.ro/options on
+// 2026-07-19. Idempotent: upsert on (group, slotIndex, statCode).
 //
-// Uso: npm run seed:options
+// Usage: npm run seed:options
 
 import { itemOptionDef, type ItemOptionGroup } from "../schema";
 import { db, runSeed } from "./client";
@@ -11,8 +11,8 @@ const ELEMENTS = [
   "Neutral", "Water", "Earth", "Fire", "Wind", "Poison", "Holy", "Shadow", "Ghost", "Undead",
 ];
 
-// Mismo orden de 10 elementos que ELEMENTS, sin "Neutral" (así viene en la
-// fuente para "resistance increase" de Garment slot 2).
+// Same order of 10 elements as ELEMENTS, without "Neutral" (that's how the
+// source lists "resistance increase" for Garment slot 2).
 const ELEMENTS_NO_NEUTRAL = ELEMENTS.filter((e) => e !== "Neutral");
 
 const RACES = [

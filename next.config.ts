@@ -2,10 +2,10 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
-  // `pg` (node-postgres) solo se usa en dev local (Postgres de docker, TCP); en
-  // el Worker de producción se usa el driver serverless de Neon (WebSocket) y esa
-  // rama nunca se ejecuta. Se marca como external para que NO entre en el bundle
-  // del Worker (es Node-only y no funcionaría ahí). Ver src/db/index.ts.
+  // `pg` (node-postgres) is only used in local dev (docker Postgres, TCP); the
+  // production Worker uses Neon's serverless driver (WebSocket) and never takes
+  // that branch. It's marked external so it does NOT enter the Worker bundle (it's
+  // Node-only and wouldn't work there). See src/db/index.ts.
   serverExternalPackages: ["pg"],
   images: {
     remotePatterns: [

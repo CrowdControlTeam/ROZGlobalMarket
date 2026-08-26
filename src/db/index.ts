@@ -4,16 +4,16 @@ import { cache } from "react";
 import * as tables from "./schema";
 import * as relations from "./relations";
 
-// El schema del cliente incluye tablas + relaciones, para habilitar el query API
-// relacional (`db.query.<tabla>.findFirst({ with: { … } })`), que sustituye a los
-// `include` de Prisma.
+// The client schema includes tables + relations, to enable the relational query
+// API (`db.query.<table>.findFirst({ with: { … } })`) that replaces Prisma's
+// `include`.
 const schema = { ...tables, ...relations };
 
-// En Cloudflare Workers (prod) no hay sockets TCP: se conecta con el driver
-// serverless de Neon vía Pool (WebSocket), que además soporta transacciones
-// interactivas (compras, trades, rate limit). En local (Postgres de docker, host
-// que no es de Neon) se usa node-postgres sobre TCP. Mismo criterio que el antiguo
-// prisma.ts (Neon vs cliente estándar según el host de DATABASE_URL).
+// On Cloudflare Workers (prod) there are no TCP sockets: connect with Neon's
+// serverless driver via a Pool (WebSocket), which also supports interactive
+// transactions (purchases, trades, rate limit). Locally (docker Postgres, a
+// non-Neon host) use node-postgres over TCP. Same criterion as the old prisma.ts
+// (Neon vs. standard client based on the DATABASE_URL host).
 function isNeon(url: string | undefined): boolean {
   return !!url && url.includes("neon.tech");
 }
@@ -27,10 +27,10 @@ type Db = ReturnType<typeof createNeonDb>;
 
 function createDb(): Db {
   if (isNeon(process.env.DATABASE_URL)) return createNeonDb();
-  // Local (docker Postgres, TCP): node-postgres. `pg` y drizzle-orm/node-postgres
-  // se cargan con require dinámico para que NO entren en el bundle del Worker
-  // (prod nunca toma esta rama; `pg` va como serverExternalPackage). Se castea al
-  // tipo del cliente Neon: la API (core + relacional) es idéntica entre drivers.
+  // Local (docker Postgres, TCP): node-postgres. `pg` and drizzle-orm/node-postgres
+  // are loaded with a dynamic require so they do NOT enter the Worker bundle (prod
+  // never takes this branch; `pg` is a serverExternalPackage). Cast to the Neon
+  // client type: the API (core + relational) is identical across drivers.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Pool } = require("pg");
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -40,11 +40,11 @@ function createDb(): Db {
 
 const globalForDb = globalThis as unknown as { db: Db | undefined };
 
-// En prod (Worker) el cliente se crea POR PETICIÓN y de forma PEREZOSA (primer
-// acceso, ya dentro de la petición): en Workers los secretos solo existen en el
-// contexto de la petición y la I/O no se reutiliza entre peticiones. En dev
-// (Node, proceso largo) se reutiliza un singleton. Mismo patrón que el antiguo
-// prisma.ts (Proxy que difiere la creación al primer acceso).
+// In prod (Worker) the client is created PER REQUEST and LAZILY (on first access,
+// already inside the request): on Workers secrets only exist within the request
+// context and I/O is not reused across requests. In dev (Node, long-lived
+// process) a singleton is reused. Same pattern as the old prisma.ts (a Proxy that
+// defers creation to first access).
 const getDb: () => Db =
   process.env.NODE_ENV === "production" ? cache(createDb) : () => (globalForDb.db ??= createDb());
 

@@ -1,18 +1,18 @@
-// Import/sustitución del catálogo de items desde la DB extraída del cliente del
-// juego (ROZDataBaseExtractor). Es la fuente de verdad: lo que no esté aquí se
-// borra. Reemplaza por completo la tabla Item. Idempotente.
+// Imports/replaces the item catalog from the DB extracted from the game client
+// (ROZDataBaseExtractor). It is the source of truth: anything not present here is
+// deleted. Fully replaces the Item table. Idempotent.
 //
-// IMPORTANTE: la fuente es el SUBCONJUNTO de items TRADUCIDOS al inglés
-// (`server/output/icons/items.json`), no el volcado completo del extractor
-// (`server/output/items.json`), que trae ~12k items, muchos sin traducir. Si
-// cambia la ubicación del subconjunto, pásala como argumento explícito.
+// IMPORTANT: the source is the SUBSET of items TRANSLATED to English
+// (`server/output/icons/items.json`), not the full extractor dump
+// (`server/output/items.json`), which holds ~12k items, many untranslated. If the
+// subset's location changes, pass it as an explicit argument.
 //
-// Uso:
-//   npm run import:items -- [ruta/items.json]
-//   (por entorno: npx dotenvx run -f .env.dev -- npm run import:items)
+// Usage:
+//   npm run import:items -- [path/items.json]
+//   (per environment: npx dotenvx run -f .env.dev -- npm run import:items)
 //
-// Iconos: convención /icons/items/<id>.png (pequeño) y /icons/details/<id>.png
-// (ficha estilo juego); se copian a public/ desde el extractor aparte.
+// Icons: convention /icons/items/<id>.png (small) and /icons/details/<id>.png
+// (game-style card); copied to public/ from the extractor separately.
 
 import fs from "node:fs";
 import { count, eq, notInArray } from "drizzle-orm";
@@ -21,7 +21,7 @@ import { db, runSeed } from "./client";
 
 const SRC = process.argv[2] ?? "E:/Proyectos/Git/ROZDataBaseExtractor/server/output/icons/items.json";
 
-// --- Mapeos (validados contra los 3.925 items del catálogo traducido) ---
+// --- Mappings (validated against the 3,925 items of the translated catalog) ---
 const CATEGORY_MAP: Record<string, ItemCategory> = {
   Weapon: "WEAPON", Armor: "ARMOR", Card: "CARD", Enchant: "ENCHANT", Costume: "COSTUME",
   Healing: "HEALING", Usable: "USABLE", DelayConsume: "DELAY_CONSUME", Etc: "ETC", Ammo: "AMMO",
@@ -91,39 +91,39 @@ runSeed(async () => {
   const items: RawItem[] = JSON.parse(fs.readFileSync(SRC, "utf8"));
   const rows = items.map(toRow);
 
-  // Reemplazo idempotente y FK-safe (la nueva DB es la verdad, lo que no esté
-  // desaparece). NO se borran todos los items y se recrean, porque los que
-  // siguen existiendo pueden estar referenciados por listings/BiS/deals; se hace
-  // UPSERT y luego se borran solo los que ya no están:
+  // Idempotent, FK-safe replacement (the new DB is the truth; anything missing
+  // disappears). Items are NOT wiped and recreated, because the ones that still
+  // exist may be referenced by listings/BiS/deals; so UPSERT, then delete only the
+  // ones that are gone:
   const validIds = [...new Set(rows.map((r) => r.id as string))];
 
-  // Diff contra lo que ya había, para reportar el impacto de la actualización.
+  // Diff against what was there, to report the impact of the update.
   const existingIds = new Set((await db.select({ id: item.id }).from(item)).map((i) => i.id));
   const newIdSet = new Set(validIds);
   const createdCount = validIds.filter((id) => !existingIds.has(id)).length;
   const matchedCount = validIds.filter((id) => existingIds.has(id)).length;
   const deletedCount = [...existingIds].filter((id) => !newIdSet.has(id)).length;
 
-  // 1) Limpiar referencias a items que desaparecen (Listing.itemId es requerido;
-  //    BisEntry.itemId opcional; Deal.offeredItemId opcional → SetNull solo).
+  // 1) Clean up references to items that disappear (Listing.itemId is required;
+  //    BisEntry.itemId optional; Deal.offeredItemId optional → SetNull only).
   await db.delete(listing).where(notInArray(listing.itemId, validIds));
   await db.delete(bisEntry).where(notInArray(bisEntry.itemId, validIds));
 
-  // 2) Upsert de todos los items (actualiza los existentes, crea los nuevos), por
-  //    lotes en paralelo. Drizzle no tiene upsert masivo con datos por fila, así
-  //    que se hace uno por fila (onConflictDoUpdate por id).
+  // 2) Upsert every item (updates the existing ones, creates the new ones), in
+  //    parallel chunks. Drizzle has no bulk upsert with per-row data, so it's done
+  //    one row at a time (onConflictDoUpdate by id).
   const CHUNK = 100;
   for (let n = 0; n < rows.length; n += CHUNK) {
     await Promise.all(
-      // set: r reescribe todas las columnas del item existente al valor del
-      // archivo (incluye id = mismo valor, no-op) — la fuente es la verdad.
+      // set: r rewrites every column of the existing item to the file's value
+      // (includes id = same value, a no-op) — the source is the truth.
       rows.slice(n, n + CHUNK).map((r) =>
         db.insert(item).values(r).onConflictDoUpdate({ target: item.id, set: r }),
       ),
     );
   }
 
-  // 3) Borrar los items que ya no están (sus referencias ya se limpiaron).
+  // 3) Delete the items that are gone (their references were already cleaned up).
   await db.delete(item).where(notInArray(item.id, validIds));
 
   const [{ total } = { total: 0 }] = await db.select({ total: count() }).from(item);
@@ -136,15 +136,15 @@ runSeed(async () => {
     `Cambios: ${createdCount} nuevos | ${matchedCount} existentes re-sincronizados | ${deletedCount} borrados`,
   );
 
-  // Bundle de búsqueda empaquetado con la app (solo COMERCIABLES): lo usan el
-  // autocompletado de publicar y el match del reconocimiento por imagen (por
-  // nombre + slotCount). Ver src/lib/item-catalog.ts.
+  // Search bundle shipped with the app (TRADEABLE only): used by the publish
+  // autocomplete and the image-recognition match (by name + slotCount). See
+  // src/lib/item-catalog.ts.
   const bundle = rows
     .filter((r) => r.tradeable)
     .map((r) => ({
       id: r.id,
-      // El nombre lleva el sufijo de ranuras ("Coat[1]") para distinguir en el
-      // buscador las variantes con/sin slots del mismo item.
+      // The name carries the slot suffix ("Coat[1]") to tell apart, in the search,
+      // the with/without-slots variants of the same item.
       name: (r.slotCount ?? 0) > 0 ? `${r.name}[${r.slotCount}]` : r.name,
       iconUrl: r.iconUrl,
       category: r.category,

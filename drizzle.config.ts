@@ -1,12 +1,12 @@
 import { defineConfig } from "drizzle-kit";
 
-// En local, si DATABASE_URL no viene ya del entorno, se carga de `.env` (dev/prod
-// lo inyectan con dotenvx: npx dotenvx run -f .env.dev -- npm run db:migrate).
+// Locally, if DATABASE_URL isn't already in the environment, load it from `.env`
+// (dev/prod inject it via dotenvx: npx dotenvx run -f .env.dev -- npm run db:migrate).
 if (!process.env.DATABASE_URL) {
   try {
     process.loadEnvFile(".env");
   } catch {
-    // Sin .env: se asume DATABASE_URL en el entorno.
+    // No .env: assume DATABASE_URL is in the environment.
   }
 }
 

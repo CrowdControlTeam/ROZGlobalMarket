@@ -53,9 +53,9 @@ export const listing = pgTable("Listing", {
 	refineLevel: integer().default(0).notNull(),
 	type: listingType().default('SALE').notNull(),
 	notes: text(),
-	// updatedAt: Prisma lo rellenaba en cliente (@updatedAt); en la DB no hay
-	// default ni trigger, así que Drizzle lo pone al insertar y actualizar.
-	// (idem en el resto de tablas con updatedAt.)
+	// updatedAt: Prisma filled this client-side (@updatedAt); the DB has no default
+	// or trigger, so Drizzle sets it on insert and update (same for the other tables
+	// with updatedAt).
 }, (table) => [
 	index("Listing_price_idx").using("btree", table.price.asc().nullsLast().op("int4_ops")),
 	index("Listing_status_createdAt_idx").using("btree", table.status.asc().nullsLast().op("timestamp_ops"), table.createdAt.asc().nullsLast().op("timestamp_ops")),
@@ -340,9 +340,9 @@ export const bisEntry = pgTable("BisEntry", {
 		}).onUpdate("cascade").onDelete("restrict"),
 ]);
 
-// Enums (valor + tipo): viven en ./enums (client-safe) y se re-exportan aquí
-// (nombre = valor y tipo a la vez) para que el código de servidor pueda
-// importarlos junto a las tablas.
+// Enums (value + type): they live in ./enums (client-safe) and are re-exported
+// here (each name is both a value and a type) so server code can import them
+// alongside the tables.
 export {
   ItemCategory,
   EquipSlot,
@@ -354,7 +354,7 @@ export {
   JobTier,
 } from "./enums";
 
-// Tipos de fila de los modelos (equivalen a los tipos que generaba Prisma).
+// Model row types (equivalent to the types Prisma used to generate).
 export type Item = typeof item.$inferSelect;
 export type ItemOptionDef = typeof itemOptionDef.$inferSelect;
 export type Listing = typeof listing.$inferSelect;

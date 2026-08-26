@@ -1,7 +1,7 @@
-// Puebla MagicalWeaponType con los tipos de arma por defecto que cuentan como
-// "arma mágica" (pool WEAPON_MAGICAL). Idempotente (onConflictDoNothing).
+// Seeds MagicalWeaponType with the default weapon types that count as "magical
+// weapons" (WEAPON_MAGICAL pool). Idempotent (onConflictDoNothing).
 //
-// Uso: npm run seed:magical
+// Usage: npm run seed:magical
 
 import { magicalWeaponType, type WeaponType } from "../schema";
 import { db, runSeed } from "./client";
@@ -14,5 +14,5 @@ runSeed(async () => {
     .values(DEFAULT_MAGICAL_TYPES.map((type) => ({ type })))
     .onConflictDoNothing()
     .returning();
-  console.log(`Insertados: ${result.length} (de ${DEFAULT_MAGICAL_TYPES.length} por defecto).`);
+  console.log(`Inserted: ${result.length} (of ${DEFAULT_MAGICAL_TYPES.length} defaults).`);
 });

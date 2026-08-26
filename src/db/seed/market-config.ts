@@ -1,7 +1,7 @@
-// Puebla la fila única de MarketConfig (id=1) si no existe. Idempotente
-// (no pisa maxRefineLevel si ya se ajustó a mano).
+// Seeds the single MarketConfig row (id=1) if it doesn't exist yet. Idempotent
+// (doesn't overwrite maxRefineLevel if it was already tweaked by hand).
 //
-// Uso: npm run seed:config   (o dotenvx run -f .env.dev -- npm run seed:config)
+// Usage: npm run seed:config   (or dotenvx run -f .env.dev -- npm run seed:config)
 
 import { eq } from "drizzle-orm";
 import { marketConfig } from "../schema";

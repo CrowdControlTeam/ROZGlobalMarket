@@ -1,21 +1,20 @@
-// Baseline de migraciones para una DB que YA tiene el schema (creado antes por
-// las migraciones de Prisma). Marca las migraciones actuales de drizzle como YA
-// aplicadas —sin ejecutarlas— para que `db:migrate` no intente volver a crear
-// las tablas. Se corre UNA sola vez por entorno, durante la transición:
+// Migration baseline for a DB that ALREADY has the schema (previously created by
+// Prisma's migrations). Marks the current drizzle migrations as ALREADY applied
+// —without running them— so `db:migrate` won't try to recreate the tables. Run
+// ONCE per environment, during the transition:
 //   npm run db:baseline                                       (local, .env)
 //   npx dotenvx run -f .env.dev -- npm run db:baseline        (dev)
 //   npx dotenvx run -f .env.production -- npm run db:baseline (prod)
 //
-// Es idempotente (no re-inserta lo ya registrado). A partir de aquí, los cambios
-// de schema se aplican con `db:generate` + `db:migrate` con normalidad: NO se
-// vuelve a usar este script (marcaría como aplicada una migración futura sin
-// ejecutarla).
+// Idempotent (won't re-insert what's already recorded). From here on, schema
+// changes are applied with `db:generate` + `db:migrate` as usual: this script is
+// NOT used again (it would mark a future migration as applied without running it).
 
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import { pool, runSeed } from "./client";
 
 runSeed(async () => {
-  // Mismo cálculo de hash que drizzle-kit (sha256 del contenido de cada .sql).
+  // Same hash computation as drizzle-kit (sha256 of each .sql file's content).
   const migrations = readMigrationFiles({ migrationsFolder: "./drizzle" });
 
   await pool.query('CREATE SCHEMA IF NOT EXISTS "drizzle"');

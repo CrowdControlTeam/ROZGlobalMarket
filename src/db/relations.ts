@@ -6,8 +6,7 @@ export const listingRelations = relations(listing, ({one, many}) => ({
 		fields: [listing.itemId],
 		references: [item.id]
 	}),
-	// Nombres alineados con Prisma (poster/options) para no tocar el código
-	// consumidor.
+	// Names aligned with Prisma (poster/options) to avoid touching consumer code.
 	poster: one(user, {
 		fields: [listing.posterId],
 		references: [user.id]
@@ -34,7 +33,7 @@ export const listingOptionRelations = relations(listingOption, ({one}) => ({
 		fields: [listingOption.listingId],
 		references: [listing.id]
 	}),
-	// `def` como en Prisma (ListingOption.def).
+	// `def` as in Prisma (ListingOption.def).
 	def: one(itemOptionDef, {
 		fields: [listingOption.defId],
 		references: [itemOptionDef.id]
@@ -63,7 +62,7 @@ export const bisEntryOptionRelations = relations(bisEntryOption, ({one}) => ({
 		fields: [bisEntryOption.entryId],
 		references: [bisEntry.id]
 	}),
-	// `def` como en Prisma (BisEntryOption.def).
+	// `def` as in Prisma (BisEntryOption.def).
 	def: one(itemOptionDef, {
 		fields: [bisEntryOption.defId],
 		references: [itemOptionDef.id]
@@ -71,7 +70,7 @@ export const bisEntryOptionRelations = relations(bisEntryOption, ({one}) => ({
 }));
 
 export const bisEntryRelations = relations(bisEntry, ({one, many}) => ({
-	// `options` como en Prisma (BisEntry.options).
+	// `options` as in Prisma (BisEntry.options).
 	options: many(bisEntryOption),
 	bisEntryToCombatRoles: many(bisEntryToCombatRole),
 	bisEntryToJobs: many(bisEntryToJob),
@@ -124,8 +123,8 @@ export const dealRelations = relations(deal, ({one}) => ({
 		fields: [deal.userId],
 		references: [user.id]
 	}),
-	// Item de contraoferta en un TRADE (Deal.offeredItemId). Nombre alineado con
-	// el `offeredItem` que usaba Prisma.
+	// Counter-offer item in a TRADE (Deal.offeredItemId). Name aligned with the
+	// `offeredItem` Prisma used.
 	offeredItem: one(item, {
 		fields: [deal.offeredItemId],
 		references: [item.id]

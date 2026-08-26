@@ -1,7 +1,6 @@
 import { nanoid } from "nanoid";
 
-// Genera el id de las filas nuevas. Sustituye al `@default(cuid())` que Prisma
-// aplicaba en el cliente (la columna en la DB no tiene default): Drizzle lo
-// rellena vía `$defaultFn(createId)` en el schema. IDs opacos y URL-safe (van
-// en rutas como /market/<id>).
+// Generates the id for new rows. Replaces Prisma's client-side `@default(cuid())`
+// (the DB column has no default): Drizzle fills it via `$defaultFn(createId)` in
+// the schema. Opaque, URL-safe ids (they appear in routes like /market/<id>).
 export const createId = (): string => nanoid();

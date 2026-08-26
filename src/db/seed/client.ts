@@ -3,19 +3,19 @@ import { Pool } from "pg";
 import * as tables from "../schema";
 import * as relations from "../relations";
 
-// Cliente Drizzle para los scripts de seed/import (Node, no el Worker): usa
-// node-postgres sobre TCP, que sirve tanto para el Postgres de docker (local)
-// como para Neon (dev/prod, endpoint directo). Se ejecutan con `tsx`.
+// Drizzle client for the seed/import scripts (Node, not the Worker): uses
+// node-postgres over TCP, which works both for the docker Postgres (local) and
+// for Neon (dev/prod, direct endpoint). Run with `tsx`.
 //
-// Env: en dev/prod las variables las inyecta dotenvx antes de correr el script
-// (npx dotenvx run -f .env.dev -- npm run …); en local, si DATABASE_URL no está
-// en el entorno, se carga de `.env` (equivale a que Prisma lo cargaba solo).
+// Env: on dev/prod the variables are injected by dotenvx before running the
+// script (npx dotenvx run -f .env.dev -- npm run …); locally, if DATABASE_URL is
+// not in the environment, it's loaded from `.env` (as Prisma used to load it).
 if (!process.env.DATABASE_URL) {
   try {
     process.loadEnvFile(".env");
   } catch {
-    // Sin .env: se asume DATABASE_URL ya en el entorno (dotenvx). Si falta, el
-    // Pool fallará al conectar con un mensaje claro.
+    // No .env: assume DATABASE_URL is already in the environment (dotenvx). If it
+    // is missing, the Pool will fail to connect with a clear message.
   }
 }
 
@@ -24,8 +24,8 @@ const schema = { ...tables, ...relations };
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
-// Ejecuta el cuerpo del seed y cierra el pool siempre (para que el proceso
-// termine). Mismo patrón que el .catch/.finally de los scripts con Prisma.
+// Runs the seed body and always closes the pool (so the process exits). Same
+// pattern as the .catch/.finally of the Prisma scripts.
 export async function runSeed(main: () => Promise<void>): Promise<void> {
   try {
     await main();
