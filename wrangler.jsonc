@@ -4,8 +4,8 @@
   // Worker generado por OpenNext (`npm run cf:build`). Ver .gitignore:
   // .open-next/ no se sube, se regenera en cada build/deploy.
   "main": ".open-next/worker.js",
-  // nodejs_compat es imprescindible para que Next/Prisma/next-auth corran en
-  // Workers; requiere compatibility_date >= 2024-09-23.
+  // nodejs_compat es imprescindible para que Next/next-auth y el driver
+  // serverless de Neon corran en Workers; requiere compatibility_date >= 2024-09-23.
   "compatibility_date": "2025-03-25",
   "compatibility_flags": ["nodejs_compat"],
   // Desactiva la URL por defecto *.workers.dev: en producción solo se entra por

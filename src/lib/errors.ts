@@ -14,19 +14,19 @@ export function rethrowFrameworkErrors(err: unknown): void {
 
 // Los errores "de usuario" se lanzan como Error(t(...)): mensajes cortos, de una
 // sola línea y sin rastros técnicos (validaciones, "stock insuficiente", etc.).
-// Los internos (Prisma, runtime) traen volcados multilínea con la invocación,
-// SQL o rutas de fichero: esos NO se enseñan tal cual —quedaría feo y filtra
-// detalles del backend—, se sustituyen por un mensaje genérico. La distinción es
+// Los internos (BD, runtime) traen volcados multilínea con la consulta, SQL o
+// rutas de fichero: esos NO se enseñan tal cual —quedaría feo y filtra detalles
+// del backend—, se sustituyen por un mensaje genérico. La distinción es
 // heurística a propósito: el error cruza la frontera server→cliente y pierde su
-// clase original (deja de ser `instanceof PrismaClientError`), pero conserva
-// nombre y mensaje, que es lo que se inspecciona aquí.
+// clase original (deja de ser p.ej. un DatabaseError de pg/Drizzle), pero
+// conserva nombre y mensaje, que es lo que se inspecciona aquí.
 function looksLikeInternalError(err: Error): boolean {
   const msg = err.message;
   return (
-    err.name !== "Error" || // subclases: PrismaClient*Error, TypeError, etc.
+    err.name !== "Error" || // subclases: DatabaseError, TypeError, etc.
     msg.includes("\n") ||
     msg.length > 300 ||
-    msg.includes("Invalid `") || // cabecera de las validaciones de Prisma
+    msg.includes("Invalid `") || // cabecera de errores de query verbosos
     msg.includes("invocation")
   );
 }

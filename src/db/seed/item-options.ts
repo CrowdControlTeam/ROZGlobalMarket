@@ -1,25 +1,14 @@
 // Script puntual (no hook de build) para poblar ItemOptionDef con los 194
 // registros reales de random options, extraídos de https://ragnarokze.ro/options
-// el 2026-07-19. Idempotente: upsert sobre (group, slotIndex, statCode), se
-// puede re-ejecutar sin duplicar filas.
+// el 2026-07-19. Idempotente: upsert sobre (group, slotIndex, statCode).
 //
-// Uso: node prisma/seedItemOptions.mjs
+// Uso: npm run seed:options
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { itemOptionDef, type ItemOptionGroup } from "../schema";
+import { db, runSeed } from "./client";
 
 const ELEMENTS = [
-  "Neutral",
-  "Water",
-  "Earth",
-  "Fire",
-  "Wind",
-  "Poison",
-  "Holy",
-  "Shadow",
-  "Ghost",
-  "Undead",
+  "Neutral", "Water", "Earth", "Fire", "Wind", "Poison", "Holy", "Shadow", "Ghost", "Undead",
 ];
 
 // Mismo orden de 10 elementos que ELEMENTS, sin "Neutral" (así viene en la
@@ -27,19 +16,10 @@ const ELEMENTS = [
 const ELEMENTS_NO_NEUTRAL = ELEMENTS.filter((e) => e !== "Neutral");
 
 const RACES = [
-  "Formless",
-  "Undead",
-  "Brute",
-  "Plant",
-  "Insect",
-  "Fish",
-  "Demon",
-  "Demi-Human",
-  "Angel",
-  "Dragon",
+  "Formless", "Undead", "Brute", "Plant", "Insect", "Fish", "Demon", "Demi-Human", "Angel", "Dragon",
 ];
 
-function slugify(label) {
+function slugify(label: string): string {
   return label
     .toUpperCase()
     .replace(/\(%\)/g, " PCT")
@@ -47,33 +27,33 @@ function slugify(label) {
     .replace(/^_+|_+$/g, "");
 }
 
-function stat(label, min, max) {
+type Stat = { label: string; statCode: string; minValue: number; maxValue: number };
+
+function stat(label: string, min: number, max: number): Stat {
   return { label, statCode: slugify(label), minValue: min, maxValue: max };
 }
 
-function elementalReduction(dmgType, min, max) {
-  return ELEMENTS.map((el) =>
-    stat(`${dmgType} Damage from ${el} enemies reduction (%)`, min, max),
-  );
+function elementalReduction(dmgType: string, min: number, max: number): Stat[] {
+  return ELEMENTS.map((el) => stat(`${dmgType} Damage from ${el} enemies reduction (%)`, min, max));
 }
 
-function elementalDamageTo(dmgType, min, max) {
+function elementalDamageTo(dmgType: string, min: number, max: number): Stat[] {
   return ELEMENTS.map((el) => stat(`${dmgType} Damage to ${el} enemies (%)`, min, max));
 }
 
-function raceResistance(min, max) {
+function raceResistance(min: number, max: number): Stat[] {
   return RACES.map((r) => stat(`Resistance to ${r} (%)`, min, max));
 }
 
-function raceDamageToMonsters(dmgType, min, max) {
+function raceDamageToMonsters(dmgType: string, min: number, max: number): Stat[] {
   return RACES.map((r) => stat(`${dmgType} Damage to ${r} monsters (%)`, min, max));
 }
 
-function raceIgnoreDef(defType, min, max) {
+function raceIgnoreDef(defType: string, min: number, max: number): Stat[] {
   return RACES.map((r) => stat(`Ignore ${r} ${defType} Def (%)`, min, max));
 }
 
-const DATA = {
+const DATA: Record<ItemOptionGroup, Record<number, Stat[]>> = {
   ARMOR: {
     1: [stat("MaxHP", 150, 350), stat("MaxSP", 25, 50), stat("MaxHP (%)", 1, 5), stat("MaxSP (%)", 1, 5)],
     2: [
@@ -152,7 +132,7 @@ const DATA = {
   },
 };
 
-const EXPECTED_COUNTS = {
+const EXPECTED_COUNTS: Record<ItemOptionGroup, number> = {
   ARMOR: 43,
   GARMENT: 50,
   FOOTGEAR: 21,
@@ -160,30 +140,26 @@ const EXPECTED_COUNTS = {
   WEAPON_MAGICAL: 39,
 };
 
-async function main() {
+runSeed(async () => {
   let total = 0;
-  for (const [group, slots] of Object.entries(DATA)) {
+  for (const [group, slots] of Object.entries(DATA) as [ItemOptionGroup, Record<number, Stat[]>][]) {
     let groupCount = 0;
     for (const [slotIndex, entries] of Object.entries(slots)) {
       for (const entry of entries) {
-        await prisma.itemOptionDef.upsert({
-          where: {
-            group_slotIndex_statCode: {
-              group,
-              slotIndex: Number(slotIndex),
-              statCode: entry.statCode,
-            },
-          },
-          update: { label: entry.label, minValue: entry.minValue, maxValue: entry.maxValue },
-          create: {
+        await db
+          .insert(itemOptionDef)
+          .values({
             group,
             slotIndex: Number(slotIndex),
             statCode: entry.statCode,
             label: entry.label,
             minValue: entry.minValue,
             maxValue: entry.maxValue,
-          },
-        });
+          })
+          .onConflictDoUpdate({
+            target: [itemOptionDef.group, itemOptionDef.slotIndex, itemOptionDef.statCode],
+            set: { label: entry.label, minValue: entry.minValue, maxValue: entry.maxValue },
+          });
         groupCount++;
       }
     }
@@ -193,13 +169,4 @@ async function main() {
     console.log(`${group}: ${groupCount} (esperado ${expected}) [${flag}]`);
   }
   console.log(`Total: ${total} (esperado ${Object.values(EXPECTED_COUNTS).reduce((a, b) => a + b, 0)})`);
-}
-
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+});

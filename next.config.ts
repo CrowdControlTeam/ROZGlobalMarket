@@ -2,13 +2,11 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
-  // Prisma no debe bundlearse con el resto del server: OpenNext (Cloudflare)
-  // necesita parchear el cliente para que en Workers use el motor WASM en vez
-  // del binario nativo. Sin esto, se bundlea el motor "library" nativo, que al
-  // arrancar intenta detectar el SO con fs.readdir (no implementado en Workers)
-  // y devuelve 500 en cada petición. Ver src/lib/prisma.ts y la guía de
-  // OpenNext (https://opennext.js.org/cloudflare/howtos/db).
-  serverExternalPackages: ["@prisma/client", ".prisma/client"],
+  // `pg` (node-postgres) solo se usa en dev local (Postgres de docker, TCP); en
+  // el Worker de producción se usa el driver serverless de Neon (WebSocket) y esa
+  // rama nunca se ejecuta. Se marca como external para que NO entre en el bundle
+  // del Worker (es Node-only y no funcionaría ahí). Ver src/db/index.ts.
+  serverExternalPackages: ["pg"],
   images: {
     remotePatterns: [
       {

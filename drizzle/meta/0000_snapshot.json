@@ -1,74 +1,11 @@
 {
-  "id": "00000000-0000-0000-0000-000000000000",
-  "prevId": "",
+  "id": "84fabae4-48e4-4bc3-b1a1-13a8c70489a1",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public._prisma_migrations": {
-      "name": "_prisma_migrations",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(36)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "checksum": {
-          "name": "checksum",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "finished_at": {
-          "name": "finished_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "migration_name": {
-          "name": "migration_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "logs": {
-          "name": "logs",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "rolled_back_at": {
-          "name": "rolled_back_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "applied_steps_count": {
-          "name": "applied_steps_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.User": {
-      "name": "User",
+    "public.BisEntry": {
+      "name": "BisEntry",
       "schema": "",
       "columns": {
         "id": {
@@ -77,54 +14,16 @@
           "primaryKey": false,
           "notNull": true
         },
-        "username": {
-          "name": "username",
+        "stageId": {
+          "name": "stageId",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "avatarUrl": {
-          "name": "avatarUrl",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "guildRoles": {
-          "name": "guildRoles",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'{\"RAY\"}'"
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp(3)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "CURRENT_TIMESTAMP"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.Listing": {
-      "name": "Listing",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "posterId": {
-          "name": "posterId",
-          "type": "text",
+        "slot": {
+          "name": "slot",
+          "type": "EquipSlot",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -132,96 +31,78 @@
           "name": "itemId",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "quantity": {
-          "name": "quantity",
+        "refineLevel": {
+          "name": "refineLevel",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "price": {
-          "name": "price",
-          "type": "integer",
+        "note": {
+          "name": "note",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "status": {
-          "name": "status",
-          "type": "ListingStatus",
-          "typeSchema": "public",
+        "position": {
+          "name": "position",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "'ACTIVE'"
+          "default": 0
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         },
         "createdAt": {
           "name": "createdAt",
-          "type": "timestamp(3)",
+          "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true,
           "default": "CURRENT_TIMESTAMP"
         },
         "updatedAt": {
           "name": "updatedAt",
-          "type": "timestamp(3)",
+          "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true
         },
-        "refineLevel": {
-          "name": "refineLevel",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "type": {
-          "name": "type",
-          "type": "ListingType",
+        "weaponType": {
+          "name": "weaponType",
+          "type": "WeaponType",
           "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'SALE'"
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {
-        "Listing_price_idx": {
-          "name": "Listing_price_idx",
+        "BisEntry_stageId_slot_position_idx": {
+          "name": "BisEntry_stageId_slot_position_idx",
           "columns": [
             {
-              "expression": "price",
+              "expression": "stageId",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "int4_ops",
-              "isExpression": false
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "Listing_status_createdAt_idx": {
-          "name": "Listing_status_createdAt_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "timestamp_ops",
-              "isExpression": false
+              "opclass": "int4_ops"
             },
             {
-              "expression": "createdAt",
+              "expression": "slot",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "timestamp_ops",
-              "isExpression": false
+              "opclass": "int4_ops"
+            },
+            {
+              "expression": "position",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops"
             }
           ],
           "isUnique": false,
@@ -231,109 +112,12 @@
         }
       },
       "foreignKeys": {
-        "Listing_itemId_fkey": {
-          "name": "Listing_itemId_fkey",
-          "tableFrom": "Listing",
-          "tableTo": "Item",
-          "schemaTo": "public",
+        "BisEntry_stageId_fkey": {
+          "name": "BisEntry_stageId_fkey",
+          "tableFrom": "BisEntry",
+          "tableTo": "BisStage",
           "columnsFrom": [
-            "itemId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "cascade"
-        },
-        "Listing_posterId_fkey": {
-          "name": "Listing_posterId_fkey",
-          "tableFrom": "Listing",
-          "tableTo": "User",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "posterId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.ListingOption": {
-      "name": "ListingOption",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "listingId": {
-          "name": "listingId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "slotIndex": {
-          "name": "slotIndex",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "defId": {
-          "name": "defId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "ListingOption_listingId_slotIndex_key": {
-          "name": "ListingOption_listingId_slotIndex_key",
-          "columns": [
-            {
-              "expression": "listingId",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "int4_ops",
-              "isExpression": false
-            },
-            {
-              "expression": "slotIndex",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "int4_ops",
-              "isExpression": false
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "ListingOption_listingId_fkey": {
-          "name": "ListingOption_listingId_fkey",
-          "tableFrom": "ListingOption",
-          "tableTo": "Listing",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "listingId"
+            "stageId"
           ],
           "columnsTo": [
             "id"
@@ -341,13 +125,25 @@
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
-        "ListingOption_defId_fkey": {
-          "name": "ListingOption_defId_fkey",
-          "tableFrom": "ListingOption",
-          "tableTo": "ItemOptionDef",
-          "schemaTo": "public",
+        "BisEntry_itemId_fkey": {
+          "name": "BisEntry_itemId_fkey",
+          "tableFrom": "BisEntry",
+          "tableTo": "Item",
           "columnsFrom": [
-            "defId"
+            "itemId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        },
+        "BisEntry_createdById_fkey": {
+          "name": "BisEntry_createdById_fkey",
+          "tableFrom": "BisEntry",
+          "tableTo": "User",
+          "columnsFrom": [
+            "createdById"
           ],
           "columnsTo": [
             "id"
@@ -358,429 +154,8 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {},
       "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.ItemOptionDef": {
-      "name": "ItemOptionDef",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "group": {
-          "name": "group",
-          "type": "ItemOptionGroup",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "slotIndex": {
-          "name": "slotIndex",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "statCode": {
-          "name": "statCode",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "minValue": {
-          "name": "minValue",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "maxValue": {
-          "name": "maxValue",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "ItemOptionDef_group_slotIndex_idx": {
-          "name": "ItemOptionDef_group_slotIndex_idx",
-          "columns": [
-            {
-              "expression": "group",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops",
-              "isExpression": false
-            },
-            {
-              "expression": "slotIndex",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "int4_ops",
-              "isExpression": false
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "ItemOptionDef_group_slotIndex_statCode_key": {
-          "name": "ItemOptionDef_group_slotIndex_statCode_key",
-          "columns": [
-            {
-              "expression": "group",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
-            },
-            {
-              "expression": "slotIndex",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
-            },
-            {
-              "expression": "statCode",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "enum_ops",
-              "isExpression": false
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.MagicalWeaponType": {
-      "name": "MagicalWeaponType",
-      "schema": "",
-      "columns": {
-        "type": {
-          "name": "type",
-          "type": "WeaponType",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.MarketConfig": {
-      "name": "MarketConfig",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "maxRefineLevel": {
-          "name": "maxRefineLevel",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 10
-        },
-        "imageRecognitionEnabled": {
-          "name": "imageRecognitionEnabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "maintenanceModeEnabled": {
-          "name": "maintenanceModeEnabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "webhookEnabled": {
-          "name": "webhookEnabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "webhookUrl": {
-          "name": "webhookUrl",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "optionsEnabled": {
-          "name": "optionsEnabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "adminRoleIds": {
-          "name": "adminRoleIds",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'{\"RAY\"}'"
-        },
-        "geminiModel": {
-          "name": "geminiModel",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'gemini-flash-latest'"
-        },
-        "dmNotificationsEnabled": {
-          "name": "dmNotificationsEnabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "siteName": {
-          "name": "siteName",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "homeImageUrl": {
-          "name": "homeImageUrl",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "logoUrl": {
-          "name": "logoUrl",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "accessRoleId": {
-          "name": "accessRoleId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bisEditorRoleId": {
-          "name": "bisEditorRoleId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.RateLimit": {
-      "name": "RateLimit",
-      "schema": "",
-      "columns": {
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "count": {
-          "name": "count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "windowStart": {
-          "name": "windowStart",
-          "type": "timestamp(3)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "CURRENT_TIMESTAMP"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.Job": {
-      "name": "Job",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tier": {
-          "name": "tier",
-          "type": "JobTier",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'FIRST'"
-        },
-        "parentJobId": {
-          "name": "parentJobId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        }
-      },
-      "indexes": {
-        "Job_key_key": {
-          "name": "Job_key_key",
-          "columns": [
-            {
-              "expression": "key",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "Job_parentJobId_fkey": {
-          "name": "Job_parentJobId_fkey",
-          "tableFrom": "Job",
-          "tableTo": "Job",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "parentJobId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.BisStage": {
-      "name": "BisStage",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp(3)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "CURRENT_TIMESTAMP"
-        }
-      },
-      "indexes": {
-        "BisStage_key_key": {
-          "name": "BisStage_key_key",
-          "columns": [
-            {
-              "expression": "key",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
       "isRLSEnabled": false
     },
     "public.BisEntryOption": {
@@ -824,17 +199,17 @@
           "columns": [
             {
               "expression": "entryId",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "int4_ops",
-              "isExpression": false
+              "opclass": "int4_ops"
             },
             {
               "expression": "slotIndex",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "int4_ops",
-              "isExpression": false
+              "opclass": "int4_ops"
             }
           ],
           "isUnique": true,
@@ -848,7 +223,6 @@
           "name": "BisEntryOption_entryId_fkey",
           "tableFrom": "BisEntryOption",
           "tableTo": "BisEntry",
-          "schemaTo": "public",
           "columnsFrom": [
             "entryId"
           ],
@@ -862,7 +236,6 @@
           "name": "BisEntryOption_defId_fkey",
           "tableFrom": "BisEntryOption",
           "tableTo": "ItemOptionDef",
-          "schemaTo": "public",
           "columnsFrom": [
             "defId"
           ],
@@ -875,8 +248,8 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {},
       "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public._BisEntryToCombatRole": {
@@ -902,10 +275,10 @@
           "columns": [
             {
               "expression": "B",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
+              "opclass": "text_ops"
             }
           ],
           "isUnique": false,
@@ -919,7 +292,6 @@
           "name": "_BisEntryToCombatRole_A_fkey",
           "tableFrom": "_BisEntryToCombatRole",
           "tableTo": "BisEntry",
-          "schemaTo": "public",
           "columnsFrom": [
             "A"
           ],
@@ -933,7 +305,6 @@
           "name": "_BisEntryToCombatRole_B_fkey",
           "tableFrom": "_BisEntryToCombatRole",
           "tableTo": "CombatRole",
-          "schemaTo": "public",
           "columnsFrom": [
             "B"
           ],
@@ -946,8 +317,139 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {},
       "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public._BisEntryToJob": {
+      "name": "_BisEntryToJob",
+      "schema": "",
+      "columns": {
+        "A": {
+          "name": "A",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "B": {
+          "name": "B",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "_BisEntryToJob_B_index": {
+          "name": "_BisEntryToJob_B_index",
+          "columns": [
+            {
+              "expression": "B",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "_BisEntryToJob_A_fkey": {
+          "name": "_BisEntryToJob_A_fkey",
+          "tableFrom": "_BisEntryToJob",
+          "tableTo": "BisEntry",
+          "columnsFrom": [
+            "A"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "_BisEntryToJob_B_fkey": {
+          "name": "_BisEntryToJob_B_fkey",
+          "tableFrom": "_BisEntryToJob",
+          "tableTo": "Job",
+          "columnsFrom": [
+            "B"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.BisStage": {
+      "name": "BisStage",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "BisStage_key_key": {
+          "name": "BisStage_key_key",
+          "columns": [
+            {
+              "expression": "key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.CombatRole": {
@@ -986,10 +488,10 @@
           "columns": [
             {
               "expression": "key",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
+              "opclass": "text_ops"
             }
           ],
           "isUnique": true,
@@ -1001,79 +503,8 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {},
       "policies": {},
-      "isRLSEnabled": false
-    },
-    "public._BisEntryToJob": {
-      "name": "_BisEntryToJob",
-      "schema": "",
-      "columns": {
-        "A": {
-          "name": "A",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "B": {
-          "name": "B",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "_BisEntryToJob_B_index": {
-          "name": "_BisEntryToJob_B_index",
-          "columns": [
-            {
-              "expression": "B",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "_BisEntryToJob_A_fkey": {
-          "name": "_BisEntryToJob_A_fkey",
-          "tableFrom": "_BisEntryToJob",
-          "tableTo": "BisEntry",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "A"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
-        },
-        "_BisEntryToJob_B_fkey": {
-          "name": "_BisEntryToJob_B_fkey",
-          "tableFrom": "_BisEntryToJob",
-          "tableTo": "Job",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "B"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "checkConstraints": {},
-      "policies": {},
       "isRLSEnabled": false
     },
     "public.Deal": {
@@ -1139,14 +570,14 @@
         },
         "createdAt": {
           "name": "createdAt",
-          "type": "timestamp(3)",
+          "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true,
           "default": "CURRENT_TIMESTAMP"
         },
         "updatedAt": {
           "name": "updatedAt",
-          "type": "timestamp(3)",
+          "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1163,17 +594,17 @@
           "columns": [
             {
               "expression": "listingId",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
+              "opclass": "text_ops"
             },
             {
               "expression": "status",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
+              "opclass": "text_ops"
             }
           ],
           "isUnique": false,
@@ -1186,10 +617,10 @@
           "columns": [
             {
               "expression": "userId",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
+              "opclass": "text_ops"
             }
           ],
           "isUnique": false,
@@ -1203,7 +634,6 @@
           "name": "Deal_listingId_fkey",
           "tableFrom": "Deal",
           "tableTo": "Listing",
-          "schemaTo": "public",
           "columnsFrom": [
             "listingId"
           ],
@@ -1217,7 +647,6 @@
           "name": "Deal_userId_fkey",
           "tableFrom": "Deal",
           "tableTo": "User",
-          "schemaTo": "public",
           "columnsFrom": [
             "userId"
           ],
@@ -1231,7 +660,6 @@
           "name": "Deal_offeredItemId_fkey",
           "tableFrom": "Deal",
           "tableTo": "Item",
-          "schemaTo": "public",
           "columnsFrom": [
             "offeredItemId"
           ],
@@ -1244,97 +672,8 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {},
       "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.SavedSearch": {
-      "name": "SavedSearch",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "userId": {
-          "name": "userId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "filters": {
-          "name": "filters",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sortOrder": {
-          "name": "sortOrder",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp(3)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "CURRENT_TIMESTAMP"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp(3)",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "SavedSearch_userId_idx": {
-          "name": "SavedSearch_userId_idx",
-          "columns": [
-            {
-              "expression": "userId",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "SavedSearch_userId_fkey": {
-          "name": "SavedSearch_userId_fkey",
-          "tableFrom": "SavedSearch",
-          "tableTo": "User",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "checkConstraints": {},
-      "policies": {},
       "isRLSEnabled": false
     },
     "public.Item": {
@@ -1375,14 +714,14 @@
         },
         "importedAt": {
           "name": "importedAt",
-          "type": "timestamp(3)",
+          "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true,
           "default": "CURRENT_TIMESTAMP"
         },
         "updatedAt": {
           "name": "updatedAt",
-          "type": "timestamp(3)",
+          "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1532,7 +871,8 @@
           "name": "description",
           "type": "text[]",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "'{}'"
         }
       },
       "indexes": {
@@ -1541,17 +881,17 @@
           "columns": [
             {
               "expression": "category",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "enum_ops",
-              "isExpression": false
+              "opclass": "enum_ops"
             },
             {
               "expression": "slot",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "enum_ops",
-              "isExpression": false
+              "opclass": "enum_ops"
             }
           ],
           "isUnique": false,
@@ -1564,10 +904,10 @@
           "columns": [
             {
               "expression": "name",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "text_ops",
-              "isExpression": false
+              "opclass": "text_ops"
             }
           ],
           "isUnique": false,
@@ -1580,10 +920,10 @@
           "columns": [
             {
               "expression": "tradeable",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "bool_ops",
-              "isExpression": false
+              "opclass": "bool_ops"
             }
           ],
           "isUnique": false,
@@ -1595,12 +935,12 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {},
       "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.BisEntry": {
-      "name": "BisEntry",
+    "public.ItemOptionDef": {
+      "name": "ItemOptionDef",
       "schema": "",
       "columns": {
         "id": {
@@ -1609,16 +949,202 @@
           "primaryKey": false,
           "notNull": true
         },
-        "stageId": {
-          "name": "stageId",
+        "group": {
+          "name": "group",
+          "type": "ItemOptionGroup",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slotIndex": {
+          "name": "slotIndex",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "statCode": {
+          "name": "statCode",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "slot": {
-          "name": "slot",
-          "type": "EquipSlot",
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "minValue": {
+          "name": "minValue",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "maxValue": {
+          "name": "maxValue",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "ItemOptionDef_group_slotIndex_idx": {
+          "name": "ItemOptionDef_group_slotIndex_idx",
+          "columns": [
+            {
+              "expression": "group",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "enum_ops"
+            },
+            {
+              "expression": "slotIndex",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ItemOptionDef_group_slotIndex_statCode_key": {
+          "name": "ItemOptionDef_group_slotIndex_statCode_key",
+          "columns": [
+            {
+              "expression": "group",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            },
+            {
+              "expression": "slotIndex",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            },
+            {
+              "expression": "statCode",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "enum_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Job": {
+      "name": "Job",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tier": {
+          "name": "tier",
+          "type": "JobTier",
           "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'FIRST'"
+        },
+        "parentJobId": {
+          "name": "parentJobId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "Job_key_key": {
+          "name": "Job_key_key",
+          "columns": [
+            {
+              "expression": "key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "Job_parentJobId_fkey": {
+          "name": "Job_parentJobId_fkey",
+          "tableFrom": "Job",
+          "tableTo": "Job",
+          "columnsFrom": [
+            "parentJobId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Listing": {
+      "name": "Listing",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "posterId": {
+          "name": "posterId",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -1626,78 +1152,96 @@
           "name": "itemId",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "refineLevel": {
-          "name": "refineLevel",
+        "quantity": {
+          "name": "quantity",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "note": {
-          "name": "note",
-          "type": "text",
+        "price": {
+          "name": "price",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "position": {
-          "name": "position",
-          "type": "integer",
+        "status": {
+          "name": "status",
+          "type": "ListingStatus",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": 0
-        },
-        "createdById": {
-          "name": "createdById",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
+          "default": "'ACTIVE'"
         },
         "createdAt": {
           "name": "createdAt",
-          "type": "timestamp(3)",
+          "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true,
           "default": "CURRENT_TIMESTAMP"
         },
         "updatedAt": {
           "name": "updatedAt",
-          "type": "timestamp(3)",
+          "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true
         },
-        "weaponType": {
-          "name": "weaponType",
-          "type": "WeaponType",
+        "refineLevel": {
+          "name": "refineLevel",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "type": {
+          "name": "type",
+          "type": "ListingType",
           "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'SALE'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {
-        "BisEntry_stageId_slot_position_idx": {
-          "name": "BisEntry_stageId_slot_position_idx",
+        "Listing_price_idx": {
+          "name": "Listing_price_idx",
           "columns": [
             {
-              "expression": "stageId",
+              "expression": "price",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "int4_ops",
-              "isExpression": false
+              "opclass": "int4_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Listing_status_createdAt_idx": {
+          "name": "Listing_status_createdAt_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "timestamp_ops"
             },
             {
-              "expression": "slot",
+              "expression": "createdAt",
+              "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "int4_ops",
-              "isExpression": false
-            },
-            {
-              "expression": "position",
-              "asc": true,
-              "nulls": "last",
-              "opclass": "int4_ops",
-              "isExpression": false
+              "opclass": "timestamp_ops"
             }
           ],
           "isUnique": false,
@@ -1707,41 +1251,25 @@
         }
       },
       "foreignKeys": {
-        "BisEntry_stageId_fkey": {
-          "name": "BisEntry_stageId_fkey",
-          "tableFrom": "BisEntry",
-          "tableTo": "BisStage",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "stageId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
-        },
-        "BisEntry_itemId_fkey": {
-          "name": "BisEntry_itemId_fkey",
-          "tableFrom": "BisEntry",
+        "Listing_itemId_fkey": {
+          "name": "Listing_itemId_fkey",
+          "tableFrom": "Listing",
           "tableTo": "Item",
-          "schemaTo": "public",
           "columnsFrom": [
             "itemId"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
+          "onDelete": "restrict",
           "onUpdate": "cascade"
         },
-        "BisEntry_createdById_fkey": {
-          "name": "BisEntry_createdById_fkey",
-          "tableFrom": "BisEntry",
+        "Listing_posterId_fkey": {
+          "name": "Listing_posterId_fkey",
+          "tableFrom": "Listing",
           "tableTo": "User",
-          "schemaTo": "public",
           "columnsFrom": [
-            "createdById"
+            "posterId"
           ],
           "columnsTo": [
             "id"
@@ -1752,24 +1280,480 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {},
       "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ListingOption": {
+      "name": "ListingOption",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "listingId": {
+          "name": "listingId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slotIndex": {
+          "name": "slotIndex",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "defId": {
+          "name": "defId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "ListingOption_listingId_slotIndex_key": {
+          "name": "ListingOption_listingId_slotIndex_key",
+          "columns": [
+            {
+              "expression": "listingId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops"
+            },
+            {
+              "expression": "slotIndex",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ListingOption_listingId_fkey": {
+          "name": "ListingOption_listingId_fkey",
+          "tableFrom": "ListingOption",
+          "tableTo": "Listing",
+          "columnsFrom": [
+            "listingId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "ListingOption_defId_fkey": {
+          "name": "ListingOption_defId_fkey",
+          "tableFrom": "ListingOption",
+          "tableTo": "ItemOptionDef",
+          "columnsFrom": [
+            "defId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MagicalWeaponType": {
+      "name": "MagicalWeaponType",
+      "schema": "",
+      "columns": {
+        "type": {
+          "name": "type",
+          "type": "WeaponType",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MarketConfig": {
+      "name": "MarketConfig",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "maxRefineLevel": {
+          "name": "maxRefineLevel",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 10
+        },
+        "imageRecognitionEnabled": {
+          "name": "imageRecognitionEnabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "maintenanceModeEnabled": {
+          "name": "maintenanceModeEnabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "webhookEnabled": {
+          "name": "webhookEnabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "webhookUrl": {
+          "name": "webhookUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "optionsEnabled": {
+          "name": "optionsEnabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "adminRoleIds": {
+          "name": "adminRoleIds",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "geminiModel": {
+          "name": "geminiModel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'gemini-flash-latest'"
+        },
+        "dmNotificationsEnabled": {
+          "name": "dmNotificationsEnabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "siteName": {
+          "name": "siteName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "homeImageUrl": {
+          "name": "homeImageUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "logoUrl": {
+          "name": "logoUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accessRoleId": {
+          "name": "accessRoleId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bisEditorRoleId": {
+          "name": "bisEditorRoleId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public._prisma_migrations": {
+      "name": "_prisma_migrations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checksum": {
+          "name": "checksum",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "migration_name": {
+          "name": "migration_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "logs": {
+          "name": "logs",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rolled_back_at": {
+          "name": "rolled_back_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "applied_steps_count": {
+          "name": "applied_steps_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.RateLimit": {
+      "name": "RateLimit",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "windowStart": {
+          "name": "windowStart",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.SavedSearch": {
+      "name": "SavedSearch",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "filters": {
+          "name": "filters",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sortOrder": {
+          "name": "sortOrder",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "SavedSearch_userId_idx": {
+          "name": "SavedSearch_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "SavedSearch_userId_fkey": {
+          "name": "SavedSearch_userId_fkey",
+          "tableFrom": "SavedSearch",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.User": {
+      "name": "User",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "avatarUrl": {
+          "name": "avatarUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "guildRoles": {
+          "name": "guildRoles",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     }
   },
   "enums": {
     "public.DealStatus": {
       "name": "DealStatus",
+      "schema": "public",
       "values": [
         "PENDING",
         "ACCEPTED",
         "REJECTED",
         "CANCELLED"
-      ],
-      "schema": "public"
+      ]
     },
     "public.EquipSlot": {
       "name": "EquipSlot",
+      "schema": "public",
       "values": [
         "HEADGEAR",
         "ARMOR",
@@ -1778,11 +1762,11 @@
         "FOOTGEAR",
         "ACCESSORY",
         "WEAPON"
-      ],
-      "schema": "public"
+      ]
     },
     "public.ItemCategory": {
       "name": "ItemCategory",
+      "schema": "public",
       "values": [
         "WEAPON",
         "ARMOR",
@@ -1798,51 +1782,51 @@
         "PET_ARMOR",
         "CASH",
         "GET_PORING"
-      ],
-      "schema": "public"
+      ]
     },
     "public.ItemOptionGroup": {
       "name": "ItemOptionGroup",
+      "schema": "public",
       "values": [
         "ARMOR",
         "GARMENT",
         "FOOTGEAR",
         "WEAPON_PHYSICAL",
         "WEAPON_MAGICAL"
-      ],
-      "schema": "public"
+      ]
     },
     "public.JobTier": {
       "name": "JobTier",
+      "schema": "public",
       "values": [
         "FIRST",
         "SECOND",
         "THIRD"
-      ],
-      "schema": "public"
+      ]
     },
     "public.ListingStatus": {
       "name": "ListingStatus",
+      "schema": "public",
       "values": [
         "ACTIVE",
         "COMPLETED",
         "CANCELLED",
         "EXPIRED"
-      ],
-      "schema": "public"
+      ]
     },
     "public.ListingType": {
       "name": "ListingType",
+      "schema": "public",
       "values": [
         "SALE",
         "TRADE",
         "BUY",
         "GIFT"
-      ],
-      "schema": "public"
+      ]
     },
     "public.WeaponType": {
       "name": "WeaponType",
+      "schema": "public",
       "values": [
         "DAGGER",
         "ONE_HAND_SWORD",
@@ -1866,8 +1850,7 @@
         "SHOTGUN",
         "GRENADE_LAUNCHER",
         "FUUMA_SHURIKEN"
-      ],
-      "schema": "public"
+      ]
     }
   },
   "schemas": {},
@@ -1876,39 +1859,8 @@
   "policies": {},
   "views": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "internal": {
-    "tables": {
-      "User": {
-        "columns": {
-          "guildRoles": {
-            "isArray": true,
-            "dimensions": 1,
-            "rawType": "text"
-          }
-        }
-      },
-      "MarketConfig": {
-        "columns": {
-          "adminRoleIds": {
-            "isArray": true,
-            "dimensions": 1,
-            "rawType": "text"
-          }
-        }
-      },
-      "Item": {
-        "columns": {
-          "description": {
-            "isArray": true,
-            "dimensions": 1,
-            "rawType": "text"
-          }
-        }
-      }
-    }
+    "tables": {}
   }
 }
