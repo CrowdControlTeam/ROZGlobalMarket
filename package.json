@@ -14,6 +14,7 @@
     "cf:deploy": "opennextjs-cloudflare deploy",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:baseline": "tsx src/db/seed/baseline.ts",
     "db:studio": "drizzle-kit studio",
     "seed:config": "tsx src/db/seed/market-config.ts",
     "seed:magical": "tsx src/db/seed/magical-weapon-types.ts",

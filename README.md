@@ -127,6 +127,14 @@ El deploy de Cloudflare es independiente del tag/Release de GitHub (ver [Version
 - Explorar los datos: `npm run db:studio`
 - Datos base / seed: scripts `npm run seed:*` e `import:items` (ver [src/db/seed/](src/db/seed)).
 
+> **Transición desde Prisma (una sola vez por entorno):** las DB existentes ya tienen el schema (lo creó Prisma), así que antes del primer `db:migrate` hay que marcar la migración baseline como aplicada para que drizzle no intente recrear las tablas:
+> ```bash
+> npm run db:baseline                                       # local
+> npx dotenvx run -f .env.dev -- npm run db:baseline        # dev
+> npx dotenvx run -f .env.production -- npm run db:baseline # prod
+> ```
+> A partir de ahí, los cambios de schema se aplican con `db:generate` + `db:migrate` con normalidad.
+
 ## Catálogo de items
 
 El catálogo de items se genera con una herramienta externa aparte (no incluida
