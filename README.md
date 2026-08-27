@@ -48,7 +48,7 @@ Sin tags, **Prepare release** parte de `v0.0.0`, así que el primer `minor` publ
 ## Puesta en marcha
 
 1. Crea los dos archivos de entorno a partir de `.env.example` (ninguno se sube al repo):
-   - `.env` → solo `DATABASE_URL` (la leen drizzle-kit y los scripts de seed, que no ven `.env.local`).
+   - `.env` → `DATABASE_URL` (app) y, en Neon, `DIRECT_URL` (migraciones/seeds). Las leen drizzle-kit y los scripts de seed, que no ven `.env.local`. En local basta `DATABASE_URL`.
    - `.env.local` → el resto: credenciales de Discord (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`), `AUTH_SECRET`, `APP_URL` y, opcionalmente, `DISCORD_ADMIN_IDS` y `GEMINI_API_KEY`.
 2. Levanta la base de datos local:
    ```bash
@@ -78,10 +78,10 @@ La app se despliega en **Cloudflare Workers** vía [OpenNext](https://opennext.j
 
 ### Base de datos (Neon)
 
-1. Crea un proyecto en Neon y copia la cadena de conexión:
-   - `DATABASE_URL` → endpoint **pooled** (host con `-pooler`) para la app.
-   - Para migrar usa el endpoint **directo** (sin `-pooler`).
-2. Aplica las migraciones contra Neon (con el endpoint directo en `DATABASE_URL`):
+1. Crea un proyecto en Neon con **dos roles** (mínimo privilegio) y copia sus cadenas:
+   - `DATABASE_URL` → endpoint **pooled** (host con `-pooler`) + rol de app (p. ej. `roz_app`, sin permisos de DDL). Lo usa la app.
+   - `DIRECT_URL` → endpoint **directo** (sin `-pooler`) + rol con permisos de DDL (p. ej. `roz_migrator`). Lo usan drizzle-kit y los scripts de seed.
+2. Aplica las migraciones contra Neon (usan `DIRECT_URL` automáticamente):
    ```bash
    npx dotenvx run -f .env.production -- npm run db:migrate
    ```
@@ -123,7 +123,7 @@ El deploy de Cloudflare es independiente del tag/Release de GitHub (ver [Version
   npm run db:generate -- --name <descripcion>
   npm run db:migrate
   ```
-  Las migraciones se aplican **a mano** por entorno (el CI no las corre): local con `.env`, y dev/prod con dotenvx (`npx dotenvx run -f .env.dev -- npm run db:migrate`), usando el endpoint **directo** de Neon.
+  Las migraciones se aplican **a mano** por entorno (el CI no las corre): local con `.env`, y dev/prod con dotenvx (`npx dotenvx run -f .env.dev -- npm run db:migrate`). drizzle-kit usa `DIRECT_URL` (endpoint directo + rol con permisos de DDL) automáticamente si está definido.
 - Explorar los datos: `npm run db:studio`
 - Datos base / seed: scripts `npm run seed:*` e `import:items` (ver [src/db/seed/](src/db/seed)).
 
