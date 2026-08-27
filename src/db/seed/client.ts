@@ -8,20 +8,24 @@ import * as relations from "../relations";
 // for Neon (dev/prod, direct endpoint). Run with `tsx`.
 //
 // Env: on dev/prod the variables are injected by dotenvx before running the
-// script (npx dotenvx run -f .env.dev -- npm run …); locally, if DATABASE_URL is
-// not in the environment, it's loaded from `.env` (as Prisma used to load it).
-if (!process.env.DATABASE_URL) {
+// script (npx dotenvx run -f .env.dev -- npm run …); locally, if no connection
+// string is in the environment, it's loaded from `.env`.
+if (!process.env.DATABASE_URL && !process.env.DIRECT_URL) {
   try {
     process.loadEnvFile(".env");
   } catch {
-    // No .env: assume DATABASE_URL is already in the environment (dotenvx). If it
-    // is missing, the Pool will fail to connect with a clear message.
+    // No .env: assume the connection string is already in the environment
+    // (dotenvx). If it is missing, the Pool will fail with a clear message.
   }
 }
 
 const schema = { ...tables, ...relations };
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Seed/import/baseline are ops tooling (bulk writes, and baseline creates the
+// migrations schema): they run as the privileged migrator role via DIRECT_URL,
+// not the least-privilege app role (DATABASE_URL). Locally there's only
+// DATABASE_URL (docker superuser), so fall back to it.
+export const pool = new Pool({ connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
 // Runs the seed body and always closes the pool (so the process exits). Same
