@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { eq, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { rateLimit } from "@/db/schema";
 
 // Limitador de tipo "ventana fija" respaldado en BD (modelo RateLimit): se
 // elige BD en vez de un contador en memoria para que funcione entre
@@ -40,8 +42,10 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   const now = Date.now();
 
-  return prisma.$transaction(async (tx) => {
-    const existing = await tx.rateLimit.findUnique({ where: { key } });
+  return db.transaction(async (tx) => {
+    const existing = (
+      await tx.select().from(rateLimit).where(eq(rateLimit.key, key)).limit(1)
+    )[0];
     const decision = decideRateLimit(
       existing ? { count: existing.count, windowStartMs: existing.windowStart.getTime() } : null,
       now,
@@ -54,13 +58,18 @@ export async function checkRateLimit(
     }
 
     if (decision.kind === "reset") {
-      await tx.rateLimit.upsert({
-        where: { key },
-        create: { key, count: 1, windowStart: new Date(now) },
-        update: { count: 1, windowStart: new Date(now) },
-      });
+      await tx
+        .insert(rateLimit)
+        .values({ key, count: 1, windowStart: new Date(now) })
+        .onConflictDoUpdate({
+          target: rateLimit.key,
+          set: { count: 1, windowStart: new Date(now) },
+        });
     } else {
-      await tx.rateLimit.update({ where: { key }, data: { count: { increment: 1 } } });
+      await tx
+        .update(rateLimit)
+        .set({ count: sql`${rateLimit.count} + 1` })
+        .where(eq(rateLimit.key, key));
     }
 
     return { ok: true };

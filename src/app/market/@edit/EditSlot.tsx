@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { db } from "@/db";
+import { deal, listing as listingTable } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { getItemOptionGroup, loadMagicalWeaponTypes, isOptionsFeatureAvailable } from "@/lib/item-options";
 import { isImageRecognitionAvailable } from "@/lib/item-recognition";
@@ -23,25 +25,25 @@ export async function EditSlot({
 
   const session = await requireSession();
 
-  const listing = await prisma.listing.findUnique({
-    where: { id: listingId },
-    include: {
+  const listing = await db.query.listing.findFirst({
+    where: eq(listingTable.id, listingId),
+    with: {
       item: true,
-      options: { orderBy: { slotIndex: "asc" } },
-      // Solo deals VIVOS (PENDING/ACCEPTED): si hay alguno, no es editable. Es
-      // la misma regla que aplica updateListing (autoritativa) en el servidor.
-      _count: { select: { deals: { where: { status: { in: ["PENDING", "ACCEPTED"] } } } } },
+      options: { orderBy: (o) => asc(o.slotIndex) },
     },
   });
 
-  if (
-    !listing ||
-    listing.posterId !== session.user.discordId ||
-    listing.status !== "ACTIVE" ||
-    listing._count.deals > 0
-  ) {
+  if (!listing || listing.posterId !== session.user.discordId || listing.status !== "ACTIVE") {
     return null;
   }
+
+  // Solo deals VIVOS (PENDING/ACCEPTED): si hay alguno, no es editable. Es la
+  // misma regla que aplica updateListing (autoritativa) en el servidor.
+  const [{ live } = { live: 0 }] = await db
+    .select({ live: count() })
+    .from(deal)
+    .where(and(eq(deal.listingId, listingId), inArray(deal.status, ["PENDING", "ACCEPTED"])));
+  if (live > 0) return null;
 
   const [magicalTypes, optionsAvailable, recognitionEnabled] = await Promise.all([
     loadMagicalWeaponTypes(),

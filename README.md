@@ -48,7 +48,7 @@ Sin tags, **Prepare release** parte de `v0.0.0`, así que el primer `minor` publ
 ## Puesta en marcha
 
 1. Crea los dos archivos de entorno a partir de `.env.example` (ninguno se sube al repo):
-   - `.env` → solo `DATABASE_URL` y `DIRECT_URL` (lo lee el CLI de Prisma, que no ve `.env.local`).
+   - `.env` → solo `DATABASE_URL` (la leen drizzle-kit y los scripts de seed, que no ven `.env.local`).
    - `.env.local` → el resto: credenciales de Discord (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`), `AUTH_SECRET`, `APP_URL` y, opcionalmente, `DISCORD_ADMIN_IDS` y `GEMINI_API_KEY`.
 2. Levanta la base de datos local:
    ```bash
@@ -57,14 +57,20 @@ Sin tags, **Prepare release** parte de `v0.0.0`, así que el primer `minor` publ
 3. Instala dependencias y aplica las migraciones:
    ```bash
    npm install
-   npx prisma migrate dev
+   npm run db:migrate
    ```
-4. Arranca el servidor de desarrollo:
+4. (Opcional) Siembra los datos base y de ejemplo:
+   ```bash
+   npm run seed:config && npm run seed:magical && npm run seed:options && npm run seed:bis
+   npm run import:items   # catálogo de items (requiere el JSON del extractor)
+   npm run seed:examples  # datos de prueba (solo local)
+   ```
+5. Arranca el servidor de desarrollo:
    ```bash
    npm run dev
    ```
 
-En local, `DATABASE_URL`/`DIRECT_URL` apuntan al Postgres de `docker-compose.yml` (puerto 5434). El webhook de Discord ya no es una variable de entorno: se configura desde `/admin`.
+En local, `DATABASE_URL` apunta al Postgres de `docker-compose.yml` (puerto 5434). El webhook de Discord ya no es una variable de entorno: se configura desde `/admin`.
 
 ## Despliegue (Cloudflare Workers + Neon)
 
@@ -72,19 +78,19 @@ La app se despliega en **Cloudflare Workers** vía [OpenNext](https://opennext.j
 
 ### Base de datos (Neon)
 
-1. Crea un proyecto en Neon y copia las dos cadenas de conexión:
-   - `DATABASE_URL` → endpoint **pooled** (host con `-pooler`).
-   - `DIRECT_URL` → endpoint **directo** (sin `-pooler`), para `prisma migrate`.
-2. Aplica las migraciones contra Neon:
+1. Crea un proyecto en Neon y copia la cadena de conexión:
+   - `DATABASE_URL` → endpoint **pooled** (host con `-pooler`) para la app.
+   - Para migrar usa el endpoint **directo** (sin `-pooler`).
+2. Aplica las migraciones contra Neon (con el endpoint directo en `DATABASE_URL`):
    ```bash
-   npx prisma migrate deploy
+   npx dotenvx run -f .env.production -- npm run db:migrate
    ```
 
-En Workers, [prisma.ts](src/lib/prisma.ts) detecta el host de Neon (`neon.tech`) y usa el driver serverless (`@prisma/adapter-neon`, WebSocket) en vez de una conexión TCP; en local se sigue usando el cliente estándar contra el Postgres de docker.
+En Workers, [src/db/index.ts](src/db/index.ts) detecta el host de Neon (`neon.tech`) y usa el driver serverless de Neon (`@neondatabase/serverless`, WebSocket) en vez de una conexión TCP; en local se usa node-postgres contra el Postgres de docker.
 
 ### Secretos en Cloudflare
 
-Configúralos con `wrangler secret put <NOMBRE>` (o desde el dashboard): `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`, `APP_URL` (dominio del Worker) y, opcionalmente, `DISCORD_ADMIN_IDS` (IDs de usuario con acceso a `/admin`, separados por comas), `DISCORD_BOT_TOKEN` y `GEMINI_API_KEY`.
+Configúralos con `wrangler secret put <NOMBRE>` (o desde el dashboard): `DATABASE_URL`, `AUTH_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_GUILD_ID`, `APP_URL` (dominio del Worker) y, opcionalmente, `DISCORD_ADMIN_IDS` (IDs de usuario con acceso a `/admin`, separados por comas), `DISCORD_BOT_TOKEN` y `GEMINI_API_KEY`.
 
 ### Build y deploy
 
@@ -109,11 +115,25 @@ En ambas: build command `npx opennextjs-cloudflare build`, *"Builds for non-prod
 
 El deploy de Cloudflare es independiente del tag/Release de GitHub (ver [Versionado](#versionado)): Cloudflare despliega al hacer push a la rama, y `release.yml` solo taggea.
 
-## Prisma
+## Base de datos (Drizzle)
 
-- Esquema: `prisma/schema.prisma`
-- Tras cualquier cambio de esquema: `npx prisma migrate dev --name <descripcion>`
-- Explorar los datos: `npx prisma studio`
+- ORM: [Drizzle](https://orm.drizzle.team). Esquema: [src/db/schema.ts](src/db/schema.ts) (tablas) y [src/db/relations.ts](src/db/relations.ts) (relaciones); cliente en [src/db/index.ts](src/db/index.ts).
+- Tras cualquier cambio de esquema, genera y aplica la migración:
+  ```bash
+  npm run db:generate -- --name <descripcion>
+  npm run db:migrate
+  ```
+  Las migraciones se aplican **a mano** por entorno (el CI no las corre): local con `.env`, y dev/prod con dotenvx (`npx dotenvx run -f .env.dev -- npm run db:migrate`), usando el endpoint **directo** de Neon.
+- Explorar los datos: `npm run db:studio`
+- Datos base / seed: scripts `npm run seed:*` e `import:items` (ver [src/db/seed/](src/db/seed)).
+
+> **Transición desde Prisma (una sola vez por entorno):** las DB existentes ya tienen el schema (lo creó Prisma), así que antes del primer `db:migrate` hay que marcar la migración baseline como aplicada para que drizzle no intente recrear las tablas:
+> ```bash
+> npm run db:baseline                                       # local
+> npx dotenvx run -f .env.dev -- npm run db:baseline        # dev
+> npx dotenvx run -f .env.production -- npm run db:baseline # prod
+> ```
+> A partir de ahí, los cambios de schema se aplican con `db:generate` + `db:migrate` con normalidad.
 
 ## Catálogo de items
 

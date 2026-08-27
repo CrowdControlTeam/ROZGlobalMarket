@@ -24,8 +24,6 @@ jobs:
           node-version: "20"
           cache: npm
 
-      # `npm ci` dispara el postinstall (prisma generate), que solo necesita
-      # el schema, no una base de datos.
       - name: Instalar dependencias
         run: npm ci
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ItemCategory, EquipSlot } from "@prisma/client";
+import { ItemCategory, EquipSlot } from "@/db/enums";
 import { isRefineEligible, formatRefinedName } from "@/lib/refine-constants";
 
 describe("isRefineEligible", () => {

@@ -44,4 +44,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-prisma/seedExamples.mjs
+
+# Seed de ejemplos: solo desarrollo local (datos de prueba), no se versiona.
+src/db/seed/examples.ts

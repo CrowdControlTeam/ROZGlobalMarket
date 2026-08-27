@@ -1,6 +1,7 @@
-import { ItemOptionDef, ItemOptionGroup, WeaponType } from "@prisma/client";
+import { count, inArray } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { itemOptionDef, magicalWeaponType, type ItemOptionDef, type ItemOptionGroup, type WeaponType } from "@/db/schema";
 import { loadMarketConfig } from "@/lib/market-config";
 import { MAX_OPTION_SLOTS, getItemOptionGroup } from "@/lib/item-options-constants";
 
@@ -9,12 +10,13 @@ export { MAX_OPTION_SLOTS, getItemOptionGroup };
 // Carga una sola vez por request y reutilizar entre varias llamadas a
 // getItemOptionGroup — evita una query por item al resolver listados.
 export async function loadMagicalWeaponTypes(): Promise<Set<WeaponType>> {
-  const rows = await prisma.magicalWeaponType.findMany({ select: { type: true } });
+  const rows = await db.select({ type: magicalWeaponType.type }).from(magicalWeaponType);
   return new Set(rows.map((r) => r.type));
 }
 
 export async function getOptionsCatalogCount(): Promise<number> {
-  return prisma.itemOptionDef.count();
+  const rows = await db.select({ value: count() }).from(itemOptionDef);
+  return rows[0]?.value ?? 0;
 }
 
 // Hace falta el toggle activo (configurable en /admin) Y que el catálogo
@@ -84,9 +86,10 @@ export async function validateOptions(
     throw new Error(t("noOptionsAllowed"));
   }
 
-  const defs = await prisma.itemOptionDef.findMany({
-    where: { id: { in: rawOptions.map((o) => o.defId) } },
-  });
+  const defs = await db
+    .select()
+    .from(itemOptionDef)
+    .where(inArray(itemOptionDef.id, rawOptions.map((o) => o.defId)));
   for (const def of defs) defsById.set(def.id, def);
 
   for (const raw of rawOptions) {

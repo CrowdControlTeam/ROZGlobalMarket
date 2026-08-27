@@ -1,5 +1,14 @@
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
+import { asc, desc, eq, inArray } from "drizzle-orm";
+import { db } from "@/db";
+import {
+  bisEntry,
+  bisEntryToCombatRole,
+  bisEntryToJob,
+  bisStage,
+  combatRole,
+  job,
+} from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { canEditBis } from "@/lib/bis";
 import { loadMagicalWeaponTypes } from "@/lib/item-options";
@@ -23,7 +32,7 @@ export default async function BisPage({
 
   // Etapas ordenadas de más reciente a más antigua: la primera es la de por
   // defecto; ?stage=<key> permite ver una anterior.
-  const stages = await prisma.bisStage.findMany({ orderBy: { order: "desc" } });
+  const stages = await db.select().from(bisStage).orderBy(desc(bisStage.order));
   const selectedStage = stages.find((s) => s.key === stageParam) ?? stages[0] ?? null;
 
   const heading = (
@@ -43,34 +52,67 @@ export default async function BisPage({
   }
 
   const [rawEntries, roles, jobs, magicalTypes, canEdit] = await Promise.all([
-    prisma.bisEntry.findMany({
-      where: { stageId: selectedStage.id },
-      orderBy: [{ slot: "asc" }, { position: "asc" }],
-      include: {
+    db.query.bisEntry.findMany({
+      where: eq(bisEntry.stageId, selectedStage.id),
+      orderBy: [asc(bisEntry.slot), asc(bisEntry.position)],
+      with: {
         item: {
-          select: {
+          columns: {
             id: true, name: true, iconUrl: true, category: true, slot: true, weaponType: true, slotCount: true,
           },
         },
         options: {
-          orderBy: { slotIndex: "asc" },
-          select: { slotIndex: true, defId: true, minValue: true, def: { select: { label: true, group: true, statCode: true } } },
+          orderBy: (o) => asc(o.slotIndex),
+          columns: { slotIndex: true, defId: true, minValue: true },
+          with: { def: { columns: { label: true, group: true, statCode: true } } },
         },
-        roles: { orderBy: { order: "asc" }, select: { id: true, label: true } },
-        jobs: { orderBy: { order: "asc" }, select: { id: true, label: true } },
       },
     }),
-    prisma.combatRole.findMany({ orderBy: { order: "asc" }, select: { id: true, label: true } }),
+    db.select({ id: combatRole.id, label: combatRole.label }).from(combatRole).orderBy(asc(combatRole.order)),
     // El filtro por job es solo de 1st jobs (ver requisitos): en EC son los
     // únicos que hay, y más adelante siguen siendo el eje del filtro.
-    prisma.job.findMany({
-      where: { tier: "FIRST" },
-      orderBy: { order: "asc" },
-      select: { id: true, label: true },
-    }),
+    db
+      .select({ id: job.id, label: job.label })
+      .from(job)
+      .where(eq(job.tier, "FIRST"))
+      .orderBy(asc(job.order)),
     loadMagicalWeaponTypes(),
     canEditBis(),
   ]);
+
+  // roles/jobs de cada entry (m2m): Prisma resolvía `roles`/`jobs` directamente;
+  // en Drizzle se traversan las tablas puente uniendo al destino, ordenados por
+  // el `order` del rol/job, y se agrupan por entry en JS.
+  const entryIds = rawEntries.map((e) => e.id);
+  const [roleRows, jobRows] =
+    entryIds.length > 0
+      ? await Promise.all([
+          db
+            .select({ entryId: bisEntryToCombatRole.a, id: combatRole.id, label: combatRole.label })
+            .from(bisEntryToCombatRole)
+            .innerJoin(combatRole, eq(bisEntryToCombatRole.b, combatRole.id))
+            .where(inArray(bisEntryToCombatRole.a, entryIds))
+            .orderBy(asc(combatRole.order)),
+          db
+            .select({ entryId: bisEntryToJob.a, id: job.id, label: job.label })
+            .from(bisEntryToJob)
+            .innerJoin(job, eq(bisEntryToJob.b, job.id))
+            .where(inArray(bisEntryToJob.a, entryIds))
+            .orderBy(asc(job.order)),
+        ])
+      : [[], []];
+  const rolesByEntry = new Map<string, { id: string; label: string }[]>();
+  for (const r of roleRows) {
+    const list = rolesByEntry.get(r.entryId) ?? [];
+    list.push({ id: r.id, label: r.label });
+    rolesByEntry.set(r.entryId, list);
+  }
+  const jobsByEntry = new Map<string, { id: string; label: string }[]>();
+  for (const j of jobRows) {
+    const list = jobsByEntry.get(j.entryId) ?? [];
+    list.push({ id: j.id, label: j.label });
+    jobsByEntry.set(j.entryId, list);
+  }
 
   const entries: BisEntryView[] = rawEntries.map((e) => ({
     id: e.id,
@@ -102,8 +144,8 @@ export default async function BisPage({
       label: o.def.label,
       statCode: o.def.statCode,
     })),
-    roles: e.roles,
-    jobs: e.jobs,
+    roles: rolesByEntry.get(e.id) ?? [],
+    jobs: jobsByEntry.get(e.id) ?? [],
   }));
 
   return (

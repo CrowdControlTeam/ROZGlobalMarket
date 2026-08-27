@@ -2,7 +2,9 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
+import { asc, count, eq, max } from "drizzle-orm";
+import { db } from "@/db";
+import { savedSearch } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { serializeFilters, parseFilters } from "@/app/market/marketFilterKeys";
 
@@ -31,10 +33,11 @@ function cleanFilters(raw: string): string {
 
 export async function listSavedSearches(): Promise<SavedSearchDTO[]> {
   const session = await requireSession();
-  const rows = await prisma.savedSearch.findMany({
-    where: { userId: session.user.discordId },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  });
+  const rows = await db
+    .select()
+    .from(savedSearch)
+    .where(eq(savedSearch.userId, session.user.discordId))
+    .orderBy(asc(savedSearch.sortOrder), asc(savedSearch.createdAt));
   return rows.map(toDTO);
 }
 
@@ -46,22 +49,26 @@ export async function createSavedSearch(name: string, filters: string): Promise<
   const parsedName = nameSchema.safeParse(name);
   if (!parsedName.success) throw new Error(t("invalidData"));
 
-  const count = await prisma.savedSearch.count({ where: { userId } });
-  if (count >= MAX_SAVED_SEARCHES) throw new Error(t("savedSearchLimit", { max: MAX_SAVED_SEARCHES }));
+  const [{ total } = { total: 0 }] = await db
+    .select({ total: count() })
+    .from(savedSearch)
+    .where(eq(savedSearch.userId, userId));
+  if (total >= MAX_SAVED_SEARCHES) throw new Error(t("savedSearchLimit", { max: MAX_SAVED_SEARCHES }));
 
-  const max = await prisma.savedSearch.aggregate({
-    where: { userId },
-    _max: { sortOrder: true },
-  });
+  const [{ maxSort } = { maxSort: null }] = await db
+    .select({ maxSort: max(savedSearch.sortOrder) })
+    .from(savedSearch)
+    .where(eq(savedSearch.userId, userId));
 
-  const created = await prisma.savedSearch.create({
-    data: {
+  const [created] = await db
+    .insert(savedSearch)
+    .values({
       userId,
       name: parsedName.data,
       filters: cleanFilters(filters),
-      sortOrder: (max._max.sortOrder ?? 0) + 1,
-    },
-  });
+      sortOrder: (maxSort ?? 0) + 1,
+    })
+    .returning();
   return toDTO(created);
 }
 
@@ -69,7 +76,11 @@ export async function createSavedSearch(name: string, filters: string): Promise<
 async function requireOwned(id: string): Promise<string> {
   const session = await requireSession();
   const t = await getTranslations("errors");
-  const row = await prisma.savedSearch.findUnique({ where: { id }, select: { userId: true } });
+  const [row] = await db
+    .select({ userId: savedSearch.userId })
+    .from(savedSearch)
+    .where(eq(savedSearch.id, id))
+    .limit(1);
   if (!row) throw new Error(t("savedSearchNotFound"));
   if (row.userId !== session.user.discordId) throw new Error(t("notYourSavedSearch"));
   return id;
@@ -80,15 +91,15 @@ export async function renameSavedSearch(id: string, name: string): Promise<void>
   const parsedName = nameSchema.safeParse(name);
   if (!parsedName.success) throw new Error(t("invalidData"));
   await requireOwned(id);
-  await prisma.savedSearch.update({ where: { id }, data: { name: parsedName.data } });
+  await db.update(savedSearch).set({ name: parsedName.data }).where(eq(savedSearch.id, id));
 }
 
 export async function updateSavedSearch(id: string, filters: string): Promise<void> {
   await requireOwned(id);
-  await prisma.savedSearch.update({ where: { id }, data: { filters: cleanFilters(filters) } });
+  await db.update(savedSearch).set({ filters: cleanFilters(filters) }).where(eq(savedSearch.id, id));
 }
 
 export async function deleteSavedSearch(id: string): Promise<void> {
   await requireOwned(id);
-  await prisma.savedSearch.delete({ where: { id } });
+  await db.delete(savedSearch).where(eq(savedSearch.id, id));
 }

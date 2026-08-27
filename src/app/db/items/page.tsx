@@ -1,4 +1,4 @@
-import { ItemCategory } from "@prisma/client";
+import { ItemCategory } from "@/db/enums";
 import { searchDbItems } from "@/lib/db-items";
 import { ItemsBrowser } from "./ItemsBrowser";
 

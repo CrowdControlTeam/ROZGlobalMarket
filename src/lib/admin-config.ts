@@ -1,10 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { marketConfig } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
 import { loadMarketConfig, bustConfigCache } from "@/lib/market-config";
 import { getOptionsCatalogCount } from "@/lib/item-options";
@@ -34,10 +35,16 @@ export async function getMarketConfig() {
     getBotStatus(),
     // logoUrl/homeImageUrl ya no vienen de loadMarketConfig (se dejaron fuera
     // por egress); aquí sí se leen (admin-only, poco tráfico) para el formulario.
-    prisma.marketConfig.findUnique({
-      where: { id: 1 },
-      select: { siteName: true, logoUrl: true, homeImageUrl: true },
-    }),
+    db
+      .select({
+        siteName: marketConfig.siteName,
+        logoUrl: marketConfig.logoUrl,
+        homeImageUrl: marketConfig.homeImageUrl,
+      })
+      .from(marketConfig)
+      .where(eq(marketConfig.id, 1))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
     getTranslations("admin.recognition.models"),
   ]);
 
@@ -106,10 +113,12 @@ export type ConfigFieldUpdate =
 // Valida un campo y devuelve el fragmento de update de Prisma. Lanza con el
 // mensaje i18n adecuado si el valor no es válido. El switch es exhaustivo sobre
 // el union (TS lo verifica por el tipo de retorno sin `undefined`).
+type MarketConfigUpdate = Partial<typeof marketConfig.$inferInsert>;
+
 function buildFieldData(
   u: ConfigFieldUpdate,
   t: Awaited<ReturnType<typeof getTranslations>>,
-): Prisma.MarketConfigUncheckedUpdateInput {
+): MarketConfigUpdate {
   switch (u.field) {
     case "webhookEnabled":
     case "imageRecognitionEnabled":
@@ -163,11 +172,10 @@ export async function setMarketConfigField(update: ConfigFieldUpdate): Promise<v
   await requireAdmin();
   const t = await getTranslations("errors");
   const data = buildFieldData(update, t);
-  await prisma.marketConfig.upsert({
-    where: { id: 1 },
-    create: { id: 1, ...data } as Prisma.MarketConfigUncheckedCreateInput,
-    update: data,
-  });
+  await db
+    .insert(marketConfig)
+    .values({ id: 1, ...data })
+    .onConflictDoUpdate({ target: marketConfig.id, set: data });
   // Invalida el cache en memoria para que el cambio se refleje ya (al menos en
   // este isolate; el resto caduca en <=TTL).
   bustConfigCache();

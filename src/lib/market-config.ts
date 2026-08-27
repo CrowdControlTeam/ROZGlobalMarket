@@ -4,7 +4,9 @@
 // navegador — devuelve valores en crudo (incluida la URL real del webhook),
 // así que solo lo importan otros módulos server-only (discord-webhook.ts,
 // listings.ts, item-recognition.ts, páginas server component).
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { marketConfig } from "@/db/schema";
 import { DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { DEFAULT_GEMINI_MODEL, isGeminiModel, type GeminiModel } from "@/lib/gemini-model-constants";
 
@@ -74,23 +76,24 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
   // todos los requests (layout, cabecera, guard de /market, acciones…), así que
   // arrastrarlos desangraba la transferencia de datos de Neon. Se leen aparte y
   // solo donde se pintan (ver loadBrandingLogo / loadHomeImage).
-  const config = await prisma.marketConfig.findUnique({
-    where: { id: 1 },
-    select: {
-      maxRefineLevel: true,
-      webhookUrl: true,
-      webhookEnabled: true,
-      imageRecognitionEnabled: true,
-      geminiModel: true,
-      dmNotificationsEnabled: true,
-      maintenanceModeEnabled: true,
-      optionsEnabled: true,
-      adminRoleIds: true,
-      accessRoleId: true,
-      bisEditorRoleId: true,
-      siteName: true,
-    },
-  });
+  const [config] = await db
+    .select({
+      maxRefineLevel: marketConfig.maxRefineLevel,
+      webhookUrl: marketConfig.webhookUrl,
+      webhookEnabled: marketConfig.webhookEnabled,
+      imageRecognitionEnabled: marketConfig.imageRecognitionEnabled,
+      geminiModel: marketConfig.geminiModel,
+      dmNotificationsEnabled: marketConfig.dmNotificationsEnabled,
+      maintenanceModeEnabled: marketConfig.maintenanceModeEnabled,
+      optionsEnabled: marketConfig.optionsEnabled,
+      adminRoleIds: marketConfig.adminRoleIds,
+      accessRoleId: marketConfig.accessRoleId,
+      bisEditorRoleId: marketConfig.bisEditorRoleId,
+      siteName: marketConfig.siteName,
+    })
+    .from(marketConfig)
+    .where(eq(marketConfig.id, 1))
+    .limit(1);
   return {
     maxRefineLevel: config?.maxRefineLevel ?? DEFAULT_MAX_REFINE_LEVEL,
     webhookUrl: config?.webhookUrl ?? null,
@@ -115,18 +118,20 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
 // las páginas) y la imagen del home en el hub (solo `/`). Mismo cache en memoria
 // con TTL para no re-leerlas de la DB en cada render.
 export const loadBrandingLogo = ttlMemo(async (): Promise<string | null> => {
-  const config = await prisma.marketConfig.findUnique({
-    where: { id: 1 },
-    select: { logoUrl: true },
-  });
+  const [config] = await db
+    .select({ logoUrl: marketConfig.logoUrl })
+    .from(marketConfig)
+    .where(eq(marketConfig.id, 1))
+    .limit(1);
   return config?.logoUrl ?? null;
 }, CONFIG_TTL_MS);
 
 export const loadHomeImage = ttlMemo(async (): Promise<string | null> => {
-  const config = await prisma.marketConfig.findUnique({
-    where: { id: 1 },
-    select: { homeImageUrl: true },
-  });
+  const [config] = await db
+    .select({ homeImageUrl: marketConfig.homeImageUrl })
+    .from(marketConfig)
+    .where(eq(marketConfig.id, 1))
+    .limit(1);
   return config?.homeImageUrl ?? null;
 }, CONFIG_TTL_MS);
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ItemIcon } from "@/components/ItemIcon";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ItemCategory } from "@prisma/client";
+import { ItemCategory } from "@/db/enums";
 import { X } from "lucide-react";
 import { categoryLabel } from "@/lib/market-labels";
 import { inputClass, selectClass } from "@/lib/ui";

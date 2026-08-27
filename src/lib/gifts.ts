@@ -3,7 +3,9 @@
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { and, asc, desc, eq, ilike, inArray, ne, or, sql, sum } from "drizzle-orm";
+import { db } from "@/db";
+import { deal, listing, user } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { sendDirectMessage } from "@/lib/discord-bot";
@@ -21,15 +23,12 @@ export async function searchUsers(query: string) {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
 
-  return prisma.user.findMany({
-    where: {
-      username: { contains: trimmed, mode: "insensitive" },
-      id: { not: session.user.discordId },
-    },
-    orderBy: { username: "asc" },
-    take: 20,
-    select: { id: true, username: true, avatarUrl: true },
-  });
+  return db
+    .select({ id: user.id, username: user.username, avatarUrl: user.avatarUrl })
+    .from(user)
+    .where(and(ilike(user.username, `%${trimmed}%`), ne(user.id, session.user.discordId)))
+    .orderBy(asc(user.username))
+    .limit(20);
 }
 
 // Regalos enviados/recibidos, leídos ya del modelo unificado (Listing type=GIFT
@@ -39,22 +38,27 @@ export async function searchUsers(query: string) {
 export async function getMyGifts() {
   const session = await requireSession();
 
-  const listings = await prisma.listing.findMany({
-    where: {
-      type: "GIFT",
-      OR: [
-        { posterId: session.user.discordId },
-        { deals: { some: { userId: session.user.discordId } } },
-      ],
-    },
-    orderBy: { createdAt: "desc" },
-    include: {
+  // Listings GIFT donde soy el que regala (posterId) O el reclamante (algún Deal
+  // mío). El "algún Deal mío" se expresa como subconsulta de ids (equivale al
+  // `deals: { some }` de Prisma) para no correlacionar dentro del query relacional.
+  const myClaimListingIds = db
+    .select({ id: deal.listingId })
+    .from(deal)
+    .where(eq(deal.userId, session.user.discordId));
+
+  const listings = await db.query.listing.findMany({
+    where: and(
+      eq(listing.type, "GIFT"),
+      or(eq(listing.posterId, session.user.discordId), inArray(listing.id, myClaimListingIds)),
+    ),
+    orderBy: desc(listing.createdAt),
+    with: {
       // select en item (no fila completa): la UI de regalos solo usa nombre/
       // icono/slots. poster/user (pequeños) se dejan completos.
-      item: { select: { id: true, name: true, iconUrl: true, slotCount: true } },
+      item: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
       poster: true,
-      options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
-      deals: { include: { user: true } },
+      options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+      deals: { with: { user: true } },
     },
   });
 
@@ -101,45 +105,45 @@ export async function claimGift(listingId: string, formData: FormData) {
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
   const { quantity } = parsed.data;
 
-  const listing = await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`;
-    const listing = await tx.listing.findUnique({ where: { id: listingId }, include: { item: true } });
-    if (!listing) throw new Error(t("listingNotFound"));
-    if (listing.posterId === session.user.discordId) throw new Error(t("cannotClaimOwn"));
-    if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
-    if (listing.type !== "GIFT") throw new Error(t("notClaimableGift"));
+  const giftListing = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`);
+    const row = await tx.query.listing.findFirst({ where: eq(listing.id, listingId), with: { item: true } });
+    if (!row) throw new Error(t("listingNotFound"));
+    if (row.posterId === session.user.discordId) throw new Error(t("cannotClaimOwn"));
+    if (row.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+    if (row.type !== "GIFT") throw new Error(t("notClaimableGift"));
 
     // Disponible = cantidad − reclamado − reservado (las reclamaciones PENDING
     // retienen unidades hasta que el que regala confirma).
-    const agg = await tx.deal.groupBy({
-      by: ["status"],
-      where: { listingId, status: { in: ["ACCEPTED", "PENDING"] } },
-      _sum: { quantity: true },
-    });
-    const claimed = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
-    const reserved = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
+    const agg = await tx
+      .select({ status: deal.status, quantity: sum(deal.quantity) })
+      .from(deal)
+      .where(and(eq(deal.listingId, listingId), inArray(deal.status, ["ACCEPTED", "PENDING"])))
+      .groupBy(deal.status);
+    const claimed = Number(agg.find((a) => a.status === "ACCEPTED")?.quantity ?? 0);
+    const reserved = Number(agg.find((a) => a.status === "PENDING")?.quantity ?? 0);
     // Un GIFT siempre tiene tope, así que available nunca es null aquí; se usa
     // el helper para no repetir la resta y por consistencia con el resto.
-    const available = availableFrom(listing.quantity, claimed, reserved);
+    const available = availableFrom(row.quantity, claimed, reserved);
     if (available !== null && quantity > available) {
       throw new Error(t("notEnoughStock", { remaining: available }));
     }
 
-    await tx.deal.create({
-      data: { listingId, userId: session.user.discordId, quantity, status: "PENDING", unitPrice: null },
-    });
-    return listing;
+    await tx
+      .insert(deal)
+      .values({ listingId, userId: session.user.discordId, quantity, status: "PENDING", unitPrice: null });
+    return row;
   });
 
   const appUrl = getAppUrl();
-  await sendDirectMessage(listing.posterId, {
+  await sendDirectMessage(giftListing.posterId, {
     title: tDiscord("dm.giftClaimRequested", {
       username: session.user.username,
-      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount),
+      item: formatItemDisplayName(giftListing.item.name, giftListing.refineLevel, giftListing.item.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
-    itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
+    itemIconUrl: `${appUrl}${giftListing.item.iconUrl}`,
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       { name: tDiscord("fields.to"), value: `<@${session.user.discordId}>`, inline: false },
@@ -157,16 +161,16 @@ async function loadOwnedPendingGiftDeal(
   discordId: string,
   t: Awaited<ReturnType<typeof getTranslations>>,
 ) {
-  const deal = await prisma.deal.findUnique({
-    where: { id: dealId },
-    include: { listing: { include: { item: true } }, user: true },
+  const dealRow = await db.query.deal.findFirst({
+    where: eq(deal.id, dealId),
+    with: { listing: { with: { item: true } }, user: true },
   });
-  if (!deal) throw new Error(t("offerNotFound"));
-  if (deal.status !== "PENDING") throw new Error(t("offerNotPending"));
-  if (deal.listing.type !== "GIFT") throw new Error(t("notClaimableGift"));
-  const ownerId = expectedOwner === "giver" ? deal.listing.posterId : deal.userId;
+  if (!dealRow) throw new Error(t("offerNotFound"));
+  if (dealRow.status !== "PENDING") throw new Error(t("offerNotPending"));
+  if (dealRow.listing.type !== "GIFT") throw new Error(t("notClaimableGift"));
+  const ownerId = expectedOwner === "giver" ? dealRow.listing.posterId : dealRow.userId;
   if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
-  return deal;
+  return dealRow;
 }
 
 // El que regala CONFIRMA una reclamación: cuenta como entregada; si se agota la
@@ -177,49 +181,54 @@ export async function acceptGiftClaim(dealId: string) {
   const tDiscord = await getTranslations("discord");
   const tField = await getTranslations("market.field");
 
-  const deal = await loadOwnedPendingGiftDeal(dealId, "giver", session.user.discordId, t);
+  const dealRow = await loadOwnedPendingGiftDeal(dealId, "giver", session.user.discordId, t);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${deal.listingId} FOR UPDATE`;
-    const cur = await tx.deal.findUnique({ where: { id: dealId }, select: { status: true, quantity: true } });
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM "Listing" WHERE id = ${dealRow.listingId} FOR UPDATE`);
+    const [cur] = await tx
+      .select({ status: deal.status, quantity: deal.quantity })
+      .from(deal)
+      .where(eq(deal.id, dealId))
+      .limit(1);
     if (!cur || cur.status !== "PENDING") throw new Error(t("offerNotPending"));
-    const listing = await tx.listing.findUnique({
-      where: { id: deal.listingId },
-      select: { quantity: true, status: true },
-    });
-    if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+    const [giftListing] = await tx
+      .select({ quantity: listing.quantity, status: listing.status })
+      .from(listing)
+      .where(eq(listing.id, dealRow.listingId))
+      .limit(1);
+    if (!giftListing || giftListing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
 
-    await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
+    await tx.update(deal).set({ status: "ACCEPTED" }).where(eq(deal.id, dealId));
     // Entregado = Σ cantidad de los Deal ACCEPTED (incluido el recién aceptado).
-    const claimedAgg = await tx.deal.aggregate({
-      where: { listingId: deal.listingId, status: "ACCEPTED" },
-      _sum: { quantity: true },
-    });
-    const claimed = claimedAgg._sum.quantity ?? 0;
-    await tx.listing.update({
-      where: { id: deal.listingId },
-      data: { status: isSoldOut(listing.quantity, claimed) ? "COMPLETED" : "ACTIVE" },
-    });
+    const [claimedAgg] = await tx
+      .select({ quantity: sum(deal.quantity) })
+      .from(deal)
+      .where(and(eq(deal.listingId, dealRow.listingId), eq(deal.status, "ACCEPTED")));
+    const claimed = Number(claimedAgg?.quantity ?? 0);
+    await tx
+      .update(listing)
+      .set({ status: isSoldOut(giftListing.quantity, claimed) ? "COMPLETED" : "ACTIVE" })
+      .where(eq(listing.id, dealRow.listingId));
   });
 
   const appUrl = getAppUrl();
-  await sendDirectMessage(deal.userId, {
+  await sendDirectMessage(dealRow.userId, {
     title: tDiscord("dm.giftClaimAccepted", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
+      item: formatItemDisplayName(dealRow.listing.item.name, dealRow.listing.refineLevel, dealRow.listing.item.slotCount),
     }),
-    url: `${appUrl}/market/${deal.listingId}`,
+    url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
-    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
+    itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
     fields: [
-      { name: tField("quantity"), value: String(deal.quantity), inline: true },
+      { name: tField("quantity"), value: String(dealRow.quantity), inline: true },
       { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
 
   revalidatePath("/market");
-  revalidatePath(`/market/${deal.listingId}`);
-  return listingCardState(deal.listingId);
+  revalidatePath(`/market/${dealRow.listingId}`);
+  return listingCardState(dealRow.listingId);
 }
 
 // El que regala RECHAZA una reclamación: libera las unidades retenidas.
@@ -228,31 +237,31 @@ export async function rejectGiftClaim(dealId: string) {
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
 
-  const deal = await loadOwnedPendingGiftDeal(dealId, "giver", session.user.discordId, t);
-  await prisma.deal.update({ where: { id: dealId }, data: { status: "REJECTED" } });
+  const dealRow = await loadOwnedPendingGiftDeal(dealId, "giver", session.user.discordId, t);
+  await db.update(deal).set({ status: "REJECTED" }).where(eq(deal.id, dealId));
 
   const appUrl = getAppUrl();
-  await sendDirectMessage(deal.userId, {
+  await sendDirectMessage(dealRow.userId, {
     title: tDiscord("dm.giftClaimRejected", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
+      item: formatItemDisplayName(dealRow.listing.item.name, dealRow.listing.refineLevel, dealRow.listing.item.slotCount),
     }),
-    url: `${appUrl}/market/${deal.listingId}`,
+    url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
-    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
+    itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
     fields: [{ name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false }],
   });
 
-  revalidatePath(`/market/${deal.listingId}`);
-  return listingCardState(deal.listingId);
+  revalidatePath(`/market/${dealRow.listingId}`);
+  return listingCardState(dealRow.listingId);
 }
 
 // El reclamante CANCELA su propia reclamación pendiente.
 export async function cancelGiftClaim(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
-  const deal = await loadOwnedPendingGiftDeal(dealId, "claimer", session.user.discordId, t);
-  await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
-  revalidatePath(`/market/${deal.listingId}`);
-  return listingCardState(deal.listingId);
+  const dealRow = await loadOwnedPendingGiftDeal(dealId, "claimer", session.user.discordId, t);
+  await db.update(deal).set({ status: "CANCELLED" }).where(eq(deal.id, dealId));
+  revalidatePath(`/market/${dealRow.listingId}`);
+  return listingCardState(dealRow.listingId);
 }

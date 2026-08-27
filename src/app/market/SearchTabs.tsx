@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, X } from "lucide-react";
-import { ItemCategory, ListingType } from "@prisma/client";
+import { ItemCategory, ListingType } from "@/db/enums";
 import { categoryLabel, listingTypeLabel } from "@/lib/market-labels";
 import { getErrorMessage } from "@/lib/errors";
 import { Toast } from "@/components/Toast";
