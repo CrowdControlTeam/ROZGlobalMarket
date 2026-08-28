@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCloseModal } from "./useCloseModal";
 
 // Envoltorio visual de la ficha de listing (panel lateral en desktop,
 // bottom sheet en móvil) — usado como overlay sobre /market (slot @detail,
@@ -11,13 +11,12 @@ import { useTranslations } from "next-intl";
 // acceso directo/enlace compartido (market/[id]/page.tsx) usa un layout de
 // página normal en vez de este panel.
 // A diferencia de Drawer.tsx (menú de usuario/contacto), esto NO es un modal: sin
-// fondo oscurecido y sin cierre al hacer clic fuera. Se cierra con la X,
-// Escape, o (en móvil) deslizando el panel hacia abajo; `close()` usa
-// router.back() porque se llega aquí navegando (Link push, ver
-// listingHref), así que "atrás" ya deja la URL correcta sin el query param.
+// fondo oscurecido y sin cierre al hacer clic fuera. Se cierra con la X, Escape, o
+// (en móvil) deslizando el panel hacia abajo; `close()` quita el query param
+// (?listing=) de la URL actual (ver useCloseModal), no depende del historial.
 export function DetailPanel({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const t = useTranslations("common");
+  const close = useCloseModal();
   const [mounted, setMounted] = useState(false);
   const [dragY, setDragY] = useState(0);
   // Estado (no ref) para decidir el estilo en render sin leer un ref durante
@@ -37,10 +36,6 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, []);
-
-  function close() {
-    router.back();
-  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
