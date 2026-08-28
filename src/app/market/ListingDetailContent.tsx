@@ -20,6 +20,7 @@ import { UserMention } from "@/components/UserMention";
 import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { CancelListingButton } from "./[id]/CancelListingButton";
 import { EditListingButton } from "./[id]/EditListingButton";
+import { ListingDetailMenu } from "./[id]/ListingDetailMenu";
 import { RepostListingButton } from "./[id]/RepostListingButton";
 import { ReserveForm } from "./[id]/ReserveForm";
 import { SaleReservationActions } from "./[id]/SaleReservationActions";
@@ -137,8 +138,8 @@ export async function ListingDetailContent({ id }: { id: string }) {
 
   return (
     <>
-      {/* Hero: icono grande + nombre + badge · vendedor. */}
-      <div className="flex items-center gap-3">
+      {/* Hero: icono grande + nombre + badge · vendedor + kebab (esquina). */}
+      <div className="flex items-start gap-3">
         <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl border border-ro-panel-border bg-ro-panel-alt">
           <ItemIcon
             item={listing.item}
@@ -172,6 +173,15 @@ export async function ListingDetailContent({ id }: { id: string }) {
             </span>
           </p>
         </div>
+        {/* Kebab de utilidad (Compartir / Contactar) en la esquina superior
+            derecha, como en las tarjetas. */}
+        <ListingDetailMenu
+          listingId={listing.id}
+          item={listing.item}
+          poster={listing.poster}
+          currentUserId={session.user.discordId}
+          dmAvailable={dmAvailable}
+        />
       </div>
 
       {/* Precio grande (color por tramo/tipo). */}
