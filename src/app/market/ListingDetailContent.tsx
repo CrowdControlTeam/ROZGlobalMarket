@@ -128,6 +128,12 @@ export async function ListingDetailContent({ id }: { id: string }) {
   // Precio sugerido al pujar/ofertar en competitivo = la mejor oferta actual (la
   // primera ya ordenada); null si aún no hay ninguna (el form arranca en 1).
   const bestOfferPrice = isCompetitive ? (pendingByBestPrice[0]?.unitPrice ?? null) : null;
+  // Lo que ve el POSTER en la lista de ofertas: pendientes (accionables) +
+  // aceptadas (ya cerradas, en lectura) — para que se vea el estado real del
+  // listing (RECHAZADAS/CANCELADAS se omiten). Pendientes primero (ya ordenadas
+  // por mejor precio en competitivo), luego las aceptadas.
+  const acceptedDeals = listing.deals.filter((d) => d.status === "ACCEPTED");
+  const posterDeals = [...pendingByBestPrice, ...acceptedDeals];
 
   return (
     <>
@@ -197,10 +203,12 @@ export async function ListingDetailContent({ id }: { id: string }) {
         />
         {/* Refino y slots no se listan aquí: ya salen en el nombre del item
             (formatItemDisplayName → "+9 Nombre [2]"), sería redundante. */}
-        {/* Con 1 sola unidad, "Vendidos: 0 de 1" no aporta nada. No aplica a BUY. */}
-        {!isBuy && (listing.quantity === null || listing.quantity > 1) && (
+        {/* Contador "X de Y" para ver el estado de un vistazo: vendido (SALE),
+            cumplido (BUY) o entregado (GIFT). En TRADE no aplica (resolución
+            única, se muestra "Intercambiado con…"). Con 1 sola unidad no aporta. */}
+        {!isTrade && (listing.quantity === null || listing.quantity > 1) && (
           <KvRow
-            label={isGift ? t("detail.given") : t("detail.sold")}
+            label={isGift ? t("detail.given") : isBuy ? t("detail.fulfilled") : t("detail.sold")}
             value={listing.quantity === null ? String(sold) : `${sold} ${t("detail.of")} ${listing.quantity}`}
           />
         )}
@@ -368,7 +376,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
-      {isSale && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
+      {isSale && (isPoster ? posterDeals.length > 0 : myOffers.length > 0) && (
         <div className="mt-3">
           <p className={labelClass}>
             {isCompetitive
@@ -380,7 +388,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                 : t("detail.yourReservations")}
           </p>
           <ul className="mt-2 flex flex-col gap-3">
-            {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
+            {(isPoster ? posterDeals : myOffers).map((deal) => (
               <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
@@ -400,7 +408,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                       )}
                     </span>
                   </span>
-                  {!isPoster && (
+                  {(!isPoster || deal.status !== "PENDING") && (
                     <span className="text-xs text-ro-text-muted">{offerStatusLabel(t, deal.status)}</span>
                   )}
                 </div>
@@ -428,7 +436,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
-      {isBuy && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
+      {isBuy && (isPoster ? posterDeals.length > 0 : myOffers.length > 0) && (
         <div className="mt-3">
           <p className={labelClass}>
             {isCompetitive
@@ -440,7 +448,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                 : t("detail.yourFulfillOffers")}
           </p>
           <ul className="mt-2 flex flex-col gap-3">
-            {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
+            {(isPoster ? posterDeals : myOffers).map((deal) => (
               <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
@@ -460,7 +468,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                       )}
                     </span>
                   </span>
-                  {!isPoster && (
+                  {(!isPoster || deal.status !== "PENDING") && (
                     <span className="text-xs text-ro-text-muted">{offerStatusLabel(t, deal.status)}</span>
                   )}
                 </div>
@@ -488,17 +496,17 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
-      {isGift && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
+      {isGift && (isPoster ? posterDeals.length > 0 : myOffers.length > 0) && (
         <div className="mt-3">
           <p className={labelClass}>
             {isPoster ? t("detail.claimsReceived") : t("detail.yourClaims")}
           </p>
           <ul className="mt-2 flex flex-col gap-3">
-            {(isPoster ? pendingOffers : myOffers).map((deal) => (
+            {(isPoster ? posterDeals : myOffers).map((deal) => (
               <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">x{deal.quantity}</span>
-                  {!isPoster && (
+                  {(!isPoster || deal.status !== "PENDING") && (
                     <span className="text-xs text-ro-text-muted">{offerStatusLabel(t, deal.status)}</span>
                   )}
                 </div>
