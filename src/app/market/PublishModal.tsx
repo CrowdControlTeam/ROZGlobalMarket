@@ -1,16 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { PublishForm, type EditListingData } from "./PublishForm";
+import { useCloseModal } from "./useCloseModal";
 import type { PublicationType } from "./publication-type";
 
 // Shell del modal de publicar: overlay centrado con backdrop oscuro sobre el
-// mercado (montado detrás). Se cierra con ✕, Escape o clic en el backdrop, vía
-// router.back() —se llega aquí navegando (Link push a ?publish=), así que
-// "atrás" deja la URL sin el query param— igual que DetailPanel. En móvil ocupa
-// (casi) toda la pantalla; en desktop es una tarjeta ancha centrada.
+// mercado (montado detrás). Se cierra con ✕, Escape o clic en el backdrop,
+// quitando el query param (?publish=/?edit=/?repost=) de la URL actual — ver
+// useCloseModal — igual que DetailPanel. En móvil ocupa (casi) toda la pantalla;
+// en desktop es una tarjeta ancha centrada.
 export function PublishModal({
   recognitionEnabled,
   initialType,
@@ -22,17 +22,13 @@ export function PublishModal({
   editListing?: EditListingData;
   repostListing?: EditListingData;
 }) {
-  const router = useRouter();
   const t = useTranslations();
+  const close = useCloseModal();
   const title = editListing
     ? t("market.form.editTitle")
     : repostListing
       ? t("market.form.repostTitle")
       : t("home.tiles.publish.label");
-
-  function close() {
-    router.back();
-  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
