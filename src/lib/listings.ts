@@ -415,9 +415,13 @@ export async function createListing(formData: FormData) {
 }
 
 // Editar una publicación propia. Reutiliza el mismo parseo de campos que
-// createListing (parseListingFields). El TIPO y el ITEM no se editan: se toman
-// del listing existente, no se confía en lo que mande el form. Solo se permite
-// si el listing es del usuario, está ACTIVE y NO tiene deals vivos.
+// createListing (parseListingFields). El ITEM y el TIPO se pueden cambiar
+// (editar = como crear): ambos se leen del form y se validan. Solo se permite si
+// el listing es del usuario, está ACTIVE y NO tiene deals vivos — por eso cambiar
+// el tipo es seguro: no hay ofertas/contabilidad que puedan quedar inconsistentes.
+// El regalo CON destinatario (directo) no se puede crear editando: el form de
+// edición no ofrece destinatario, así que pasar a GIFT crea un regalo reclamable
+// (ACTIVE, sin Deal), no uno directo.
 export async function updateListing(listingId: string, formData: FormData) {
   const session = await requireSession();
   const t = await getTranslations("errors");
@@ -432,16 +436,21 @@ export async function updateListing(listingId: string, formData: FormData) {
   if (existing.posterId !== session.user.discordId) throw new Error(t("notYourListing"));
   if (existing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
 
-  // El TIPO se mantiene fijo (bloqueado en edición). El ITEM sí puede cambiar
-  // (editar = como crear, con escáner): se lee del form y se valida. El parseo
-  // usa el tipo original y el item nuevo (options/refine se validan contra él).
+  // Tipo nuevo (validado): si no llega o es inválido, se conserva el actual. El
+  // parseo de campos (precio/cantidad/options) se hace contra ESTE tipo, así que
+  // al pasar a TRADE/GIFT el precio queda null, etc. (lo resuelve parseListingFields).
+  const typeParsed = z.enum(["SALE", "BUY", "TRADE", "GIFT"]).safeParse(formData.get("type"));
+  const type = typeParsed.success ? typeParsed.data : existing.type;
+
+  // El ITEM también puede cambiar: se lee del form y se valida (options/refine se
+  // validan contra el item nuevo y el tipo nuevo).
   const itemId = ((formData.get("itemId") as string) || "").trim();
   if (!itemId) throw new Error(t("selectItem"));
   const [item] = await db.select().from(itemTable).where(eq(itemTable.id, itemId)).limit(1);
   if (!item) throw new Error(t("itemNotFound"));
 
   const { price, quantity, refineLevel, notes, rawOptions } =
-    await parseListingFields(formData, existing.type, item, t);
+    await parseListingFields(formData, type, item, t);
 
   // Editable solo SIN deals vivos (PENDING o ACCEPTED); CANCELLED/REJECTED no
   // cuentan. Se comprueba DENTRO de la transacción para cerrar la ventana con
@@ -458,7 +467,7 @@ export async function updateListing(listingId: string, formData: FormData) {
     await tx.delete(listingOption).where(eq(listingOption.listingId, listingId));
     await tx
       .update(listing)
-      .set({ itemId: item.id, quantity, price, refineLevel, notes })
+      .set({ type, itemId: item.id, quantity, price, refineLevel, notes })
       .where(eq(listing.id, listingId));
     if (rawOptions.length > 0) {
       await tx.insert(listingOption).values(

@@ -42,8 +42,9 @@ const TYPE_SEGMENTS: TypeSegment[] = [
 // una sola columna si el reconocimiento no está disponible). Es el único
 // formulario de publicar; el contrato de FormData hacia createListing lo
 // consumen createListing/updateListing. Con `editListing` funciona en modo EDICIÓN: precarga
-// los campos, bloquea tipo e item, oculta el escáner y el destinatario, y envía
-// a updateListing en vez de createListing.
+// los campos y envía a updateListing en vez de createListing. Tipo e item SÍ se
+// editan (editar = como crear); solo se oculta el destinatario del regalo (un
+// regalo reclamable no se convierte en directo al editar).
 
 // Valores iniciales para el modo edición (los arma EditSlot desde el listing).
 export type EditListingData = {
@@ -134,7 +135,23 @@ export function PublishForm({
 
   function handleTypeChange(next: PublicationType) {
     setType(next);
-    setOptionSelections(emptyOptionSelections());
+    // Las options dependen del ITEM (su grupo), no del tipo → se conservan al
+    // cambiar de tipo (antes se borraban, perdiendo lo introducido). BUY admite
+    // huecos posicionales; los tipos secuenciales (SALE/TRADE/GIFT) no, así que al
+    // salir de BUY se truncan en el primer hueco (igual que el parseo del server).
+    setOptionSelections((prev) => {
+      if (next === "BUY") return prev;
+      const firstGap = prev.findIndex((s) => s.defId === "");
+      if (firstGap === -1) return prev;
+      return prev.map((s, i) => (i < firstGap ? s : { defId: "", value: "" }));
+    });
+    // Si el tipo nuevo no admite ilimitado (solo BUY o SALE-sin-options), fija una
+    // cantidad concreta para no enviar `unlimited` con un tipo que no lo permite.
+    const nextCanBeUnlimited = next === "BUY" || (next === "SALE" && optionGroup === null);
+    if (!nextCanBeUnlimited && unlimited) {
+      setUnlimited(false);
+      if (quantity === "") setQuantity(1);
+    }
   }
 
   function handleItemSelect(item: ItemResult) {
@@ -364,12 +381,14 @@ export function PublishForm({
   const formColumn = (
     <div className="flex min-w-0 flex-col gap-3 sm:h-full">
       {/* Ítem. */}
-      {/* Item editable también al editar (edición = como crear, con escáner);
-          solo el tipo queda fijo (los botones de tipo abajo van disabled). */}
+      {/* Item y tipo editables también al editar (edición = como crear, con
+          escáner): solo se puede editar sin ofertas/ventas, así que es seguro. */}
       <ItemPicker selected={selectedItem} onSelect={handleItemSelect} onClear={handleItemClear} />
       <input type="hidden" name="itemId" value={selectedItem?.id ?? ""} />
 
-      {/* Tipo (fuera de las pestañas). */}
+      {/* Tipo (fuera de las pestañas). Editable también al editar: solo se puede
+          editar una publicación sin ofertas/ventas, así que cambiar el tipo es
+          seguro (no hay contabilidad que quede inconsistente). */}
       <div role="group" aria-label={t("typeLabel")} className="flex gap-1 rounded-full border border-ro-panel-border bg-ro-panel-alt p-1">
         {TYPE_SEGMENTS.map((seg) => {
           const active = seg.value === type;
@@ -381,11 +400,10 @@ export function PublishForm({
               aria-pressed={active}
               aria-label={label}
               title={label}
-              disabled={isEdit}
               onClick={() => handleTypeChange(seg.value)}
-              className={`flex flex-1 items-center justify-center rounded-full py-1.5 transition-colors disabled:cursor-not-allowed ${
+              className={`flex flex-1 items-center justify-center rounded-full py-1.5 transition-colors ${
                 active ? `${seg.activeBg} text-ro-on-type` : "text-ro-text hover:bg-ro-panel-border/40"
-              } ${isEdit && !active ? "opacity-40" : ""}`}
+              }`}
             >
               <seg.Icon size={15} className={active ? "" : seg.iconColor} aria-hidden />
             </button>
