@@ -610,7 +610,7 @@
       "reservationActions": {
         "confirm": "Vender",
         "reject": "Rechazar",
-        "cancel": "Cancelar compra"
+        "cancel": "Cancelar"
       },
       "fulfillForm": {
         "quantityLabel": "Cantidad a vender",
@@ -625,7 +625,7 @@
       "fulfillActions": {
         "confirm": "Comprar",
         "reject": "Rechazar",
-        "cancel": "Cancelar oferta"
+        "cancel": "Cancelar"
       },
       "claimForm": {
         "quantityLabel": "Cantidad a reclamar",
@@ -638,7 +638,7 @@
       "claimActions": {
         "confirm": "Entregar",
         "reject": "Rechazar",
-        "cancel": "Cancelar reclamación"
+        "cancel": "Cancelar"
       }
     },
     "form": {
