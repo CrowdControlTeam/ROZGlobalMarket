@@ -1,4 +1,5 @@
 import { requireMarketSession } from "@/lib/guard";
+import { countMyPendingDeals } from "@/lib/pending-deals";
 import { MarketNav } from "./MarketNav";
 
 // Layout de la sección Mercado. Hace dos cosas:
@@ -27,10 +28,13 @@ export default async function MarketLayout({
   repost: React.ReactNode;
 }) {
   const session = await requireMarketSession();
+  // Contador de ofertas entrantes pendientes para el badge de "Mi actividad"
+  // (cache() dedup por request; el layout de actividad lo reusa).
+  const pendingCount = await countMyPendingDeals();
   return (
     <>
       <main className="mx-auto max-w-5xl px-6 py-8">
-        <MarketNav isAdmin={session.user.isAdmin} />
+        <MarketNav isAdmin={session.user.isAdmin} pendingCount={pendingCount} />
         {children}
       </main>
       {detail}

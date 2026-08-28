@@ -92,6 +92,7 @@
     "pendingEmpty": "No tienes nada pendiente.",
     "pendingIncoming": "Por confirmar",
     "pendingOutgoing": "Mis solicitudes",
+    "pendingBadge": "{count, plural, one {# oferta por confirmar} other {# ofertas por confirmar}}",
     "tabs": {
       "listings": "Mis publicaciones",
       "pending": "Pendientes",
