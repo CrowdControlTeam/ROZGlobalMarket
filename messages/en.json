@@ -92,6 +92,7 @@
     "pendingEmpty": "Nothing pending.",
     "pendingIncoming": "To confirm",
     "pendingOutgoing": "My requests",
+    "pendingBadge": "{count, plural, one {# offer to confirm} other {# offers to confirm}}",
     "tabs": {
       "listings": "My listings",
       "pending": "Pending",
