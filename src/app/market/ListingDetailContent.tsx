@@ -1,10 +1,8 @@
 import { ItemIcon } from "@/components/ItemIcon";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { asc, desc, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { listing as listingTable } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
+import { getListingDetail } from "@/lib/listing-detail";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import {
@@ -20,7 +18,6 @@ import { UserMention } from "@/components/UserMention";
 import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { CancelListingButton } from "./[id]/CancelListingButton";
 import { EditListingButton } from "./[id]/EditListingButton";
-import { ListingDetailMenu } from "./[id]/ListingDetailMenu";
 import { RepostListingButton } from "./[id]/RepostListingButton";
 import { ReserveForm } from "./[id]/ReserveForm";
 import { SaleReservationActions } from "./[id]/SaleReservationActions";
@@ -66,27 +63,11 @@ export async function ListingDetailContent({ id }: { id: string }) {
   const t = await getTranslations("market");
 
   // dmAvailable no depende del listing (ni viceversa) — en paralelo en vez
-  // de en serie.
+  // de en serie. getListingDetail va con cache(): comparte la query con las
+  // acciones de cabecera (DetailHeaderActions) en el mismo request.
   const [dmAvailable, listing] = await Promise.all([
     isDmFeatureAvailable(),
-    db.query.listing.findFirst({
-      where: eq(listingTable.id, id),
-      // `columns` en las relaciones pesadas (item/offeredItem) para no traer la
-      // fila completa de Item (description[]/restrictions). Los escalares de
-      // Listing/Deal van completos; def es pequeño.
-      with: {
-        item: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
-        poster: { columns: { id: true, username: true } },
-        options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
-        deals: {
-          with: {
-            user: { columns: { id: true, username: true } },
-            offeredItem: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
-          },
-          orderBy: (d) => desc(d.createdAt),
-        },
-      },
-    }),
+    getListingDetail(id),
   ]);
   if (!listing) notFound();
 
@@ -138,8 +119,10 @@ export async function ListingDetailContent({ id }: { id: string }) {
 
   return (
     <>
-      {/* Hero: icono grande + nombre + badge · vendedor + kebab (esquina). */}
-      <div className="flex items-start gap-3">
+      {/* Hero: icono grande + nombre + badge · vendedor. Las acciones de
+          utilidad (Compartir/Contactar) van en la cabecera (DetailHeaderActions),
+          no aquí. */}
+      <div className="flex items-center gap-3">
         <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl border border-ro-panel-border bg-ro-panel-alt">
           <ItemIcon
             item={listing.item}
@@ -173,15 +156,6 @@ export async function ListingDetailContent({ id }: { id: string }) {
             </span>
           </p>
         </div>
-        {/* Kebab de utilidad (Compartir / Contactar) en la esquina superior
-            derecha, como en las tarjetas. */}
-        <ListingDetailMenu
-          listingId={listing.id}
-          item={listing.item}
-          poster={listing.poster}
-          currentUserId={session.user.discordId}
-          dmAvailable={dmAvailable}
-        />
       </div>
 
       {/* Precio grande (color por tramo/tipo). */}
