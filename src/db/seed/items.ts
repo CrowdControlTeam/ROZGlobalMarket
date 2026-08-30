@@ -16,7 +16,7 @@
 
 import fs from "node:fs";
 import { count, eq, notInArray } from "drizzle-orm";
-import { bisEntry, item, listing, type EquipSlot, type ItemCategory, type WeaponType } from "../schema";
+import { buildEntry, buildEntryCard, item, listing, type EquipSlot, type ItemCategory, type WeaponType } from "../schema";
 import { db, runSeed } from "./client";
 
 const SRC = process.argv[2] ?? "E:/Proyectos/Git/ROZDataBaseExtractor/server/output/icons/items.json";
@@ -104,10 +104,12 @@ runSeed(async () => {
   const matchedCount = validIds.filter((id) => existingIds.has(id)).length;
   const deletedCount = [...existingIds].filter((id) => !newIdSet.has(id)).length;
 
-  // 1) Clean up references to items that disappear (Listing.itemId is required;
-  //    BisEntry.itemId optional; Deal.offeredItemId optional → SetNull only).
+  // 1) Clean up references to items that disappear (todas con FK required/restrict:
+  //    Listing.itemId, BuildEntry.itemId, BuildEntryCard.cardItemId; Deal
+  //    .offeredItemId es opcional → SetNull, no hace falta borrarlo aquí).
   await db.delete(listing).where(notInArray(listing.itemId, validIds));
-  await db.delete(bisEntry).where(notInArray(bisEntry.itemId, validIds));
+  await db.delete(buildEntryCard).where(notInArray(buildEntryCard.cardItemId, validIds));
+  await db.delete(buildEntry).where(notInArray(buildEntry.itemId, validIds));
 
   // 2) Upsert every item (updates the existing ones, creates the new ones), in
   //    parallel chunks. Drizzle has no bulk upsert with per-row data, so it's done

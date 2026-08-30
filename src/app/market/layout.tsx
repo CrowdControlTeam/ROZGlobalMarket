@@ -12,7 +12,7 @@ import { MarketNav } from "./MarketNav";
 //     sin duplicarlo: cada página se monta como children.
 // requireMarketSession protege toda la sección (logueado-only) y, en
 // mantenimiento, manda a /maintenance a los no-admin — es el único sitio donde
-// se cierra el mercado (/bis y /db quedan abiertos). Aporta isAdmin al hub; las
+// se cierra el mercado (/builds y /db quedan abiertos). Aporta isAdmin al hub; las
 // páginas mantienen sus guards propios (p. ej. requireAdmin en statistics).
 export default async function MarketLayout({
   children,

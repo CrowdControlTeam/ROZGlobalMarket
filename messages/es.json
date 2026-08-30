@@ -65,7 +65,7 @@
     "sections": {
       "label": "Secciones",
       "market": "Mercado",
-      "bis": "BiS",
+      "builds": "Builds",
       "db": "DB"
     },
     "account": {
@@ -112,7 +112,7 @@
       "publish": { "label": "Publicar", "desc": "Pon un objeto a la venta, compra o intercambio." },
       "stats": { "label": "Estadísticas", "desc": "Rankings y actividad del mercado." },
       "settings": { "label": "Ajustes", "desc": "Configuración del mercado." },
-      "bis": { "label": "BiSes", "desc": "Listado de los mejores items por slot." },
+      "builds": { "label": "Builds", "desc": "Builds de la comunidad por clase." },
       "items": { "label": "Items", "desc": "Base de datos de objetos con su ficha de juego." },
       "skills": { "label": "Skills", "desc": "Planifica tu árbol de skills por clase." },
       "comingSoon": "Próximamente"
@@ -120,7 +120,7 @@
   },
   "maintenancePage": {
     "title": "En mantenimiento",
-    "message": "El mercado está temporalmente en mantenimiento. Mientras tanto puedes seguir usando BiS y la base de datos.",
+    "message": "El mercado está temporalmente en mantenimiento. Mientras tanto puedes seguir usando Builds y la base de datos.",
     "adminNote": "Eres admin: sigues teniendo acceso completo.",
     "backToMarket": "Ir al mercado",
     "backHome": "Volver al inicio"
@@ -194,14 +194,13 @@
     "imageTooLarge": "La imagen no puede superar los {max} MB",
     "rateLimited": "Demasiadas peticiones. Espera {seconds} s e inténtalo de nuevo.",
     "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano.",
-    "notBisEditor": "No tienes permiso para editar BiS",
-    "stageNotFound": "La etapa no existe",
-    "bisEntryNotFound": "El BiS no existe o ya se ha eliminado",
-    "bisNeedTag": "Selecciona al menos un rol o un job",
-    "bisNeedItemOrOption": "Elige un item o al menos una option",
-    "bisNoOptionsForSlot": "Este slot no admite random options",
-    "bisWeaponTypeRequired": "Elige un tipo de arma para las options",
-    "bisItemSlotMismatch": "El item no corresponde a este slot de equipo"
+    "buildNotFound": "La build no existe o ya se ha eliminado",
+    "notYourBuild": "No tienes permiso sobre esta build",
+    "buildLimitReached": "Has alcanzado el máximo de builds ({max})",
+    "buildNeedTag": "Selecciona al menos una etiqueta (PvP/PvE)",
+    "buildInvalidJob": "Clase no válida",
+    "buildItemSlotMismatch": "El item no corresponde a este slot",
+    "buildTooManyCards": "Este item no admite tantas cartas"
   },
   "admin": {
     "title": "Configuración",
@@ -211,19 +210,10 @@
       "features": "Funcionalidades"
     },
     "features": {
-      "bis": {
-        "title": "BiS",
-        "hint": "Etapas del juego que aparecen en la página de BiS. La primera (arriba) es la que sale por defecto.",
-        "empty": "No hay etapas todavía.",
-        "entryCount": "{count} BiS",
-        "moveUp": "Subir",
-        "moveDown": "Bajar",
-        "rename": "Renombrar",
-        "save": "Guardar",
-        "delete": "Borrar etapa",
-        "confirmDelete": "Borrar etapa y {count} BiS",
-        "addPlaceholder": "Nueva etapa…",
-        "add": "Añadir"
+      "builds": {
+        "title": "Builds",
+        "maxBuildsLabel": "Máximo de builds por usuario",
+        "maxBuildsHint": "Cuántas builds puede guardar cada usuario."
       }
     },
     "stats": {
@@ -291,12 +281,6 @@
       "hint": "Rol necesario para entrar. Si eliges uno, para acceder hará falta pertenecer al servidor Y tener ese rol; los administradores entran igualmente. Sin rol = acceso solo por pertenencia, como hasta ahora.",
       "none": "Sin restricción (solo pertenencia)",
       "roleIdPlaceholder": "ID del rol de acceso (vacío = sin restricción)"
-    },
-    "bisEditor": {
-      "legend": "Editor de BiS",
-      "hint": "Rol que puede crear y modificar objetos BiS, además de los administradores (que siempre pueden). Sin rol = solo los administradores; para el resto, BiS de solo lectura.",
-      "none": "Solo administradores",
-      "roleIdPlaceholder": "ID del rol de editor (vacío = solo lectura)"
     },
     "webhook": {
       "legend": "Notificaciones a Discord",
@@ -759,70 +743,9 @@
       "contactMessage": "{username} te ha escrito sobre {item}"
     }
   },
-  "bis": {
-    "title": "BiS · Best in Slot",
-    "subtitle": "Los mejores objetos por slot de equipo para cada etapa del juego.",
-    "stageLabel": "Etapa",
-    "filters": {
-      "roleLegend": "Rol",
-      "jobLegend": "Job",
-      "clear": "Quitar filtros"
-    },
-    "cells": {
-      "head": "Cabeza",
-      "weapon": "Arma",
-      "garment": "Manto",
-      "accessory": "Accesorio",
-      "armor": "Armadura",
-      "shield": "Escudo",
-      "footgear": "Calzado"
-    },
-    "cell": {
-      "empty": "Sin BiS todavía",
-      "noMatches": "Sin coincidencias"
-    },
-    "detail": {
-      "close": "Cerrar",
-      "options": "Options",
-      "roles": "Roles",
-      "jobs": "Jobs",
-      "note": "Nota"
-    },
-    "showAll": "Ver todas ({count})",
-    "showLess": "Ver menos",
-    "anyItem": "Cualquiera",
-    "noStages": "Todavía no hay etapas configuradas.",
-    "add": "Añadir",
-    "edit": "Editar",
-    "kebabLabel": "Opciones",
-    "deleteConfirm": "¿Borrar este BiS?",
-    "hasNotes": "Tiene notas",
-    "searchInMarket": "Buscar en el mercado",
-    "form": {
-      "addTitle": "Añadir BiS",
-      "editTitle": "Editar BiS",
-      "slotLabel": "Slot",
-      "itemLabel": "Item",
-      "itemOrOptionHint": "Opcional. Elige un item, unas options, o ambos (item con options concretas).",
-      "refine": "Refine",
-      "cardSlots": "Slots",
-      "weaponType": "Tipo de arma",
-      "weaponTypeNone": "Sin especificar",
-      "optionsLabel": "Options",
-      "optionNone": "— Sin option —",
-      "optionsHint": "El valor es un mínimo opcional; vacío = cualquier valor.",
-      "optionOutOfRange": "Cada valor debe estar dentro del rango de su option.",
-      "min": "Mín",
-      "rolesLabel": "Roles",
-      "jobsLabel": "Jobs",
-      "needTag": "Selecciona al menos un rol o un job.",
-      "noteLabel": "Nota",
-      "save": "Guardar",
-      "saving": "Guardando…",
-      "cancel": "Cancelar",
-      "delete": "Borrar",
-      "confirmDelete": "¿Seguro? Borrar",
-      "saveError": "No se pudo guardar. Inténtalo de nuevo."
-    }
+  "builds": {
+    "title": "Builds",
+    "subtitle": "Builds de la comunidad por clase.",
+    "comingSoon": "Builds está en construcción. Pronto podrás crear y compartir tus builds."
   }
 }

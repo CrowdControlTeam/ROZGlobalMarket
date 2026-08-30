@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-// Navegación de alto nivel del header: los dos pilares del sitio (Mercado y
-// BiS). Es el switch de sección global; la navegación interna del mercado
+// Navegación de alto nivel del header: los pilares del sitio (Mercado, Builds,
+// DB). Es el switch de sección global; la navegación interna del mercado
 // (Mi actividad, Estadísticas, Publicar) sigue viviendo en MarketNav, no aquí.
 // Todo lo "del mercado" cuelga ya de /market (incluye /market/activity y
 // /market/statistics), así que basta ese prefijo para resaltar el pilar.
@@ -23,7 +23,7 @@ export function HeaderNav() {
       label: t("market"),
       active: isUnder(pathname, "/market"),
     },
-    { href: "/bis", label: t("bis"), active: isUnder(pathname, "/bis") },
+    { href: "/builds", label: t("builds"), active: isUnder(pathname, "/builds") },
     { href: "/db", label: t("db"), active: isUnder(pathname, "/db") },
   ];
 
