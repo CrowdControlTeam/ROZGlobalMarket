@@ -133,7 +133,7 @@ export function PreviewShell({
       ref={ref}
       role="tooltip"
       style={{ position: "fixed", left: pos.left, top: pos.top, zIndex: 60 }}
-      className="w-[20rem] max-w-[calc(100vw-1rem)] rounded-lg border-2 border-ro-panel-border bg-ro-panel p-3 shadow-xl"
+      className="max-h-[calc(100vh-1rem)] w-[20rem] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-lg border-2 border-ro-panel-border bg-ro-panel p-3 shadow-xl"
       onContextMenu={(e) => e.preventDefault()}
     >
       {children}
