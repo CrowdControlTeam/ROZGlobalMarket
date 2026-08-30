@@ -58,6 +58,13 @@ export async function searchItems(query: string, slot?: EquipSlot) {
   }));
 }
 
+// Búsqueda de CARTAS (categoría CARD) por nombre — para el editor de builds, que
+// asigna cartas a las ranuras de cada pieza. Mismo catálogo en memoria.
+export async function searchCards(query: string) {
+  await requireSession();
+  return searchCatalog(query, 20, (item) => item.category === "CARD");
+}
+
 // Para que el filtro de mercado (client component, sin acceso directo a
 // Prisma) pueda saber si debe mostrar la sección de options en absoluto —
 // mismo patrón que getMagicalWeaponTypes/getMaxRefineLevel.

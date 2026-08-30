@@ -2,15 +2,22 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { build, buildEntry, item as itemTable } from "@/db/schema";
-import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES } from "@/db/enums";
+import {
+  build,
+  buildEntry,
+  buildEntryOption,
+  buildEntryCard,
+  item as itemTable,
+} from "@/db/schema";
+import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES, ItemCategory } from "@/db/enums";
 import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { loadMaxRefineLevel } from "@/lib/refine";
 import { getJob } from "@/lib/skill-planner";
 import { itemFitsSlot } from "@/lib/item-slots";
+import { loadMagicalWeaponTypes, getItemOptionGroup, validateOptions } from "@/lib/item-options";
 import { buildSlotToEquipSlot, MAX_BUILD_NAME_LENGTH, MAX_BUILD_NOTES_LENGTH } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
 
@@ -18,7 +25,7 @@ const itemCols = { id: true, name: true, iconUrl: true, slotCount: true } as con
 const ownerCols = { id: true, username: true } as const;
 
 // TODAS las builds (de todos los usuarios) para la página de la comunidad, con
-// dueño y piezas. Editar/borrar sigue restringido al propietario (ver acciones).
+// dueño y piezas (solo el item; options/cartas no hacen falta en el listado).
 export async function listBuilds() {
   await requireSession();
   return db.query.build.findMany({
@@ -30,8 +37,8 @@ export async function listBuilds() {
   });
 }
 
-// Una build concreta para el DETALLE — visible para cualquiera (logueado). El
-// que sea o no del propietario lo decide la página (para mostrar Editar).
+// Una build concreta para el DETALLE — visible para cualquiera (logueado). Las
+// piezas traen item + options (con su def) + cartas (con el item de la carta).
 export async function getBuild(id: string) {
   await requireSession();
   return (
@@ -39,18 +46,36 @@ export async function getBuild(id: string) {
       where: eq(build.id, id),
       with: {
         owner: { columns: ownerCols },
-        entries: { with: { item: { columns: itemCols } } },
+        entries: {
+          with: {
+            item: { columns: itemCols },
+            options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+            cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
+          },
+        },
       },
     })) ?? null
   );
 }
 
-// Una build concreta para EDITAR — solo del propietario (null si no lo es).
+// Una build concreta para EDITAR — solo del propietario (null si no lo es). El
+// item trae además category/slot/weaponType para que el editor pueda recomputar
+// el grupo de options (getItemOptionGroup) al precargar.
 export async function getMyBuild(id: string) {
   const session = await requireSession();
   const row = await db.query.build.findFirst({
     where: eq(build.id, id),
-    with: { entries: { with: { item: { columns: itemCols } } } },
+    with: {
+      entries: {
+        with: {
+          item: {
+            columns: { id: true, name: true, iconUrl: true, slotCount: true, category: true, slot: true, weaponType: true },
+          },
+          options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+          cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
+        },
+      },
+    },
   });
   if (!row) return null;
   if (row.ownerId !== session.user.discordId) return null;
@@ -67,12 +92,20 @@ export async function myBuildCount() {
   return n;
 }
 
-// Entrada del editor: una pieza por slot (item + refino). Options y cartas se
-// añaden en una fase siguiente.
+// Entrada del editor: una pieza por slot con item + refino + options aleatorias
+// + cartas (una por ranura, hasta Item.slotCount).
 const entrySchema = z.object({
   slot: z.enum(BUILD_SLOT_VALUES),
   itemId: z.string().min(1),
   refineLevel: z.coerce.number().int().nonnegative(),
+  options: z
+    .array(z.object({ slotIndex: z.coerce.number().int(), defId: z.string().min(1), value: z.coerce.number().int() }))
+    .optional()
+    .default([]),
+  cards: z
+    .array(z.object({ slotIndex: z.coerce.number().int().nonnegative(), cardItemId: z.string().min(1) }))
+    .optional()
+    .default([]),
 });
 
 const buildInputSchema = z.object({
@@ -84,10 +117,11 @@ const buildInputSchema = z.object({
 });
 
 export type BuildInput = z.infer<typeof buildInputSchema>;
+type ParsedEntry = z.infer<typeof entrySchema>;
 
 // Valida el payload común a crear/editar. Lanza con el mensaje i18n al primer
-// fallo. Devuelve los datos ya saneados (tags deduplicadas, una entry por slot,
-// items validados contra su slot y el refino).
+// fallo. Devuelve los datos saneados (una entry por slot; item que encaja en el
+// slot; refino, options y cartas validados contra el item real).
 async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getTranslations>>) {
   const parsed = buildInputSchema.safeParse(input);
   if (!parsed.success) throw new Error(t("invalidData"));
@@ -98,29 +132,81 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
   const tags = Array.from(new Set(data.tags));
   if (tags.length === 0) throw new Error(t("buildNeedTag"));
 
-  // Una entrada por slot como mucho (la última gana); solo las que tienen item.
-  const bySlot = new Map<string, (typeof data.entries)[number]>();
+  // Una entrada por slot como mucho (la última gana).
+  const bySlot = new Map<string, ParsedEntry>();
   for (const e of data.entries) bySlot.set(e.slot, e);
   const entries = [...bySlot.values()];
 
   if (entries.length > 0) {
-    const maxRefine = await loadMaxRefineLevel();
-    const ids = [...new Set(entries.map((e) => e.itemId))];
-    const items = await db
-      .select({ id: itemTable.id, category: itemTable.category, slot: itemTable.slot })
+    const [maxRefine, magicalTypes] = await Promise.all([loadMaxRefineLevel(), loadMagicalWeaponTypes()]);
+
+    // Items de las piezas (para slot/group/slotCount) y de las cartas (categoría).
+    const itemIds = [...new Set(entries.map((e) => e.itemId))];
+    const cardIds = [...new Set(entries.flatMap((e) => e.cards.map((c) => c.cardItemId)))];
+    const allIds = [...new Set([...itemIds, ...cardIds])];
+    const rows = await db
+      .select({
+        id: itemTable.id,
+        category: itemTable.category,
+        slot: itemTable.slot,
+        weaponType: itemTable.weaponType,
+        slotCount: itemTable.slotCount,
+      })
       .from(itemTable)
-      .where(inArray(itemTable.id, ids));
-    const itemById = new Map(items.map((i) => [i.id, i]));
+      .where(inArray(itemTable.id, allIds));
+    const byId = new Map(rows.map((r) => [r.id, r]));
+
     for (const e of entries) {
-      const it = itemById.get(e.itemId);
+      const it = byId.get(e.itemId);
       if (!it) throw new Error(t("itemNotFound"));
       if (!itemFitsSlot(it, buildSlotToEquipSlot(e.slot))) throw new Error(t("buildItemSlotMismatch"));
       if (e.refineLevel > maxRefine) throw new Error(t("refineTooHigh", { max: maxRefine }));
+
+      // Options: mismo validador que el mercado (grupo/slot/rango del def).
+      const group = getItemOptionGroup(it, magicalTypes);
+      await validateOptions(e.options, group);
+
+      // Cartas: como mucho Item.slotCount, ranuras únicas dentro de rango, y cada
+      // cardItemId debe ser un item de categoría CARD.
+      if (e.cards.length > it.slotCount) throw new Error(t("buildTooManyCards"));
+      const seen = new Set<number>();
+      for (const c of e.cards) {
+        if (c.slotIndex < 0 || c.slotIndex >= it.slotCount || seen.has(c.slotIndex)) {
+          throw new Error(t("invalidData"));
+        }
+        seen.add(c.slotIndex);
+        const card = byId.get(c.cardItemId);
+        if (!card || card.category !== ItemCategory.CARD) throw new Error(t("itemNotFound"));
+      }
     }
   }
 
   const notes = data.notes?.trim() || null;
   return { name: data.name, jobId: data.jobId, tags, notes, entries };
+}
+
+// Inserta las piezas de una build (una a una para enlazar options/cartas por id).
+async function insertEntries(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  buildId: string,
+  entries: ParsedEntry[],
+) {
+  for (const e of entries) {
+    const [row] = await tx
+      .insert(buildEntry)
+      .values({ buildId, slot: e.slot, itemId: e.itemId, refineLevel: e.refineLevel })
+      .returning();
+    if (e.options.length > 0) {
+      await tx.insert(buildEntryOption).values(
+        e.options.map((o) => ({ entryId: row.id, slotIndex: o.slotIndex, defId: o.defId, value: o.value })),
+      );
+    }
+    if (e.cards.length > 0) {
+      await tx.insert(buildEntryCard).values(
+        e.cards.map((c) => ({ entryId: row.id, slotIndex: c.slotIndex, cardItemId: c.cardItemId })),
+      );
+    }
+  }
 }
 
 export async function createBuild(input: unknown) {
@@ -129,10 +215,7 @@ export async function createBuild(input: unknown) {
   const me = session.user.discordId;
 
   const { maxBuildsPerUser } = await loadMarketConfig();
-  const [{ n } = { n: 0 }] = await db
-    .select({ n: count() })
-    .from(build)
-    .where(eq(build.ownerId, me));
+  const [{ n } = { n: 0 }] = await db.select({ n: count() }).from(build).where(eq(build.ownerId, me));
   if (n >= maxBuildsPerUser) throw new Error(t("buildLimitReached", { max: maxBuildsPerUser }));
 
   const data = await parseBuildInput(input, t);
@@ -142,11 +225,7 @@ export async function createBuild(input: unknown) {
       .insert(build)
       .values({ ownerId: me, name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes })
       .returning();
-    if (data.entries.length > 0) {
-      await tx.insert(buildEntry).values(
-        data.entries.map((e) => ({ buildId: row.id, slot: e.slot, itemId: e.itemId, refineLevel: e.refineLevel })),
-      );
-    }
+    await insertEntries(tx, row.id, data.entries);
     return row;
   });
 
@@ -169,13 +248,10 @@ export async function updateBuild(id: string, input: unknown) {
       .update(build)
       .set({ name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes })
       .where(eq(build.id, id));
-    // Piezas: se borran y se recrean (más simple que un diff; el volumen es ≤10).
+    // Piezas: se borran y se recrean (más simple que un diff; ≤10 piezas). Las
+    // options/cartas caen en cascada al borrar las entries.
     await tx.delete(buildEntry).where(eq(buildEntry.buildId, id));
-    if (data.entries.length > 0) {
-      await tx.insert(buildEntry).values(
-        data.entries.map((e) => ({ buildId: id, slot: e.slot, itemId: e.itemId, refineLevel: e.refineLevel })),
-      );
-    }
+    await insertEntries(tx, id, data.entries);
   });
 
   revalidatePath("/builds");

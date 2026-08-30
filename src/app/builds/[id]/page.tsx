@@ -63,14 +63,31 @@ export default async function BuildDetailPage({ params }: { params: Promise<{ id
           filledSlots.map((slot) => {
             const e = bySlot.get(slot)!;
             return (
-              <li key={slot} className="flex items-center gap-3 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
-                <span className="w-28 shrink-0 text-xs font-semibold text-ro-text-muted">{tSlot(slot)}</span>
-                <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
-                  <ItemIcon item={e.item} width={28} height={28} refine={e.refineLevel} alt="" />
+              <li key={slot} className="flex flex-col gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
+                <div className="flex items-center gap-3">
+                  <span className="w-28 shrink-0 text-xs font-semibold text-ro-text-muted">{tSlot(slot)}</span>
+                  <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
+                    <ItemIcon item={e.item} width={28} height={28} refine={e.refineLevel} alt="" />
+                  </div>
+                  <p className="min-w-0 flex-1 truncate text-sm text-ro-text">
+                    {formatItemDisplayName(e.item.name, e.refineLevel, e.item.slotCount)}
+                  </p>
                 </div>
-                <p className="min-w-0 flex-1 truncate text-sm text-ro-text">
-                  {formatItemDisplayName(e.item.name, e.refineLevel, e.item.slotCount)}
-                </p>
+                {(e.options.length > 0 || e.cards.length > 0) && (
+                  <div className="flex flex-wrap items-center gap-1.5 pl-28">
+                    {e.options.map((o) => (
+                      <span key={o.id} className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-xs text-ro-accent">
+                        {o.def.label} {o.value}
+                      </span>
+                    ))}
+                    {e.cards.map((c) => (
+                      <span key={c.id} className="inline-flex items-center gap-1 rounded border border-ro-panel-border bg-ro-panel px-1.5 py-0.5 text-xs text-ro-text-muted">
+                        <ItemIcon item={c.card} width={16} height={16} alt="" />
+                        {c.card.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </li>
             );
           })

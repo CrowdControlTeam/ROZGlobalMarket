@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/lib/guard";
 import { loadMaxRefineLevel } from "@/lib/refine";
+import { getAllOptionChoices } from "@/lib/listings";
 import { selectableJobs } from "@/lib/skill-planner";
 import { BackLink } from "@/components/BackLink";
 import { BuildEditor } from "../BuildEditor";
@@ -18,13 +19,13 @@ function jobOptions() {
 export default async function NewBuildPage() {
   await requireSession();
   const t = await getTranslations("builds.form");
-  const maxRefine = await loadMaxRefineLevel();
+  const [maxRefine, optionDefs] = await Promise.all([loadMaxRefineLevel(), getAllOptionChoices()]);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
       <BackLink href="/builds" label={t("back")} />
       <h1 className="mb-4 text-2xl font-extrabold text-ro-text">{t("newTitle")}</h1>
-      <BuildEditor jobs={jobOptions()} maxRefine={maxRefine} />
+      <BuildEditor jobs={jobOptions()} maxRefine={maxRefine} optionDefs={optionDefs} />
     </main>
   );
 }
