@@ -279,7 +279,7 @@ export async function createListing(formData: FormData) {
   const session = await requireSession();
   const t = await getTranslations("errors");
 
-  const { maintenanceModeEnabled } = await loadMarketConfig();
+  const { maintenanceModeEnabled, listingExpirationDays } = await loadMarketConfig();
   if (maintenanceModeEnabled && !session.user.isAdmin) {
     throw new Error(t("maintenanceMode"));
   }
@@ -334,6 +334,12 @@ export async function createListing(formData: FormData) {
         price,
         // Regalo directo: nace ya cerrado (la entrega es instantánea).
         status: isDirectGift ? "COMPLETED" : "ACTIVE",
+        // Caduca a listingExpirationDays vista (config). El regalo directo ya
+        // nace COMPLETED, así que no caduca (expiresAt null). Cubre también los
+        // reposts: van por createListing, así que reciben caducidad nueva.
+        expiresAt: isDirectGift
+          ? null
+          : new Date(Date.now() + listingExpirationDays * 24 * 60 * 60 * 1000),
         refineLevel,
         notes,
       })

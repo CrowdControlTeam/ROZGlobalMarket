@@ -346,7 +346,9 @@
     "market": {
       "legend": "Mercado",
       "maintenanceToggleLabel": "Modo mantenimiento (bloquea el acceso al mercado para todos menos administradores; BiS y DB siguen abiertos)",
-      "maxRefineLabel": "Refine máximo permitido"
+      "maxRefineLabel": "Refine máximo permitido",
+      "listingExpirationLabel": "Días hasta caducar una publicación",
+      "listingExpirationHint": "Las publicaciones activas caducan automáticamente pasados estos días. Solo afecta a las nuevas; las existentes conservan su caducidad."
     }
   },
   "market": {
@@ -563,10 +565,18 @@
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
     },
+    "expiry": {
+      "clockLabel": "Tiempo hasta caducar",
+      "today": "Hoy",
+      "days": "{days, plural, one {# día} other {# días}}",
+      "hours": "{hours, plural, one {# hora} other {# horas}}",
+      "tooltip": "Caduca el {date}"
+    },
     "detail": {
       "available": "Disponibles",
       "unitPrice": "Precio/ud",
       "posted": "Publicado",
+      "expires": "Caduca",
       "sold": "Vendidos",
       "given": "Entregados",
       "fulfilled": "Cumplido",

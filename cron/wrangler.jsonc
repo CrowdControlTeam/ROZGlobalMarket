@@ -1,0 +1,29 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // Worker de cron INDEPENDIENTE del de la app (OpenNext). Solo caduca
+  // publicaciones: pasa a EXPIRED las ACTIVE cuya expiresAt ya venció. Se
+  // despliega a mano (`cd cron && npx wrangler deploy`), prod-only — no hay
+  // env.dev: el mercado ya oculta las caducadas por query (expiresAt > now()),
+  // así que el cron no es crítico y no hace falta replicarlo en dev.
+  "name": "roz-market-cron",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-03-25",
+  // nodejs_compat: requerido por el driver serverless de Neon (igual que la app).
+  "compatibility_flags": ["nodejs_compat"],
+  // Sin URL *.workers.dev: este worker no sirve HTTP, solo responde al cron.
+  "workers_dev": false,
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "head_sampling_rate": 1
+    }
+  },
+  // Cada hora en punto. El barrido es idempotente (WHERE status='ACTIVE'), así
+  // que la frecuencia solo marca cuánto tardan las caducadas en pasar a EXPIRED.
+  "triggers": {
+    "crons": ["0 * * * *"]
+  }
+  // Secreto DATABASE_URL (Neon prod, rol roz_app — puede UPDATE, no necesita
+  // DDL): se carga con `cd cron && npx wrangler secret put DATABASE_URL`.
+}

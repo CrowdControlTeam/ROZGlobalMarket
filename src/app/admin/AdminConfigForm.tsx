@@ -160,6 +160,17 @@ export function AdminConfigForm({ config }: { config: Config }) {
             error={errors.maxRefineLevel}
             onSave={(v) => save({ field: "maxRefineLevel", value: Number(v) })}
           />
+
+          <EditableField
+            label={t("market.listingExpirationLabel")}
+            hint={t("market.listingExpirationHint")}
+            initial={String(config.listingExpirationDays)}
+            type="number"
+            min={1}
+            state={state.listingExpirationDays}
+            error={errors.listingExpirationDays}
+            onSave={(v) => save({ field: "listingExpirationDays", value: Number(v) })}
+          />
         </div>
 
         {/* Grupo DERECHO — funcionalidades. */}

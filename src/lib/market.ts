@@ -10,6 +10,7 @@ import {
   ilike,
   inArray,
   isNotNull,
+  isNull,
   lt,
   lte,
   or,
@@ -245,6 +246,11 @@ export async function getListings(filters: MarketFilters) {
   // Condiciones base (comunes a listado y count): estado + filtros de listing e
   // item. El JOIN a Item permite filtrar/ordenar por sus columnas (name/category/…).
   const baseConditions: SQL[] = [eq(listing.status, "ACTIVE")];
+  // Oculta las caducadas aunque el cron aún no las haya marcado EXPIRED
+  // (expiresAt null = no caduca, por diseño → se mantiene visible).
+  baseConditions.push(
+    or(isNull(listing.expiresAt), gt(listing.expiresAt, sql`now()`)) as SQL,
+  );
   if (filters.type) baseConditions.push(eq(listing.type, filters.type));
   if (filters.posterId) baseConditions.push(eq(listing.posterId, filters.posterId));
   if (filters.minPrice !== undefined) baseConditions.push(gte(listing.price, filters.minPrice));
@@ -280,6 +286,7 @@ export async function getListings(filters: MarketFilters) {
         refineLevel: listing.refineLevel,
         notes: listing.notes,
         createdAt: listing.createdAt, // para el cursor de paginación
+        expiresAt: listing.expiresAt, // para el indicador de caducidad (reloj)
         itemId: item.id,
         itemName: item.name,
         itemIconUrl: item.iconUrl,
@@ -342,6 +349,7 @@ export async function getListings(filters: MarketFilters) {
     refineLevel: l.refineLevel,
     notes: l.notes,
     createdAt: l.createdAt,
+    expiresAt: l.expiresAt,
     item: { id: l.itemId, name: l.itemName, iconUrl: l.itemIconUrl, slotCount: l.itemSlotCount },
     poster: { id: l.posterId, username: l.posterUsername },
     options: optionsByListing.get(l.id) ?? [],

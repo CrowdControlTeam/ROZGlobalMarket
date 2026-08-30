@@ -1,0 +1,17 @@
+{
+  // tsconfig propio del worker de cron (excluido del build de la app, que corre
+  // en Workers, no en Next). Comparte deps de la raíz vía node_modules.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  },
+  "include": ["src/**/*.ts", "../src/db/schema.ts", "../src/db/enums.ts", "../src/lib/id.ts"]
+}
