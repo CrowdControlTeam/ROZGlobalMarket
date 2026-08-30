@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Store, Package, Plus, BarChart3, Settings, Trophy, Gem, Sparkles } from "lucide-react";
+import { Store, Package, Plus, BarChart3, Settings, Swords, Gem, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 // Base común de cada tile del hub: misma altura para todos (min-h) con el
@@ -90,7 +90,7 @@ export async function Hub({
 
         {/* Builds: builds de la comunidad por clase, a todo el ancho. */}
         <Link href="/builds" className={`${TILE_LINK} sm:col-span-2`}>
-          <TileIcon Icon={Trophy} />
+          <TileIcon Icon={Swords} />
           <TileText label={t("tiles.builds.label")} desc={t("tiles.builds.desc")} />
         </Link>
 
