@@ -2,21 +2,23 @@ import { pgTable, varchar, timestamp, text, integer, index, foreignKey, uniqueIn
 import { sql } from "drizzle-orm"
 import { createId } from "../lib/id"
 import {
+  BUILD_SLOT_VALUES,
+  BUILD_TAG_VALUES,
   DEAL_STATUS_VALUES,
   EQUIP_SLOT_VALUES,
   ITEM_CATEGORY_VALUES,
   ITEM_OPTION_GROUP_VALUES,
-  JOB_TIER_VALUES,
   LISTING_STATUS_VALUES,
   LISTING_TYPE_VALUES,
   WEAPON_TYPE_VALUES,
 } from "./enums"
 
+export const buildSlot = pgEnum("BuildSlot", BUILD_SLOT_VALUES)
+export const buildTag = pgEnum("BuildTag", BUILD_TAG_VALUES)
 export const dealStatus = pgEnum("DealStatus", DEAL_STATUS_VALUES)
 export const equipSlot = pgEnum("EquipSlot", EQUIP_SLOT_VALUES)
 export const itemCategory = pgEnum("ItemCategory", ITEM_CATEGORY_VALUES)
 export const itemOptionGroup = pgEnum("ItemOptionGroup", ITEM_OPTION_GROUP_VALUES)
-export const jobTier = pgEnum("JobTier", JOB_TIER_VALUES)
 export const listingStatus = pgEnum("ListingStatus", LISTING_STATUS_VALUES)
 export const listingType = pgEnum("ListingType", LISTING_TYPE_VALUES)
 export const weaponType = pgEnum("WeaponType", WEAPON_TYPE_VALUES)
@@ -130,9 +132,10 @@ export const marketConfig = pgTable("MarketConfig", {
 	homeImageUrl: text(),
 	logoUrl: text(),
 	accessRoleId: text(),
-	bisEditorRoleId: text(),
 	// Días que una publicación permanece activa antes de caducar (cron → EXPIRED).
 	listingExpirationDays: integer().default(7).notNull(),
+	// Máximo de builds que puede tener cada usuario.
+	maxBuildsPerUser: integer().default(5).notNull(),
 });
 
 export const rateLimit = pgTable("RateLimit", {
@@ -140,95 +143,6 @@ export const rateLimit = pgTable("RateLimit", {
 	count: integer().default(0).notNull(),
 	windowStart: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
-
-export const job = pgTable("Job", {
-	id: text().notNull().$defaultFn(createId),
-	key: text().notNull(),
-	label: text().notNull(),
-	tier: jobTier().default('FIRST').notNull(),
-	parentJobId: text(),
-	order: integer().default(0).notNull(),
-}, (table) => [
-	uniqueIndex("Job_key_key").using("btree", table.key.asc().nullsLast().op("text_ops")),
-	foreignKey({
-			columns: [table.parentJobId],
-			foreignColumns: [table.id],
-			name: "Job_parentJobId_fkey"
-		}).onUpdate("cascade").onDelete("set null"),
-]);
-
-export const bisStage = pgTable("BisStage", {
-	id: text().notNull().$defaultFn(createId),
-	key: text().notNull(),
-	label: text().notNull(),
-	order: integer().default(0).notNull(),
-	createdAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-}, (table) => [
-	uniqueIndex("BisStage_key_key").using("btree", table.key.asc().nullsLast().op("text_ops")),
-]);
-
-export const bisEntryOption = pgTable("BisEntryOption", {
-	id: text().notNull().$defaultFn(createId),
-	entryId: text().notNull(),
-	slotIndex: integer().notNull(),
-	defId: text().notNull(),
-	minValue: integer(),
-}, (table) => [
-	uniqueIndex("BisEntryOption_entryId_slotIndex_key").using("btree", table.entryId.asc().nullsLast().op("int4_ops"), table.slotIndex.asc().nullsLast().op("int4_ops")),
-	foreignKey({
-			columns: [table.entryId],
-			foreignColumns: [bisEntry.id],
-			name: "BisEntryOption_entryId_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
-	foreignKey({
-			columns: [table.defId],
-			foreignColumns: [itemOptionDef.id],
-			name: "BisEntryOption_defId_fkey"
-		}).onUpdate("cascade").onDelete("restrict"),
-]);
-
-export const bisEntryToCombatRole = pgTable("_BisEntryToCombatRole", {
-	a: text("A").notNull(),
-	b: text("B").notNull(),
-}, (table) => [
-	index().using("btree", table.b.asc().nullsLast().op("text_ops")),
-	foreignKey({
-			columns: [table.a],
-			foreignColumns: [bisEntry.id],
-			name: "_BisEntryToCombatRole_A_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
-	foreignKey({
-			columns: [table.b],
-			foreignColumns: [combatRole.id],
-			name: "_BisEntryToCombatRole_B_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
-]);
-
-export const combatRole = pgTable("CombatRole", {
-	id: text().notNull().$defaultFn(createId),
-	key: text().notNull(),
-	label: text().notNull(),
-	order: integer().default(0).notNull(),
-}, (table) => [
-	uniqueIndex("CombatRole_key_key").using("btree", table.key.asc().nullsLast().op("text_ops")),
-]);
-
-export const bisEntryToJob = pgTable("_BisEntryToJob", {
-	a: text("A").notNull(),
-	b: text("B").notNull(),
-}, (table) => [
-	index().using("btree", table.b.asc().nullsLast().op("text_ops")),
-	foreignKey({
-			columns: [table.a],
-			foreignColumns: [bisEntry.id],
-			name: "_BisEntryToJob_A_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
-	foreignKey({
-			columns: [table.b],
-			foreignColumns: [job.id],
-			name: "_BisEntryToJob_B_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
-]);
 
 export const deal = pgTable("Deal", {
 	id: text().notNull().$defaultFn(createId),
@@ -318,34 +232,88 @@ export const item = pgTable("Item", {
 	index("Item_tradeable_idx").using("btree", table.tradeable.asc().nullsLast().op("bool_ops")),
 ]);
 
-export const bisEntry = pgTable("BisEntry", {
+// Build de un usuario: nombre, clase (jobId = id del job en skill-planner.json,
+// misma fuente que el planner; sin FK a una tabla), etiquetas (≥1 PvP/PvE) y
+// notas. Las piezas van en BuildEntry (una por slot ocupado).
+export const build = pgTable("Build", {
 	id: text().notNull().$defaultFn(createId),
-	stageId: text().notNull(),
-	slot: equipSlot().notNull(),
-	itemId: text(),
-	refineLevel: integer(),
-	note: text(),
-	position: integer().default(0).notNull(),
-	createdById: text().notNull(),
+	ownerId: text().notNull(),
+	name: text().notNull(),
+	jobId: integer().notNull(),
+	tags: buildTag().array().default([]).notNull(),
+	notes: text(),
 	createdAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
-	weaponType: weaponType(),
 }, (table) => [
-	index("BisEntry_stageId_slot_position_idx").using("btree", table.stageId.asc().nullsLast().op("int4_ops"), table.slot.asc().nullsLast().op("int4_ops"), table.position.asc().nullsLast().op("int4_ops")),
+	index("Build_ownerId_idx").using("btree", table.ownerId.asc().nullsLast().op("text_ops")),
 	foreignKey({
-			columns: [table.stageId],
-			foreignColumns: [bisStage.id],
-			name: "BisEntry_stageId_fkey"
+			columns: [table.ownerId],
+			foreignColumns: [user.id],
+			name: "Build_ownerId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+]);
+
+// Una pieza de la build en un slot concreto (item + refino). Sus options
+// aleatorias van en BuildEntryOption y sus cartas en BuildEntryCard.
+export const buildEntry = pgTable("BuildEntry", {
+	id: text().notNull().$defaultFn(createId),
+	buildId: text().notNull(),
+	slot: buildSlot().notNull(),
+	itemId: text().notNull(),
+	refineLevel: integer().default(0).notNull(),
+}, (table) => [
+	uniqueIndex("BuildEntry_buildId_slot_key").using("btree", table.buildId.asc().nullsLast().op("text_ops"), table.slot.asc().nullsLast().op("enum_ops")),
+	foreignKey({
+			columns: [table.buildId],
+			foreignColumns: [build.id],
+			name: "BuildEntry_buildId_fkey"
 		}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
 			columns: [table.itemId],
 			foreignColumns: [item.id],
-			name: "BisEntry_itemId_fkey"
-		}).onUpdate("cascade").onDelete("set null"),
+			name: "BuildEntry_itemId_fkey"
+		}).onUpdate("cascade").onDelete("restrict"),
+]);
+
+// Options aleatorias de una pieza de la build (mismo patrón que ListingOption).
+export const buildEntryOption = pgTable("BuildEntryOption", {
+	id: text().notNull().$defaultFn(createId),
+	entryId: text().notNull(),
+	slotIndex: integer().notNull(),
+	defId: text().notNull(),
+	value: integer().notNull(),
+}, (table) => [
+	uniqueIndex("BuildEntryOption_entryId_slotIndex_key").using("btree", table.entryId.asc().nullsLast().op("text_ops"), table.slotIndex.asc().nullsLast().op("int4_ops")),
 	foreignKey({
-			columns: [table.createdById],
-			foreignColumns: [user.id],
-			name: "BisEntry_createdById_fkey"
+			columns: [table.entryId],
+			foreignColumns: [buildEntry.id],
+			name: "BuildEntryOption_entryId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.defId],
+			foreignColumns: [itemOptionDef.id],
+			name: "BuildEntryOption_defId_fkey"
+		}).onUpdate("cascade").onDelete("restrict"),
+]);
+
+// Cartas de una pieza de la build, una por ranura (hasta Item.slotCount). El
+// cardItemId apunta a un Item de categoría CARD.
+export const buildEntryCard = pgTable("BuildEntryCard", {
+	id: text().notNull().$defaultFn(createId),
+	entryId: text().notNull(),
+	slotIndex: integer().notNull(),
+	cardItemId: text().notNull(),
+}, (table) => [
+	uniqueIndex("BuildEntryCard_entryId_slotIndex_key").using("btree", table.entryId.asc().nullsLast().op("text_ops"), table.slotIndex.asc().nullsLast().op("int4_ops")),
+	foreignKey({
+			columns: [table.entryId],
+			foreignColumns: [buildEntry.id],
+			name: "BuildEntryCard_entryId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.cardItemId],
+			foreignColumns: [item.id],
+			name: "BuildEntryCard_cardItemId_fkey"
 		}).onUpdate("cascade").onDelete("restrict"),
 ]);
 
@@ -360,7 +328,8 @@ export {
   ListingStatus,
   DealStatus,
   ItemOptionGroup,
-  JobTier,
+  BuildSlot,
+  BuildTag,
 } from "./enums";
 
 // Model row types (equivalent to the types Prisma used to generate).
@@ -370,6 +339,9 @@ export type Listing = typeof listing.$inferSelect;
 export type ListingOption = typeof listingOption.$inferSelect;
 export type Deal = typeof deal.$inferSelect;
 export type User = typeof user.$inferSelect;
-export type BisEntry = typeof bisEntry.$inferSelect;
+export type Build = typeof build.$inferSelect;
+export type BuildEntry = typeof buildEntry.$inferSelect;
+export type BuildEntryOption = typeof buildEntryOption.$inferSelect;
+export type BuildEntryCard = typeof buildEntryCard.$inferSelect;
 export type SavedSearch = typeof savedSearch.$inferSelect;
 export type MarketConfig = typeof marketConfig.$inferSelect;

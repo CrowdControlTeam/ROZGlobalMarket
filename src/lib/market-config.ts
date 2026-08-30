@@ -20,9 +20,13 @@ export const DEFAULT_SITE_NAME = "ROZ Global Market";
 // default de la columna; en código para el fallback "sin fila de config").
 export const DEFAULT_LISTING_EXPIRATION_DAYS = 7;
 
+// Máximo de builds por usuario por defecto (fallback "sin fila de config").
+export const DEFAULT_MAX_BUILDS_PER_USER = 5;
+
 export type MarketConfigValues = {
   maxRefineLevel: number;
   listingExpirationDays: number;
+  maxBuildsPerUser: number;
   webhookUrl: string | null;
   webhookEnabled: boolean;
   imageRecognitionEnabled: boolean;
@@ -32,7 +36,6 @@ export type MarketConfigValues = {
   optionsEnabled: boolean;
   adminRoleIds: string[];
   accessRoleId: string | null;
-  bisEditorRoleId: string | null;
   siteName: string;
 };
 
@@ -85,6 +88,7 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
     .select({
       maxRefineLevel: marketConfig.maxRefineLevel,
       listingExpirationDays: marketConfig.listingExpirationDays,
+      maxBuildsPerUser: marketConfig.maxBuildsPerUser,
       webhookUrl: marketConfig.webhookUrl,
       webhookEnabled: marketConfig.webhookEnabled,
       imageRecognitionEnabled: marketConfig.imageRecognitionEnabled,
@@ -94,7 +98,6 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
       optionsEnabled: marketConfig.optionsEnabled,
       adminRoleIds: marketConfig.adminRoleIds,
       accessRoleId: marketConfig.accessRoleId,
-      bisEditorRoleId: marketConfig.bisEditorRoleId,
       siteName: marketConfig.siteName,
     })
     .from(marketConfig)
@@ -103,6 +106,7 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
   return {
     maxRefineLevel: config?.maxRefineLevel ?? DEFAULT_MAX_REFINE_LEVEL,
     listingExpirationDays: config?.listingExpirationDays ?? DEFAULT_LISTING_EXPIRATION_DAYS,
+    maxBuildsPerUser: config?.maxBuildsPerUser ?? DEFAULT_MAX_BUILDS_PER_USER,
     webhookUrl: config?.webhookUrl ?? null,
     webhookEnabled: config?.webhookEnabled ?? false,
     imageRecognitionEnabled: config?.imageRecognitionEnabled ?? false,
@@ -115,7 +119,6 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
     optionsEnabled: config?.optionsEnabled ?? true,
     adminRoleIds: config?.adminRoleIds ?? [],
     accessRoleId: config?.accessRoleId ?? null,
-    bisEditorRoleId: config?.bisEditorRoleId ?? null,
     siteName: config?.siteName?.trim() || DEFAULT_SITE_NAME,
   };
 }, CONFIG_TTL_MS);

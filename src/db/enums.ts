@@ -26,7 +26,15 @@ export const DEAL_STATUS_VALUES = ["PENDING", "ACCEPTED", "REJECTED", "CANCELLED
 export const ITEM_OPTION_GROUP_VALUES = [
   "ARMOR", "GARMENT", "FOOTGEAR", "WEAPON_PHYSICAL", "WEAPON_MAGICAL",
 ] as const;
-export const JOB_TIER_VALUES = ["FIRST", "SECOND", "THIRD"] as const;
+// Slots de una build (paperdoll): 3 tocados (superior/medio/inferior) + resto de
+// equipo, con 2 accesorios (izquierda/derecha). Son 10, más granular que
+// EquipSlot (que agrupa HEADGEAR y ACCESSORY) porque una build los distingue.
+export const BUILD_SLOT_VALUES = [
+  "HEADGEAR_TOP", "HEADGEAR_MID", "HEADGEAR_LOW", "ARMOR", "WEAPON", "SHIELD",
+  "GARMENT", "FOOTGEAR", "ACCESSORY_LEFT", "ACCESSORY_RIGHT",
+] as const;
+// Etiquetas de una build: al menos una (PvP/PvE), sin genéricos.
+export const BUILD_TAG_VALUES = ["PVP", "PVE"] as const;
 
 // Rebuilds the { KEY: "KEY" } object Prisma generated, so the enum can be used as
 // a value (EquipSlot.WEAPON).
@@ -48,5 +56,7 @@ export const DealStatus = enumObject(DEAL_STATUS_VALUES);
 export type DealStatus = (typeof DEAL_STATUS_VALUES)[number];
 export const ItemOptionGroup = enumObject(ITEM_OPTION_GROUP_VALUES);
 export type ItemOptionGroup = (typeof ITEM_OPTION_GROUP_VALUES)[number];
-export const JobTier = enumObject(JOB_TIER_VALUES);
-export type JobTier = (typeof JOB_TIER_VALUES)[number];
+export const BuildSlot = enumObject(BUILD_SLOT_VALUES);
+export type BuildSlot = (typeof BUILD_SLOT_VALUES)[number];
+export const BuildTag = enumObject(BUILD_TAG_VALUES);
+export type BuildTag = (typeof BUILD_TAG_VALUES)[number];

@@ -88,13 +88,13 @@ export async function Hub({
           <TileText label={t("tiles.publish.label")} desc={t("tiles.publish.desc")} />
         </Link>
 
-        {/* BiSes: página pública de mejores items por slot, a todo el ancho. */}
-        <Link href="/bis" className={`${TILE_LINK} sm:col-span-2`}>
+        {/* Builds: builds de la comunidad por clase, a todo el ancho. */}
+        <Link href="/builds" className={`${TILE_LINK} sm:col-span-2`}>
           <TileIcon Icon={Trophy} />
-          <TileText label={t("tiles.bis.label")} desc={t("tiles.bis.desc")} />
+          <TileText label={t("tiles.builds.label")} desc={t("tiles.builds.desc")} />
         </Link>
 
-        {/* DB: Items y Skills, en una fila de dos columnas bajo BiSes. */}
+        {/* DB: Items y Skills, en una fila de dos columnas bajo Builds. */}
         <Link href="/db/items" className={TILE_LINK}>
           <TileIcon Icon={Gem} />
           <TileText label={t("tiles.items.label")} desc={t("tiles.items.desc")} />

@@ -139,18 +139,6 @@ export function AdminConfigForm({ config }: { config: Config }) {
             onSave={(v) => save({ field: "accessRoleId", value: v })}
           />
 
-          <RoleSelectField
-            legend={t("bisEditor.legend")}
-            hint={t("bisEditor.hint")}
-            noneLabel={t("bisEditor.none")}
-            placeholder={t("bisEditor.roleIdPlaceholder")}
-            value={config.bisEditorRoleId}
-            roles={config.guildRolesResult.status === "ok" ? config.guildRolesResult.roles : null}
-            state={state.bisEditorRoleId}
-            error={errors.bisEditorRoleId}
-            onSave={(v) => save({ field: "bisEditorRoleId", value: v })}
-          />
-
           <EditableField
             label={t("market.maxRefineLabel")}
             initial={String(config.maxRefineLevel)}

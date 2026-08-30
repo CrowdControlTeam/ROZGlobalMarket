@@ -15,7 +15,7 @@ import {
   type EquipSlot,
   type Item,
 } from "@/db/schema";
-import { itemFitsSlot } from "@/lib/bis-constants";
+import { itemFitsSlot } from "@/lib/item-slots";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/guard";
 import { sendListingCreatedWebhook } from "@/lib/discord-webhook";

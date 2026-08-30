@@ -62,6 +62,7 @@ export async function getMarketConfig() {
     siteNamePlaceholder: config.siteName,
     maxRefineLevel: config.maxRefineLevel,
     listingExpirationDays: config.listingExpirationDays,
+    maxBuildsPerUser: config.maxBuildsPerUser,
     webhookEnabled: config.webhookEnabled,
     webhookUrlMasked: config.webhookUrl ? maskSecret(config.webhookUrl) : null,
     imageRecognitionEnabled: config.imageRecognitionEnabled,
@@ -75,7 +76,6 @@ export async function getMarketConfig() {
     optionsCatalogCount,
     adminRoleIds: config.adminRoleIds,
     accessRoleId: config.accessRoleId,
-    bisEditorRoleId: config.bisEditorRoleId,
     guildRolesResult,
     // Se devuelven completos (admin-only): el formulario los reenvía tal cual
     // si no se cambian (así "sin tocar" = conservar; vacío = borrar).
@@ -106,9 +106,10 @@ export type ConfigFieldUpdate =
   | { field: "siteName"; value: string }
   | { field: "maxRefineLevel"; value: number }
   | { field: "listingExpirationDays"; value: number }
+  | { field: "maxBuildsPerUser"; value: number }
   | { field: "webhookUrl"; value: string }
   | { field: "geminiModel"; value: string }
-  | { field: "accessRoleId" | "bisEditorRoleId"; value: string }
+  | { field: "accessRoleId"; value: string }
   | { field: "adminRoleIds"; value: string[] }
   | { field: "logoUrl" | "homeImageUrl"; value: string | null };
 
@@ -141,6 +142,12 @@ function buildFieldData(
       if (!n.success) throw new Error(t("invalidData"));
       return { listingExpirationDays: n.data };
     }
+    case "maxBuildsPerUser": {
+      // Al menos 1; tope de 50 por sanidad.
+      const n = z.coerce.number().int().min(1).max(50).safeParse(u.value);
+      if (!n.success) throw new Error(t("invalidData"));
+      return { maxBuildsPerUser: n.data };
+    }
     case "webhookUrl": {
       const v = u.value.trim();
       // Vacío no se guarda por aquí (patrón enmascarado): la UI solo manda ✓ con
@@ -152,10 +159,9 @@ function buildFieldData(
     case "geminiModel":
       if (!isGeminiModel(u.value)) throw new Error(t("unsupportedGeminiModel"));
       return { geminiModel: u.value };
-    case "accessRoleId":
-    case "bisEditorRoleId": {
+    case "accessRoleId": {
       const v = u.value.trim();
-      return { [u.field]: SNOWFLAKE.test(v) ? v : null };
+      return { accessRoleId: SNOWFLAKE.test(v) ? v : null };
     }
     case "adminRoleIds": {
       const ids = Array.from(

@@ -1,5 +1,17 @@
 import { relations } from "drizzle-orm/relations";
-import { item, listing, user, listingOption, itemOptionDef, job, bisEntry, bisEntryOption, bisEntryToCombatRole, combatRole, bisEntryToJob, deal, savedSearch, bisStage } from "./schema";
+import {
+  item,
+  listing,
+  user,
+  listingOption,
+  itemOptionDef,
+  deal,
+  savedSearch,
+  build,
+  buildEntry,
+  buildEntryOption,
+  buildEntryCard,
+} from "./schema";
 
 export const listingRelations = relations(listing, ({one, many}) => ({
 	item: one(item, {
@@ -18,14 +30,13 @@ export const listingRelations = relations(listing, ({one, many}) => ({
 export const itemRelations = relations(item, ({many}) => ({
 	listings: many(listing),
 	deals: many(deal),
-	bisEntries: many(bisEntry),
 }));
 
 export const userRelations = relations(user, ({many}) => ({
 	listings: many(listing),
 	deals: many(deal),
 	savedSearches: many(savedSearch),
-	bisEntries: many(bisEntry),
+	builds: many(build),
 }));
 
 export const listingOptionRelations = relations(listingOption, ({one}) => ({
@@ -42,76 +53,6 @@ export const listingOptionRelations = relations(listingOption, ({one}) => ({
 
 export const itemOptionDefRelations = relations(itemOptionDef, ({many}) => ({
 	listingOptions: many(listingOption),
-	bisEntryOptions: many(bisEntryOption),
-}));
-
-export const jobRelations = relations(job, ({one, many}) => ({
-	job: one(job, {
-		fields: [job.parentJobId],
-		references: [job.id],
-		relationName: "job_parentJobId_job_id"
-	}),
-	jobs: many(job, {
-		relationName: "job_parentJobId_job_id"
-	}),
-	bisEntryToJobs: many(bisEntryToJob),
-}));
-
-export const bisEntryOptionRelations = relations(bisEntryOption, ({one}) => ({
-	bisEntry: one(bisEntry, {
-		fields: [bisEntryOption.entryId],
-		references: [bisEntry.id]
-	}),
-	// `def` as in Prisma (BisEntryOption.def).
-	def: one(itemOptionDef, {
-		fields: [bisEntryOption.defId],
-		references: [itemOptionDef.id]
-	}),
-}));
-
-export const bisEntryRelations = relations(bisEntry, ({one, many}) => ({
-	// `options` as in Prisma (BisEntry.options).
-	options: many(bisEntryOption),
-	bisEntryToCombatRoles: many(bisEntryToCombatRole),
-	bisEntryToJobs: many(bisEntryToJob),
-	bisStage: one(bisStage, {
-		fields: [bisEntry.stageId],
-		references: [bisStage.id]
-	}),
-	item: one(item, {
-		fields: [bisEntry.itemId],
-		references: [item.id]
-	}),
-	user: one(user, {
-		fields: [bisEntry.createdById],
-		references: [user.id]
-	}),
-}));
-
-export const bisEntryToCombatRoleRelations = relations(bisEntryToCombatRole, ({one}) => ({
-	bisEntry: one(bisEntry, {
-		fields: [bisEntryToCombatRole.a],
-		references: [bisEntry.id]
-	}),
-	combatRole: one(combatRole, {
-		fields: [bisEntryToCombatRole.b],
-		references: [combatRole.id]
-	}),
-}));
-
-export const combatRoleRelations = relations(combatRole, ({many}) => ({
-	bisEntryToCombatRoles: many(bisEntryToCombatRole),
-}));
-
-export const bisEntryToJobRelations = relations(bisEntryToJob, ({one}) => ({
-	bisEntry: one(bisEntry, {
-		fields: [bisEntryToJob.a],
-		references: [bisEntry.id]
-	}),
-	job: one(job, {
-		fields: [bisEntryToJob.b],
-		references: [job.id]
-	}),
 }));
 
 export const dealRelations = relations(deal, ({one}) => ({
@@ -138,6 +79,46 @@ export const savedSearchRelations = relations(savedSearch, ({one}) => ({
 	}),
 }));
 
-export const bisStageRelations = relations(bisStage, ({many}) => ({
-	bisEntries: many(bisEntry),
+// ── Builds ──────────────────────────────────────────────────────────────────
+export const buildRelations = relations(build, ({one, many}) => ({
+	owner: one(user, {
+		fields: [build.ownerId],
+		references: [user.id]
+	}),
+	entries: many(buildEntry),
+}));
+
+export const buildEntryRelations = relations(buildEntry, ({one, many}) => ({
+	build: one(build, {
+		fields: [buildEntry.buildId],
+		references: [build.id]
+	}),
+	item: one(item, {
+		fields: [buildEntry.itemId],
+		references: [item.id]
+	}),
+	options: many(buildEntryOption),
+	cards: many(buildEntryCard),
+}));
+
+export const buildEntryOptionRelations = relations(buildEntryOption, ({one}) => ({
+	entry: one(buildEntry, {
+		fields: [buildEntryOption.entryId],
+		references: [buildEntry.id]
+	}),
+	def: one(itemOptionDef, {
+		fields: [buildEntryOption.defId],
+		references: [itemOptionDef.id]
+	}),
+}));
+
+export const buildEntryCardRelations = relations(buildEntryCard, ({one}) => ({
+	entry: one(buildEntry, {
+		fields: [buildEntryCard.entryId],
+		references: [buildEntry.id]
+	}),
+	card: one(item, {
+		fields: [buildEntryCard.cardItemId],
+		references: [item.id]
+	}),
 }));
