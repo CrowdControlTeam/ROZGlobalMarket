@@ -745,7 +745,52 @@
   },
   "builds": {
     "title": "Builds",
-    "subtitle": "Builds de la comunidad por clase.",
-    "comingSoon": "Builds está en construcción. Pronto podrás crear y compartir tus builds."
+    "list": {
+      "myLimit": "Tienes {n} de {max} builds",
+      "you": "Tú",
+      "create": "Crear build",
+      "empty": "Todavía no hay builds. Crea la primera.",
+      "edit": "Editar"
+    },
+    "form": {
+      "back": "Volver a builds",
+      "newTitle": "Nueva build",
+      "editTitle": "Editar build",
+      "nameLabel": "Nombre",
+      "namePlaceholder": "p. ej. Knight PvP burst",
+      "classLabel": "Clase",
+      "chooseClass": "Elige una clase…",
+      "firstJobs": "Clases 1ª",
+      "secondJobs": "Clases 2ª",
+      "tagsLabel": "Etiquetas",
+      "notesLabel": "Notas",
+      "notesPlaceholder": "Detalles de la build, sinergias, alternativas…",
+      "slotsLabel": "Piezas",
+      "refine": "Refino",
+      "remove": "Quitar",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "deleteBuild": "Borrar build"
+    },
+    "detail": {
+      "noPieces": "Esta build no tiene piezas todavía."
+    },
+    "slots": {
+      "HEADGEAR_TOP": "Tocado superior",
+      "HEADGEAR_MID": "Tocado medio",
+      "HEADGEAR_LOW": "Tocado inferior",
+      "ARMOR": "Armadura",
+      "WEAPON": "Arma",
+      "SHIELD": "Escudo",
+      "GARMENT": "Manto",
+      "FOOTGEAR": "Calzado",
+      "ACCESSORY_LEFT": "Accesorio izq.",
+      "ACCESSORY_RIGHT": "Accesorio der."
+    },
+    "tags": {
+      "PVP": "PvP",
+      "PVE": "PvE"
+    }
   }
 }
