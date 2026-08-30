@@ -5,9 +5,10 @@ import { Clock } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 // Indicador de caducidad: reloj + tiempo restante (días u horas; "Hoy" en la
-// última hora), con la fecha exacta en el tooltip. Se usa en la card del mercado
-// y en el detalle. No pinta nada si no hay caducidad o si ya venció (esos
-// listings no deberían llegar a mostrarse: la query los oculta).
+// última hora), con la fecha y hora exactas en un tooltip propio (estilado, al
+// instante), no el `title` nativo —más sutil—. Se usa en la card del mercado y
+// en el detalle. No pinta nada si no hay caducidad o si ya venció (esos listings
+// no deberían llegar a mostrarse: la query los oculta).
 //
 // El tiempo restante se calcula en un efecto (no en el render): Date.now() es
 // impuro y no puede llamarse durante el render; además así el primer render
@@ -43,14 +44,24 @@ export function ExpiryIndicator({
 
   if (!expires || !label) return null;
 
+  const tooltip = t("tooltip", { date: expires.toLocaleString(locale) });
+
   return (
+    // group + focus-within: el tooltip aparece al pasar el ratón o al enfocar con
+    // teclado (tabIndex). aria-label lo anuncia a lectores de pantalla.
     <span
-      className={`inline-flex items-center gap-1 ${className}`}
-      title={t("tooltip", { date: expires.toLocaleString(locale) })}
-      aria-label={`${t("clockLabel")}: ${label}`}
+      className={`group relative inline-flex items-center gap-1 ${className}`}
+      tabIndex={0}
+      aria-label={`${t("clockLabel")}: ${label} — ${tooltip}`}
     >
       <Clock size={12} aria-hidden />
       {label}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-ro-panel-border bg-ro-panel px-2 py-1 text-xs font-normal text-ro-text opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {tooltip}
+      </span>
     </span>
   );
 }
