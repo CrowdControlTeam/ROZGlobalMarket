@@ -16,8 +16,13 @@ import { DEFAULT_GEMINI_MODEL, isGeminiModel, type GeminiModel } from "@/lib/gem
 // literalmente a este valor".
 export const DEFAULT_SITE_NAME = "ROZ Global Market";
 
+// Días por defecto que una publicación permanece activa (mismo valor que el
+// default de la columna; en código para el fallback "sin fila de config").
+export const DEFAULT_LISTING_EXPIRATION_DAYS = 7;
+
 export type MarketConfigValues = {
   maxRefineLevel: number;
+  listingExpirationDays: number;
   webhookUrl: string | null;
   webhookEnabled: boolean;
   imageRecognitionEnabled: boolean;
@@ -79,6 +84,7 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
   const [config] = await db
     .select({
       maxRefineLevel: marketConfig.maxRefineLevel,
+      listingExpirationDays: marketConfig.listingExpirationDays,
       webhookUrl: marketConfig.webhookUrl,
       webhookEnabled: marketConfig.webhookEnabled,
       imageRecognitionEnabled: marketConfig.imageRecognitionEnabled,
@@ -96,6 +102,7 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
     .limit(1);
   return {
     maxRefineLevel: config?.maxRefineLevel ?? DEFAULT_MAX_REFINE_LEVEL,
+    listingExpirationDays: config?.listingExpirationDays ?? DEFAULT_LISTING_EXPIRATION_DAYS,
     webhookUrl: config?.webhookUrl ?? null,
     webhookEnabled: config?.webhookEnabled ?? false,
     imageRecognitionEnabled: config?.imageRecognitionEnabled ?? false,

@@ -53,12 +53,19 @@ export const listing = pgTable("Listing", {
 	refineLevel: integer().default(0).notNull(),
 	type: listingType().default('SALE').notNull(),
 	notes: text(),
+	// When the listing auto-expires. Set at creation to now + MarketConfig
+	// .listingExpirationDays. Nullable = never expires (safety default for any
+	// row without a value; the cron only touches rows with expiresAt <= now()).
+	expiresAt: timestamp({ precision: 3, mode: 'date' }),
 	// updatedAt: Prisma filled this client-side (@updatedAt); the DB has no default
 	// or trigger, so Drizzle sets it on insert and update (same for the other tables
 	// with updatedAt).
 }, (table) => [
 	index("Listing_price_idx").using("btree", table.price.asc().nullsLast().op("int4_ops")),
 	index("Listing_status_createdAt_idx").using("btree", table.status.asc().nullsLast().op("timestamp_ops"), table.createdAt.asc().nullsLast().op("timestamp_ops")),
+	// Sirve tanto al filtro del mercado (status='ACTIVE' AND expiresAt > now())
+	// como al barrido del cron (status='ACTIVE' AND expiresAt <= now()).
+	index("Listing_status_expiresAt_idx").using("btree", table.status.asc().nullsLast().op("enum_ops"), table.expiresAt.asc().nullsLast().op("timestamp_ops")),
 	foreignKey({
 			columns: [table.itemId],
 			foreignColumns: [item.id],
@@ -124,6 +131,8 @@ export const marketConfig = pgTable("MarketConfig", {
 	logoUrl: text(),
 	accessRoleId: text(),
 	bisEditorRoleId: text(),
+	// Días que una publicación permanece activa antes de caducar (cron → EXPIRED).
+	listingExpirationDays: integer().default(7).notNull(),
 });
 
 export const rateLimit = pgTable("RateLimit", {

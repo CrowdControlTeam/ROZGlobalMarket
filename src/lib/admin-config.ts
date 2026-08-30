@@ -61,6 +61,7 @@ export async function getMarketConfig() {
     siteName: rawConfig?.siteName ?? "",
     siteNamePlaceholder: config.siteName,
     maxRefineLevel: config.maxRefineLevel,
+    listingExpirationDays: config.listingExpirationDays,
     webhookEnabled: config.webhookEnabled,
     webhookUrlMasked: config.webhookUrl ? maskSecret(config.webhookUrl) : null,
     imageRecognitionEnabled: config.imageRecognitionEnabled,
@@ -104,6 +105,7 @@ export type ConfigFieldUpdate =
   | { field: BoolField; value: boolean }
   | { field: "siteName"; value: string }
   | { field: "maxRefineLevel"; value: number }
+  | { field: "listingExpirationDays"; value: number }
   | { field: "webhookUrl"; value: string }
   | { field: "geminiModel"; value: string }
   | { field: "accessRoleId" | "bisEditorRoleId"; value: string }
@@ -132,6 +134,12 @@ function buildFieldData(
       const n = z.coerce.number().int().nonnegative().safeParse(u.value);
       if (!n.success) throw new Error(t("invalidData"));
       return { maxRefineLevel: n.data };
+    }
+    case "listingExpirationDays": {
+      // Mínimo 1 día (0 caducaría al instante). Tope generoso (365) por sanidad.
+      const n = z.coerce.number().int().min(1).max(365).safeParse(u.value);
+      if (!n.success) throw new Error(t("invalidData"));
+      return { listingExpirationDays: n.data };
     }
     case "webhookUrl": {
       const v = u.value.trim();

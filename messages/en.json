@@ -346,7 +346,9 @@
     "market": {
       "legend": "Market",
       "maintenanceToggleLabel": "Maintenance mode (blocks access to the market for everyone except admins; BiS and DB stay open)",
-      "maxRefineLabel": "Maximum allowed refine"
+      "maxRefineLabel": "Maximum allowed refine",
+      "listingExpirationLabel": "Days until a listing expires",
+      "listingExpirationHint": "Active listings auto-expire after this many days. Only affects new listings; existing ones keep their expiry."
     }
   },
   "market": {
@@ -563,10 +565,18 @@
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
     },
+    "expiry": {
+      "clockLabel": "Time until expiry",
+      "today": "Today",
+      "days": "{days, plural, one {# day} other {# days}}",
+      "hours": "{hours, plural, one {# hour} other {# hours}}",
+      "tooltip": "Expires on {date}"
+    },
     "detail": {
       "available": "Available",
       "unitPrice": "Price/ea",
       "posted": "Posted",
+      "expires": "Expires",
       "sold": "Sold",
       "given": "Given",
       "fulfilled": "Fulfilled",

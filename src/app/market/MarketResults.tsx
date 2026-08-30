@@ -16,6 +16,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { UserMention, ContactModal } from "@/components/UserMention";
 import { KebabMenu, type KebabItem } from "@/components/KebabMenu";
 import { NoteIndicator } from "@/components/NoteIndicator";
+import { ExpiryIndicator } from "@/components/ExpiryIndicator";
 import { Toast } from "@/components/Toast";
 import { SortSelect } from "./SortSelect";
 import { useMarketSearch } from "./marketSearchStore";
@@ -35,6 +36,7 @@ type Listing = {
   price: number | null;
   refineLevel: number;
   notes: string | null;
+  expiresAt: Date | string | null; // caducidad (indicador de reloj); null = no caduca
   item: Item;
   poster: Poster;
   options: ListingOption[];
@@ -175,6 +177,9 @@ function ListingCard({
       </span>
     </p>
   );
+  const expiryLine = listing.expiresAt ? (
+    <ExpiryIndicator expiresAt={listing.expiresAt} className="text-[0.65rem] text-ro-text-muted" />
+  ) : null;
   const optionChips =
     listing.options.length > 0 ? (
       <div className="mt-2 flex flex-wrap gap-1">
@@ -274,6 +279,7 @@ function ListingCard({
           <div className="shrink-0 text-right">
             <div className="text-sm">{priceLine}</div>
             <div className="mt-0.5 text-xs text-ro-text-muted">{countLabel}</div>
+            {expiryLine && <div className="mt-0.5 flex justify-end">{expiryLine}</div>}
           </div>
         </Link>
         {cornerActions}
@@ -304,7 +310,10 @@ function ListingCard({
         {/* mt-auto ancla el precio abajo: con auto-rows-fr todas las tarjetas
             de la fila igualan altura y el precio queda alineado. */}
         <div className="mt-auto flex items-end justify-between gap-2 pt-2">
-          <span className="text-xs text-ro-text-muted">{countLabel}</span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-xs text-ro-text-muted">{countLabel}</span>
+            {expiryLine}
+          </div>
           <span className="text-sm">{priceLine}</span>
         </div>
       </Link>

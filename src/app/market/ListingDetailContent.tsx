@@ -15,6 +15,7 @@ import {
 import { labelClass } from "@/lib/ui";
 import { availableFrom } from "@/lib/deals";
 import { UserMention } from "@/components/UserMention";
+import { ExpiryIndicator } from "@/components/ExpiryIndicator";
 import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { CancelListingButton } from "./[id]/CancelListingButton";
 import { EditListingButton } from "./[id]/EditListingButton";
@@ -197,7 +198,14 @@ export async function ListingDetailContent({ id }: { id: string }) {
           />
         )}
         {isSale && reserved > 0 && <KvRow label={t("detail.reserved")} value={String(reserved)} />}
-        <KvRow label={t("detail.posted")} value={listing.createdAt.toLocaleString()} last />
+        <KvRow
+          label={t("detail.posted")}
+          value={listing.createdAt.toLocaleString()}
+          last={!(listing.status === "ACTIVE" && listing.expiresAt)}
+        />
+        {listing.status === "ACTIVE" && listing.expiresAt && (
+          <KvRow label={t("detail.expires")} value={<ExpiryIndicator expiresAt={listing.expiresAt} />} last />
+        )}
       </dl>
 
       {listing.options.length > 0 && (
