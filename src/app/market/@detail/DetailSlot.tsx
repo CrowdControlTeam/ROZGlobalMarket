@@ -1,5 +1,6 @@
 import { DetailPanel } from "../DetailPanel";
 import { ListingDetailContent } from "../ListingDetailContent";
+import { DetailHeaderActions } from "../[id]/DetailHeaderActions";
 
 // Contenido del slot @detail, compartido entre page.tsx (raíz /market) y
 // [...catchAll]/page.tsx (cualquier otra ruta bajo /market): en vez de
@@ -17,7 +18,7 @@ export async function DetailSlot({
   if (!id) return null;
 
   return (
-    <DetailPanel>
+    <DetailPanel headerActions={<DetailHeaderActions id={id} />}>
       <ListingDetailContent id={id} />
     </DetailPanel>
   );

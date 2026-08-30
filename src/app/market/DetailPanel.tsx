@@ -14,7 +14,13 @@ import { useCloseModal } from "./useCloseModal";
 // fondo oscurecido y sin cierre al hacer clic fuera. Se cierra con la X, Escape, o
 // (en móvil) deslizando el panel hacia abajo; `close()` quita el query param
 // (?listing=) de la URL actual (ver useCloseModal), no depende del historial.
-export function DetailPanel({ children }: { children: React.ReactNode }) {
+export function DetailPanel({
+  children,
+  headerActions,
+}: {
+  children: React.ReactNode;
+  headerActions?: React.ReactNode;
+}) {
   const t = useTranslations("common");
   const close = useCloseModal();
   const [mounted, setMounted] = useState(false);
@@ -88,9 +94,9 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
       >
         <span className="h-1.5 w-10 rounded-full bg-ro-panel-border" />
       </div>
-      {/* Cerrar: ✕ arriba a la izquierda (primer elemento del panel, como el
-          diseño), sin barra de cabecera. */}
-      <div className="flex shrink-0 justify-start px-4 pb-2 pt-3">
+      {/* Cabecera: ✕ (cerrar) arriba a la izquierda + acciones de utilidad
+          (Compartir/Contactar) en la esquina derecha, a su misma altura. */}
+      <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-3">
         <button
           type="button"
           onClick={close}
@@ -99,6 +105,7 @@ export function DetailPanel({ children }: { children: React.ReactNode }) {
         >
           ✕
         </button>
+        {headerActions}
       </div>
       <div className="overflow-y-auto px-4 pb-4">{children}</div>
     </div>
