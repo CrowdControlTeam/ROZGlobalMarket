@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { requireSession } from "@/lib/guard";
-import { getMyBuild } from "@/lib/builds";
+import { getBuild } from "@/lib/builds";
 import { getJob } from "@/lib/skill-planner";
 import { BUILD_SLOTS } from "@/lib/build-constants";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
@@ -14,14 +14,15 @@ import { buttonClass } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 
 export default async function BuildDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireSession();
+  const session = await requireSession();
   const { id } = await params;
   const t = await getTranslations("builds");
   const tSlot = await getTranslations("builds.slots");
   const tTag = await getTranslations("builds.tags");
-  const buildRow = await getMyBuild(id);
+  const buildRow = await getBuild(id);
   if (!buildRow) notFound();
 
+  const isOwner = buildRow.owner.id === session.user.discordId;
   const jobName = getJob(buildRow.jobId)?.name ?? "—";
   const bySlot = new Map(buildRow.entries.map((e) => [e.slot, e]));
   const filledSlots = BUILD_SLOTS.filter((s) => bySlot.has(s));
@@ -35,6 +36,7 @@ export default async function BuildDetailPage({ params }: { params: Promise<{ id
           <h1 className="truncate text-2xl font-extrabold text-ro-text">{buildRow.name}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ro-text-muted">
             <span className="font-semibold text-ro-text">{jobName}</span>
+            <span>· {isOwner ? t("list.you") : buildRow.owner.username}</span>
             {buildRow.tags.map((tag) => (
               <span key={tag} className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-xs text-ro-accent">
                 {tTag(tag)}
@@ -42,10 +44,12 @@ export default async function BuildDetailPage({ params }: { params: Promise<{ id
             ))}
           </p>
         </div>
-        <Link href={`/builds/${id}/edit`} className={`shrink-0 ${buttonClass("outline")}`}>
-          <Pencil size={15} aria-hidden />
-          {t("list.edit")}
-        </Link>
+        {isOwner && (
+          <Link href={`/builds/${id}/edit`} className={`shrink-0 ${buttonClass("outline")}`}>
+            <Pencil size={15} aria-hidden />
+            {t("list.edit")}
+          </Link>
+        )}
       </div>
 
       {buildRow.notes && (

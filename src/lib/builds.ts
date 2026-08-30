@@ -15,20 +15,37 @@ import { buildSlotToEquipSlot, MAX_BUILD_NAME_LENGTH, MAX_BUILD_NOTES_LENGTH } f
 import { revalidatePath } from "next/cache";
 
 const itemCols = { id: true, name: true, iconUrl: true, slotCount: true } as const;
+const ownerCols = { id: true, username: true } as const;
 
-// Todas mis builds (con sus piezas) para el listado y para precargar el editor.
-export async function listMyBuilds() {
-  const session = await requireSession();
+// TODAS las builds (de todos los usuarios) para la página de la comunidad, con
+// dueño y piezas. Editar/borrar sigue restringido al propietario (ver acciones).
+export async function listBuilds() {
+  await requireSession();
   return db.query.build.findMany({
-    where: eq(build.ownerId, session.user.discordId),
     orderBy: desc(build.updatedAt),
     with: {
+      owner: { columns: ownerCols },
       entries: { with: { item: { columns: itemCols } } },
     },
   });
 }
 
-// Una build concreta (para el detalle/editor). Solo del propietario.
+// Una build concreta para el DETALLE — visible para cualquiera (logueado). El
+// que sea o no del propietario lo decide la página (para mostrar Editar).
+export async function getBuild(id: string) {
+  await requireSession();
+  return (
+    (await db.query.build.findFirst({
+      where: eq(build.id, id),
+      with: {
+        owner: { columns: ownerCols },
+        entries: { with: { item: { columns: itemCols } } },
+      },
+    })) ?? null
+  );
+}
+
+// Una build concreta para EDITAR — solo del propietario (null si no lo es).
 export async function getMyBuild(id: string) {
   const session = await requireSession();
   const row = await db.query.build.findFirst({
@@ -38,6 +55,16 @@ export async function getMyBuild(id: string) {
   if (!row) return null;
   if (row.ownerId !== session.user.discordId) return null;
   return row;
+}
+
+// Cuántas builds tiene el usuario actual (para el tope de "Crear").
+export async function myBuildCount() {
+  const session = await requireSession();
+  const [{ n } = { n: 0 }] = await db
+    .select({ n: count() })
+    .from(build)
+    .where(eq(build.ownerId, session.user.discordId));
+  return n;
 }
 
 // Entrada del editor: una pieza por slot (item + refino). Options y cartas se

@@ -744,11 +744,12 @@
     }
   },
   "builds": {
-    "title": "Mis builds",
+    "title": "Builds",
     "list": {
-      "count": "{n} de {max} builds",
+      "myLimit": "Tienes {n} de {max} builds",
+      "you": "Tú",
       "create": "Crear build",
-      "empty": "Aún no tienes ninguna build. Crea la primera.",
+      "empty": "Todavía no hay builds. Crea la primera.",
       "edit": "Editar"
     },
     "form": {

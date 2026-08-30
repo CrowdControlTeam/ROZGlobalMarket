@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Plus } from "lucide-react";
 import { requireSession } from "@/lib/guard";
-import { listMyBuilds } from "@/lib/builds";
+import { listBuilds, myBuildCount } from "@/lib/builds";
 import { loadMarketConfig } from "@/lib/market-config";
 import { getJob } from "@/lib/skill-planner";
 import { ItemIcon } from "@/components/ItemIcon";
@@ -11,11 +11,16 @@ import { buttonClass } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 
 export default async function BuildsPage() {
-  await requireSession();
+  const session = await requireSession();
+  const me = session.user.discordId;
   const t = await getTranslations("builds");
   const tTag = await getTranslations("builds.tags");
-  const [builds, { maxBuildsPerUser }] = await Promise.all([listMyBuilds(), loadMarketConfig()]);
-  const atLimit = builds.length >= maxBuildsPerUser;
+  const [builds, { maxBuildsPerUser }, myCount] = await Promise.all([
+    listBuilds(),
+    loadMarketConfig(),
+    myBuildCount(),
+  ]);
+  const atLimit = myCount >= maxBuildsPerUser;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
@@ -23,7 +28,7 @@ export default async function BuildsPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-ro-text">{t("title")}</h1>
           <p className="mt-1 text-sm text-ro-text-muted">
-            {t("list.count", { n: builds.length, max: maxBuildsPerUser })}
+            {t("list.myLimit", { n: myCount, max: maxBuildsPerUser })}
           </p>
         </div>
         {!atLimit && (
@@ -50,6 +55,7 @@ export default async function BuildsPage() {
                   <p className="truncate text-sm font-bold text-ro-text">{b.name}</p>
                   <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ro-text-muted">
                     <span className="font-semibold text-ro-text">{getJob(b.jobId)?.name ?? "—"}</span>
+                    <span>· {b.owner.id === me ? t("list.you") : b.owner.username}</span>
                     {b.tags.map((tag) => (
                       <span key={tag} className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1 py-0.5 text-[0.65rem] text-ro-accent">
                         {tTag(tag)}
