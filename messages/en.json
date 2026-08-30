@@ -744,8 +744,52 @@
     }
   },
   "builds": {
-    "title": "Builds",
-    "subtitle": "Community builds by class.",
-    "comingSoon": "Builds is under construction. Soon you'll be able to create and share your builds."
+    "title": "My builds",
+    "list": {
+      "count": "{n} of {max} builds",
+      "create": "Create build",
+      "empty": "You don't have any builds yet. Create your first one.",
+      "edit": "Edit"
+    },
+    "form": {
+      "back": "Back to builds",
+      "newTitle": "New build",
+      "editTitle": "Edit build",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Knight PvP burst",
+      "classLabel": "Class",
+      "chooseClass": "Choose a class…",
+      "firstJobs": "1st classes",
+      "secondJobs": "2nd classes",
+      "tagsLabel": "Tags",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Build details, synergies, alternatives…",
+      "slotsLabel": "Pieces",
+      "refine": "Refine",
+      "remove": "Remove",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "deleteBuild": "Delete build"
+    },
+    "detail": {
+      "noPieces": "This build has no pieces yet."
+    },
+    "slots": {
+      "HEADGEAR_TOP": "Upper headgear",
+      "HEADGEAR_MID": "Middle headgear",
+      "HEADGEAR_LOW": "Lower headgear",
+      "ARMOR": "Armor",
+      "WEAPON": "Weapon",
+      "SHIELD": "Shield",
+      "GARMENT": "Garment",
+      "FOOTGEAR": "Footgear",
+      "ACCESSORY_LEFT": "Accessory L",
+      "ACCESSORY_RIGHT": "Accessory R"
+    },
+    "tags": {
+      "PVP": "PvP",
+      "PVE": "PvE"
+    }
   }
 }
