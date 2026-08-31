@@ -28,6 +28,7 @@ export function ItemPicker({
   onClear,
   locked = false,
   slotFilter,
+  positionFilter,
 }: {
   selected: ItemResult | null;
   onSelect: (item: ItemResult) => void;
@@ -40,8 +41,11 @@ export function ItemPicker({
   // coincidía con lo que decía el input.
   onClear: () => void;
   // Si se pasa, la búsqueda solo devuelve items que encajan en ese slot de
-  // equipo (lo usa el picker de BiS para no ofrecer items de otro slot).
+  // equipo (lo usa el editor de builds para no ofrecer items de otro slot).
   slotFilter?: EquipSlot;
+  // Además del slot, acota los tocados a una posición (Upper/Middle/Lower) —
+  // lo usan los 3 slots de tocado del editor de builds.
+  positionFilter?: "Upper" | "Middle" | "Lower";
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ItemResult[]>([]);
@@ -64,7 +68,7 @@ export function ItemPicker({
     debounceRef.current = setTimeout(() => {
       startTransition(async () => {
         try {
-          const found = await searchItems(value, slotFilter);
+          const found = await searchItems(value, slotFilter, positionFilter);
           setResults(found);
         } catch (err) {
           setError(getErrorMessage(err, tCommon("searchError")));

@@ -16,6 +16,7 @@ import {
   type Item,
 } from "@/db/schema";
 import { itemFitsSlot } from "@/lib/item-slots";
+import { positionAllows, type HeadgearPosition } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/guard";
 import { sendListingCreatedWebhook } from "@/lib/discord-webhook";
@@ -39,13 +40,20 @@ import { searchCatalog } from "@/lib/item-catalog";
 import { listingStatusOnClose, availableFrom, isSoldOut } from "@/lib/deals";
 import { listingCardState } from "@/lib/listing-card";
 
-export async function searchItems(query: string, slot?: EquipSlot) {
+export async function searchItems(query: string, slot?: EquipSlot, position?: HeadgearPosition) {
   await requireSession();
   // Búsqueda en memoria (catálogo empaquetado, ver src/lib/item-catalog.ts) en
-  // vez de pegar a la BD en cada tecla. `slot` (lo usa el picker de BiS) acota a
-  // los items que encajan en ese slot de equipo, para no dejar elegir uno que
+  // vez de pegar a la BD en cada tecla. `slot` acota a los items que encajan en
+  // ese slot de equipo; `position` (Upper/Middle/Lower) acota además los tocados
+  // al slot correcto del editor de builds. Así el picker no ofrece un item que
   // luego el servidor rechazaría.
-  const items = searchCatalog(query, 20, slot ? (item) => itemFitsSlot(item, slot) : undefined);
+  const items = searchCatalog(
+    query,
+    20,
+    slot || position
+      ? (item) => (!slot || itemFitsSlot(item, slot)) && positionAllows(item.position, position)
+      : undefined,
+  );
   if (items.length === 0) return [];
 
   const [magicalTypes, optionsAvailable] = await Promise.all([
@@ -56,6 +64,13 @@ export async function searchItems(query: string, slot?: EquipSlot) {
     ...item,
     optionGroup: optionsAvailable ? getItemOptionGroup(item, magicalTypes) : null,
   }));
+}
+
+// Búsqueda de CARTAS (categoría CARD) por nombre — para el editor de builds, que
+// asigna cartas a las ranuras de cada pieza. Mismo catálogo en memoria.
+export async function searchCards(query: string) {
+  await requireSession();
+  return searchCatalog(query, 20, (item) => item.category === "CARD");
 }
 
 // Para que el filtro de mercado (client component, sin acceso directo a

@@ -34,5 +34,25 @@ export function buildSlotToEquipSlot(slot: BuildSlot): EquipSlot {
   return BUILD_SLOT_TO_EQUIP[slot];
 }
 
+// Posición de tocado (Item.position, tokens "Upper"/"Middle"/"Lower") exigida
+// por cada slot de tocado del build. El resto de slots no filtran por posición.
+export type HeadgearPosition = "Upper" | "Middle" | "Lower";
+export const BUILD_SLOT_POSITION: Partial<Record<BuildSlot, HeadgearPosition>> = {
+  HEADGEAR_TOP: "Upper",
+  HEADGEAR_MID: "Middle",
+  HEADGEAR_LOW: "Lower",
+};
+
+// ¿La posición de un item (lista separada por comas, p. ej. "Middle, Lower")
+// incluye la posición exigida? Sin exigencia → siempre encaja.
+export function positionAllows(
+  itemPosition: string | null | undefined,
+  required: HeadgearPosition | undefined,
+): boolean {
+  if (!required) return true;
+  if (!itemPosition) return false;
+  return itemPosition.split(",").some((p) => p.trim() === required);
+}
+
 export const MAX_BUILD_NAME_LENGTH = 60;
 export const MAX_BUILD_NOTES_LENGTH = 500;
