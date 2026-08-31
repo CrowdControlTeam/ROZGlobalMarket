@@ -5,15 +5,19 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { ItemIcon } from "@/components/ItemIcon";
-import { ItemPicker } from "@/app/market/ItemPicker";
+import { ItemPicker, type ItemResult } from "@/app/market/ItemPicker";
 import { CardPicker } from "./CardPicker";
 import type { BuildSlot, BuildTag, ItemOptionGroup } from "@/db/enums";
 import { BUILD_TAG_VALUES } from "@/db/enums";
 import { MAX_OPTION_SLOTS, emptyOptionSelections, type OptionSelection } from "@/lib/item-options-constants";
 import {
   BUILD_SLOTS,
+  HEADGEAR_SLOTS,
   buildSlotToEquipSlot,
   BUILD_SLOT_POSITION,
+  headgearPrimary,
+  parsePositions,
+  type HeadgearPosition,
   MAX_BUILD_NAME_LENGTH,
   MAX_BUILD_NOTES_LENGTH,
 } from "@/lib/build-constants";
@@ -30,7 +34,29 @@ export type OptionDef = {
   maxValue: number;
 };
 type JobOption = { id: number; name: string };
-type SlotItem = { id: string; name: string; iconUrl: string; slotCount: number; optionGroup: ItemOptionGroup | null };
+type SlotItem = {
+  id: string;
+  name: string;
+  iconUrl: string;
+  slotCount: number;
+  optionGroup: ItemOptionGroup | null;
+  // Ubicación del tocado ("Upper"/"Middle"/"Lower" o combinaciones); null en el
+  // resto. Determina qué slots ocupa (ocupación multi-slot).
+  position: string | null;
+};
+
+// Construye el SlotItem desde un resultado del picker (mismo campos en pick y
+// change).
+function toSlotItem(item: ItemResult): SlotItem {
+  return {
+    id: item.id,
+    name: item.name,
+    iconUrl: item.iconUrl,
+    slotCount: item.slotCount,
+    optionGroup: item.optionGroup,
+    position: item.position ?? null,
+  };
+}
 type CardSel = { id: string; name: string; iconUrl: string } | null;
 export type SlotState = { item: SlotItem; refine: number; options: OptionSelection[]; cards: CardSel[] };
 
@@ -101,6 +127,33 @@ export function BuildEditor({
       delete next[slot];
       return next;
     });
+  }
+
+  // Ocupación de tocados: cada tocado ocupa TODAS sus posiciones (Item.position)
+  // y se guarda en su slot principal (la posición más alta que ocupa). Las demás
+  // posiciones quedan bloqueadas (secundarias), como en el juego.
+  const headOcc = new Map<HeadgearPosition, { primarySlot: BuildSlot; item: SlotItem }>();
+  for (const hs of HEADGEAR_SLOTS) {
+    const s = slots[hs];
+    if (!s) continue;
+    for (const p of parsePositions(s.item.position)) headOcc.set(p, { primarySlot: hs, item: s.item });
+  }
+  // Props extra por slot de tocado: si está ocupado por OTRO tocado → secundario
+  // (bloqueado); si no, el filtro del picker (solo items cuyo slot principal es
+  // este y que no se solapen con lo ya ocupado por otros).
+  function headgearProps(slot: BuildSlot): { secondary?: { item: SlotItem; onRemove: () => void }; pickerFilter?: (item: ItemResult) => boolean } {
+    const pos = BUILD_SLOT_POSITION[slot];
+    if (!pos) return {};
+    const occ = headOcc.get(pos);
+    if (occ && occ.primarySlot !== slot) {
+      return { secondary: { item: occ.item, onRemove: () => clearSlot(occ.primarySlot) } };
+    }
+    const blocked = new Set<HeadgearPosition>();
+    for (const [p, o] of headOcc) if (o.primarySlot !== slot) blocked.add(p);
+    return {
+      pickerFilter: (item: ItemResult) =>
+        headgearPrimary(item.position) === pos && parsePositions(item.position).every((p) => !blocked.has(p)),
+    };
   }
 
   const canSave = name.trim().length > 0 && jobId !== null && tags.length > 0 && !isPending;
@@ -235,6 +288,7 @@ export function BuildEditor({
                 onChangeItem={(item) => changeItem(slot, item)}
                 onClear={() => clearSlot(slot)}
                 onPatch={(patch) => patchSlot(slot, patch)}
+                {...headgearProps(slot)}
               />
             </li>
           ))}
@@ -269,6 +323,8 @@ function BuildSlotRow({
   onChangeItem,
   onClear,
   onPatch,
+  secondary,
+  pickerFilter,
 }: {
   slot: BuildSlot;
   state: SlotState | undefined;
@@ -278,10 +334,38 @@ function BuildSlotRow({
   onChangeItem: (item: SlotItem) => void;
   onClear: () => void;
   onPatch: (patch: Partial<SlotState>) => void;
+  // Tocado ocupado por otro item multi-slot: se muestra bloqueado (solo lectura).
+  secondary?: { item: SlotItem; onRemove: () => void };
+  // Filtro extra del picker (ocupación multi-slot de tocados).
+  pickerFilter?: (item: ItemResult) => boolean;
 }) {
   const t = useTranslations("builds.form");
   const tSlot = useTranslations("builds.slots");
   const [changing, setChanging] = useState(false);
+
+  // Ocupado por un tocado multi-slot guardado en otro slot: bloqueado.
+  if (secondary) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-dashed border-ro-panel-border bg-ro-panel-alt/40 p-2">
+        <span className="w-28 shrink-0 text-xs font-semibold text-ro-text-muted">{tSlot(slot)}</span>
+        <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel opacity-70">
+          <ItemIcon item={secondary.item} width={28} height={28} alt="" />
+        </div>
+        <p className="min-w-0 flex-1 truncate text-sm text-ro-text-muted">
+          {t("occupiedBy", { item: secondary.item.name })}
+        </p>
+        <button
+          type="button"
+          onClick={secondary.onRemove}
+          aria-label={t("remove")}
+          title={t("remove")}
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel hover:text-ro-text"
+        >
+          <X size={15} />
+        </button>
+      </div>
+    );
+  }
 
   if (!state) {
     return (
@@ -290,12 +374,11 @@ function BuildSlotRow({
         <div className="min-w-0 flex-1">
           <ItemPicker
             selected={null}
-            onSelect={(item) =>
-              onPick({ id: item.id, name: item.name, iconUrl: item.iconUrl, slotCount: item.slotCount, optionGroup: item.optionGroup })
-            }
+            onSelect={(item) => onPick(toSlotItem(item))}
             onClear={() => {}}
             slotFilter={buildSlotToEquipSlot(slot)}
             positionFilter={BUILD_SLOT_POSITION[slot]}
+            filterResult={pickerFilter}
           />
         </div>
       </div>
@@ -326,12 +409,13 @@ function BuildSlotRow({
               <ItemPicker
                 selected={null}
                 onSelect={(item) => {
-                  onChangeItem({ id: item.id, name: item.name, iconUrl: item.iconUrl, slotCount: item.slotCount, optionGroup: item.optionGroup });
+                  onChangeItem(toSlotItem(item));
                   setChanging(false);
                 }}
                 onClear={() => {}}
                 slotFilter={buildSlotToEquipSlot(slot)}
                 positionFilter={BUILD_SLOT_POSITION[slot]}
+                filterResult={pickerFilter}
               />
             </div>
             <button

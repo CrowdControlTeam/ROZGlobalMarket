@@ -768,6 +768,7 @@
       "slotsLabel": "Pieces",
       "refine": "Refine",
       "changeItem": "Change",
+      "occupiedBy": "Occupied by {item}",
       "optionsLabel": "Options",
       "optionPlaceholder": "Option {slot}",
       "cardsLabel": "Cards",

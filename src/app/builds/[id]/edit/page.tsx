@@ -55,6 +55,7 @@ export default async function EditBuildPage({ params }: { params: Promise<{ id: 
         iconUrl: e.item.iconUrl,
         slotCount: e.item.slotCount,
         optionGroup: getItemOptionGroup(e.item, magicalTypes),
+        position: e.item.position,
       },
       refine: e.refineLevel,
       options,
