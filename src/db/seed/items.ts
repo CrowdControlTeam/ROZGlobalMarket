@@ -153,6 +153,7 @@ runSeed(async () => {
       slot: r.slot,
       weaponType: r.weaponType,
       slotCount: r.slotCount,
+      position: r.position ?? null,
     }));
   fs.writeFileSync("src/data/catalog-search.json", JSON.stringify(bundle));
   console.log(`Bundle comerciable: ${bundle.length} items → src/data/catalog-search.json`);

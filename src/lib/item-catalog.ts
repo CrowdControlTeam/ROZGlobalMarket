@@ -17,6 +17,10 @@ export type CatalogItem = {
   // Nº de ranuras de carta del item (fijo por id) — lo usan el match del
   // reconocimiento (nombre + slots) y la vista previa.
   slotCount: number;
+  // Ubicación del tocado ("Upper"/"Middle"/"Lower", o combinaciones separadas
+  // por comas). Solo relevante para headgears; null en el resto. Lo usa el
+  // filtrado por slot del editor de builds.
+  position?: string | null;
 };
 
 const CATALOG = catalogData as unknown as CatalogItem[];

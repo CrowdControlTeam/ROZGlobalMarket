@@ -13,6 +13,7 @@ import { MAX_OPTION_SLOTS, emptyOptionSelections, type OptionSelection } from "@
 import {
   BUILD_SLOTS,
   buildSlotToEquipSlot,
+  BUILD_SLOT_POSITION,
   MAX_BUILD_NAME_LENGTH,
   MAX_BUILD_NOTES_LENGTH,
 } from "@/lib/build-constants";
@@ -294,6 +295,7 @@ function BuildSlotRow({
             }
             onClear={() => {}}
             slotFilter={buildSlotToEquipSlot(slot)}
+            positionFilter={BUILD_SLOT_POSITION[slot]}
           />
         </div>
       </div>
@@ -329,6 +331,7 @@ function BuildSlotRow({
                 }}
                 onClear={() => {}}
                 slotFilter={buildSlotToEquipSlot(slot)}
+                positionFilter={BUILD_SLOT_POSITION[slot]}
               />
             </div>
             <button

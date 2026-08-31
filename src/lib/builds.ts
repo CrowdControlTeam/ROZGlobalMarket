@@ -18,7 +18,13 @@ import { loadMaxRefineLevel } from "@/lib/refine";
 import { getJob } from "@/lib/skill-planner";
 import { itemFitsSlot } from "@/lib/item-slots";
 import { loadMagicalWeaponTypes, getItemOptionGroup, validateOptions } from "@/lib/item-options";
-import { buildSlotToEquipSlot, MAX_BUILD_NAME_LENGTH, MAX_BUILD_NOTES_LENGTH } from "@/lib/build-constants";
+import {
+  buildSlotToEquipSlot,
+  BUILD_SLOT_POSITION,
+  positionAllows,
+  MAX_BUILD_NAME_LENGTH,
+  MAX_BUILD_NOTES_LENGTH,
+} from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
 
 const itemCols = { id: true, name: true, iconUrl: true, slotCount: true } as const;
@@ -151,6 +157,7 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
         slot: itemTable.slot,
         weaponType: itemTable.weaponType,
         slotCount: itemTable.slotCount,
+        position: itemTable.position,
       })
       .from(itemTable)
       .where(inArray(itemTable.id, allIds));
@@ -160,6 +167,8 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
       const it = byId.get(e.itemId);
       if (!it) throw new Error(t("itemNotFound"));
       if (!itemFitsSlot(it, buildSlotToEquipSlot(e.slot))) throw new Error(t("buildItemSlotMismatch"));
+      // Tocados: el item debe poder ir en la posición del slot (Upper/Middle/Lower).
+      if (!positionAllows(it.position, BUILD_SLOT_POSITION[e.slot])) throw new Error(t("buildItemSlotMismatch"));
       if (e.refineLevel > maxRefine) throw new Error(t("refineTooHigh", { max: maxRefine }));
 
       // Options: mismo validador que el mercado (grupo/slot/rango del def).
