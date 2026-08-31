@@ -767,6 +767,7 @@
       "notesPlaceholder": "Detalles de la build, sinergias, alternativas…",
       "slotsLabel": "Piezas",
       "refine": "Refino",
+      "changeItem": "Cambiar",
       "optionsLabel": "Options",
       "optionPlaceholder": "Option {slot}",
       "cardsLabel": "Cartas",

@@ -767,6 +767,7 @@
       "notesPlaceholder": "Build details, synergies, alternatives…",
       "slotsLabel": "Pieces",
       "refine": "Refine",
+      "changeItem": "Change",
       "optionsLabel": "Options",
       "optionPlaceholder": "Option {slot}",
       "cardsLabel": "Cards",

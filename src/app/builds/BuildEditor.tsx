@@ -83,6 +83,17 @@ export function BuildEditor({
       },
     }));
   }
+  // Cambiar el item de un slot YA relleno conservando refino, options y cartas
+  // (las cartas se redimensionan al slotCount del item nuevo: se mantienen las
+  // que caben y se rellenan con vacío si el nuevo admite más).
+  function changeItem(slot: BuildSlot, item: SlotItem) {
+    setSlots((prev) => {
+      const s = prev[slot];
+      if (!s) return { ...prev, [slot]: { item, refine: 0, options: emptyOptionSelections(), cards: Array.from({ length: item.slotCount }, () => null) } };
+      const cards = Array.from({ length: item.slotCount }, (_, i) => s.cards[i] ?? null);
+      return { ...prev, [slot]: { ...s, item, cards } };
+    });
+  }
   function clearSlot(slot: BuildSlot) {
     setSlots((prev) => {
       const next = { ...prev };
@@ -220,6 +231,7 @@ export function BuildEditor({
                 optionDefs={optionDefs}
                 maxRefine={maxRefine}
                 onPick={(item) => pickItem(slot, item)}
+                onChangeItem={(item) => changeItem(slot, item)}
                 onClear={() => clearSlot(slot)}
                 onPatch={(patch) => patchSlot(slot, patch)}
               />
@@ -253,6 +265,7 @@ function BuildSlotRow({
   optionDefs,
   maxRefine,
   onPick,
+  onChangeItem,
   onClear,
   onPatch,
 }: {
@@ -261,11 +274,13 @@ function BuildSlotRow({
   optionDefs: OptionDef[];
   maxRefine: number;
   onPick: (item: SlotItem) => void;
+  onChangeItem: (item: SlotItem) => void;
   onClear: () => void;
   onPatch: (patch: Partial<SlotState>) => void;
 }) {
   const t = useTranslations("builds.form");
   const tSlot = useTranslations("builds.slots");
+  const [changing, setChanging] = useState(false);
 
   if (!state) {
     return (
@@ -301,30 +316,64 @@ function BuildSlotRow({
     <div className="flex flex-col gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
       <div className="flex items-center gap-3">
         <span className="w-28 shrink-0 text-xs font-semibold text-ro-text-muted">{tSlot(slot)}</span>
-        <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
-          <ItemIcon item={state.item} width={28} height={28} refine={state.refine} alt="" />
-        </div>
-        <p className="min-w-0 flex-1 truncate text-sm text-ro-text">{state.item.name}</p>
-        <label className="flex items-center gap-1 text-xs text-ro-text-muted">
-          {t("refine")}
-          <input
-            type="number"
-            min={0}
-            max={maxRefine}
-            value={state.refine}
-            onChange={(e) => onPatch({ refine: Math.max(0, Math.min(maxRefine, Number(e.target.value) || 0)) })}
-            className={`${inputClass} h-8 w-16`}
-          />
-        </label>
-        <button
-          type="button"
-          onClick={onClear}
-          aria-label={t("remove")}
-          title={t("remove")}
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel hover:text-ro-text"
-        >
-          <X size={15} />
-        </button>
+        {changing ? (
+          // Cambiar item conservando refino/options/cartas: buscador inline. Al
+          // elegir, se sustituye el item (onChangeItem) y se sale del modo.
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <ItemPicker
+                selected={null}
+                onSelect={(item) => {
+                  onChangeItem({ id: item.id, name: item.name, iconUrl: item.iconUrl, slotCount: item.slotCount, optionGroup: item.optionGroup });
+                  setChanging(false);
+                }}
+                onClear={() => {}}
+                slotFilter={buildSlotToEquipSlot(slot)}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setChanging(false)}
+              className="shrink-0 text-xs font-medium text-ro-text-muted hover:text-ro-text"
+            >
+              {t("cancel")}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel">
+              <ItemIcon item={state.item} width={28} height={28} refine={state.refine} alt="" />
+            </div>
+            <p className="min-w-0 flex-1 truncate text-sm text-ro-text">{state.item.name}</p>
+            <button
+              type="button"
+              onClick={() => setChanging(true)}
+              className="shrink-0 text-xs font-medium text-ro-accent hover:underline"
+            >
+              {t("changeItem")}
+            </button>
+            <label className="flex items-center gap-1 text-xs text-ro-text-muted">
+              {t("refine")}
+              <input
+                type="number"
+                min={0}
+                max={maxRefine}
+                value={state.refine}
+                onChange={(e) => onPatch({ refine: Math.max(0, Math.min(maxRefine, Number(e.target.value) || 0)) })}
+                className={`${inputClass} h-8 w-16`}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={onClear}
+              aria-label={t("remove")}
+              title={t("remove")}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel hover:text-ro-text"
+            >
+              <X size={15} />
+            </button>
+          </>
+        )}
       </div>
 
       {/* Options (si el item tiene grupo de options) */}
