@@ -1,7 +1,8 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { Pencil, PersonStanding } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { requireSession } from "@/lib/guard";
 import { getBuild } from "@/lib/builds";
 import { getJob } from "@/lib/skill-planner";
@@ -14,10 +15,11 @@ import { buttonClass } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-// Paperdoll estilo ventana de equipo del juego: dos columnas de 5 slots
-// flanqueando al personaje en el centro.
-const LEFT_SLOTS: readonly BuildSlot[] = ["HEADGEAR_TOP", "HEADGEAR_MID", "HEADGEAR_LOW", "ARMOR", "WEAPON"];
-const RIGHT_SLOTS: readonly BuildSlot[] = ["SHIELD", "GARMENT", "FOOTGEAR", "ACCESSORY_LEFT", "ACCESSORY_RIGHT"];
+// Paperdoll estilo ventana de equipo del juego: dos columnas de 5 slots. Orden
+// como en el juego — izquierda: tocados + arma + accesorio; derecha: armadura +
+// escudo + manto + calzado + accesorio.
+const LEFT_SLOTS: readonly BuildSlot[] = ["HEADGEAR_TOP", "HEADGEAR_MID", "HEADGEAR_LOW", "WEAPON", "ACCESSORY_LEFT"];
+const RIGHT_SLOTS: readonly BuildSlot[] = ["ARMOR", "SHIELD", "GARMENT", "FOOTGEAR", "ACCESSORY_RIGHT"];
 
 export default async function BuildDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -55,7 +57,7 @@ export default async function BuildDetailPage({ params }: { params: Promise<{ id
     const showExtras = head ? head.primary : true;
     return (
       <div
-        className={`flex min-h-[3.5rem] items-center gap-2 rounded-lg border border-ro-panel-border p-2 ${
+        className={`flex h-full min-h-[3.5rem] items-center gap-2 rounded-lg border border-ro-panel-border p-2 ${
           e ? "bg-ro-panel-alt" : "bg-ro-panel-alt/40"
         } ${mirror ? "flex-row-reverse text-right" : ""}`}
       >
@@ -126,25 +128,19 @@ export default async function BuildDetailPage({ params }: { params: Promise<{ id
         <p className="mt-3 whitespace-pre-wrap break-words text-sm text-ro-text">{buildRow.notes}</p>
       )}
 
-      {/* Paperdoll: columna izquierda · personaje · columna derecha. En móvil se
-          apila (personaje arriba y las dos columnas debajo). */}
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-stretch">
-        <div className="order-2 flex flex-1 flex-col gap-2 sm:order-1">
-          {LEFT_SLOTS.map((slot) => (
-            <div key={slot}>{cell(slot, false)}</div>
-          ))}
-        </div>
-        <div className="order-1 flex shrink-0 items-center justify-center sm:order-2 sm:w-36">
-          <div className="flex w-full flex-col items-center gap-2 rounded-xl border border-ro-panel-border bg-ro-panel-alt p-4 text-center">
-            <PersonStanding size={48} className="text-ro-text-muted" aria-hidden />
-            <span className="text-sm font-semibold text-ro-text">{jobName}</span>
-          </div>
-        </div>
-        <div className="order-3 flex flex-1 flex-col gap-2">
-          {RIGHT_SLOTS.map((slot) => (
-            <div key={slot}>{cell(slot, true)}</div>
-          ))}
-        </div>
+      {/* Paperdoll: dos columnas (izquierda / derecha). Las celdas van en una
+          única rejilla con filas de igual alto (auto-rows-fr), así todos los
+          slots ocupan lo mismo. Se intercalan izquierda/derecha por fila. */}
+      <div className="mt-5 grid grid-cols-1 gap-2 sm:auto-rows-fr sm:grid-cols-2">
+        {LEFT_SLOTS.map((left, i) => {
+          const right = RIGHT_SLOTS[i];
+          return (
+            <Fragment key={left}>
+              <div className="h-full">{cell(left, false)}</div>
+              <div className="h-full">{cell(right, true)}</div>
+            </Fragment>
+          );
+        })}
       </div>
     </main>
   );
