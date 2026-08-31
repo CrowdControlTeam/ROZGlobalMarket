@@ -23,7 +23,7 @@ export default async function BuildsPage() {
   const atLimit = myCount >= maxBuildsPerUser;
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-8">
+    <main className="mx-auto max-w-5xl px-6 py-8">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-ro-text">{t("title")}</h1>

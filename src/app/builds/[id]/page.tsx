@@ -100,7 +100,7 @@ export default async function BuildDetailPage({ params }: { params: Promise<{ id
   };
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
+    <main className="mx-auto max-w-5xl px-6 py-8">
       <BackLink href="/builds" label={t("form.back")} />
 
       <div className="flex items-start justify-between gap-3">

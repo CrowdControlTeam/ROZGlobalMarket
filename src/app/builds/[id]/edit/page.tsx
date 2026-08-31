@@ -73,7 +73,7 @@ export default async function EditBuildPage({ params }: { params: Promise<{ id: 
   };
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-8">
+    <main className="mx-auto max-w-5xl px-6 py-8">
       <BackLink href={`/builds/${id}`} label={t("back")} />
       <h1 className="mb-4 text-2xl font-extrabold text-ro-text">{t("editTitle")}</h1>
       <BuildEditor jobs={jobOptions()} maxRefine={maxRefine} optionDefs={optionDefs} initial={initial} />
