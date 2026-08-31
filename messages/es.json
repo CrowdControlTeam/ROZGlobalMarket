@@ -783,9 +783,9 @@
       "noPieces": "Esta build no tiene piezas todavía."
     },
     "slots": {
-      "HEADGEAR_TOP": "Tocado superior",
-      "HEADGEAR_MID": "Tocado medio",
-      "HEADGEAR_LOW": "Tocado inferior",
+      "HEADGEAR_TOP": "Casco superior",
+      "HEADGEAR_MID": "Casco medio",
+      "HEADGEAR_LOW": "Casco inferior",
       "ARMOR": "Armadura",
       "WEAPON": "Arma",
       "SHIELD": "Escudo",

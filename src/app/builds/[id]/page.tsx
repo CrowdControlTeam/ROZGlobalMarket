@@ -15,11 +15,11 @@ import { buttonClass } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-// Paperdoll estilo ventana de equipo del juego: dos columnas de 5 slots. Orden
-// como en el juego — izquierda: tocados + arma + accesorio; derecha: armadura +
-// escudo + manto + calzado + accesorio.
-const LEFT_SLOTS: readonly BuildSlot[] = ["HEADGEAR_TOP", "HEADGEAR_MID", "HEADGEAR_LOW", "WEAPON", "ACCESSORY_LEFT"];
-const RIGHT_SLOTS: readonly BuildSlot[] = ["ARMOR", "SHIELD", "GARMENT", "FOOTGEAR", "ACCESSORY_RIGHT"];
+// Paperdoll estilo ventana de equipo del juego: dos columnas, leídas por filas
+// (izq, der): (1) upper HG · middle HG, (2) lower HG · armadura, (3) arma ·
+// escudo, (4) manto · calzado, (5) accesorio izq. · accesorio der.
+const LEFT_SLOTS: readonly BuildSlot[] = ["HEADGEAR_TOP", "HEADGEAR_LOW", "WEAPON", "GARMENT", "ACCESSORY_LEFT"];
+const RIGHT_SLOTS: readonly BuildSlot[] = ["HEADGEAR_MID", "ARMOR", "SHIELD", "FOOTGEAR", "ACCESSORY_RIGHT"];
 
 export default async function BuildDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
