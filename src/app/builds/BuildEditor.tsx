@@ -90,6 +90,11 @@ export function BuildEditor({
   const [tags, setTags] = useState<BuildTag[]>(initial?.tags ?? []);
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [slots, setSlots] = useState<Partial<Record<BuildSlot, SlotState>>>(initial?.slots ?? {});
+  // Slot cuyo item se está cambiando (buscador abierto). Se eleva aquí —no en la
+  // fila— para que la ocupación de tocados lo trate como "libre" mientras se
+  // cambia (así un tocado multi-slot desbloquea sus otras ranuras), y vuelva a
+  // bloquearlas si se cancela.
+  const [changingSlot, setChangingSlot] = useState<BuildSlot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -134,6 +139,9 @@ export function BuildEditor({
   // posiciones quedan bloqueadas (secundarias), como en el juego.
   const headOcc = new Map<HeadgearPosition, { primarySlot: BuildSlot; item: SlotItem }>();
   for (const hs of HEADGEAR_SLOTS) {
+    // El slot en modo "cambiar" se trata como libre: así sus otras posiciones se
+    // desbloquean mientras se elige el nuevo item (y se re-bloquean al cancelar).
+    if (hs === changingSlot) continue;
     const s = slots[hs];
     if (!s) continue;
     for (const p of parsePositions(s.item.position)) headOcc.set(p, { primarySlot: hs, item: s.item });
@@ -285,9 +293,15 @@ export function BuildEditor({
                 optionDefs={optionDefs}
                 maxRefine={maxRefine}
                 onPick={(item) => pickItem(slot, item)}
-                onChangeItem={(item) => changeItem(slot, item)}
+                onChangeItem={(item) => {
+                  changeItem(slot, item);
+                  setChangingSlot(null);
+                }}
                 onClear={() => clearSlot(slot)}
                 onPatch={(patch) => patchSlot(slot, patch)}
+                isChanging={changingSlot === slot}
+                onStartChange={() => setChangingSlot(slot)}
+                onCancelChange={() => setChangingSlot(null)}
                 {...headgearProps(slot)}
               />
             </li>
@@ -325,6 +339,9 @@ function BuildSlotRow({
   onPatch,
   secondary,
   pickerFilter,
+  isChanging,
+  onStartChange,
+  onCancelChange,
 }: {
   slot: BuildSlot;
   state: SlotState | undefined;
@@ -338,10 +355,14 @@ function BuildSlotRow({
   secondary?: { item: SlotItem; onRemove: () => void };
   // Filtro extra del picker (ocupación multi-slot de tocados).
   pickerFilter?: (item: ItemResult) => boolean;
+  // "Cambiar" controlado desde el padre (para que la ocupación se recalcule).
+  isChanging: boolean;
+  onStartChange: () => void;
+  onCancelChange: () => void;
 }) {
   const t = useTranslations("builds.form");
   const tSlot = useTranslations("builds.slots");
-  const [changing, setChanging] = useState(false);
+  const changing = isChanging;
 
   // Ocupado por un tocado multi-slot guardado en otro slot: bloqueado.
   if (secondary) {
@@ -408,10 +429,7 @@ function BuildSlotRow({
             <div className="min-w-0 flex-1">
               <ItemPicker
                 selected={null}
-                onSelect={(item) => {
-                  onChangeItem(toSlotItem(item));
-                  setChanging(false);
-                }}
+                onSelect={(item) => onChangeItem(toSlotItem(item))}
                 onClear={() => {}}
                 slotFilter={buildSlotToEquipSlot(slot)}
                 positionFilter={BUILD_SLOT_POSITION[slot]}
@@ -420,7 +438,7 @@ function BuildSlotRow({
             </div>
             <button
               type="button"
-              onClick={() => setChanging(false)}
+              onClick={onCancelChange}
               className="shrink-0 text-xs font-medium text-ro-text-muted hover:text-ro-text"
             >
               {t("cancel")}
@@ -434,7 +452,7 @@ function BuildSlotRow({
             <p className="min-w-0 flex-1 truncate text-sm text-ro-text">{state.item.name}</p>
             <button
               type="button"
-              onClick={() => setChanging(true)}
+              onClick={onStartChange}
               className="shrink-0 text-xs font-medium text-ro-accent hover:underline"
             >
               {t("changeItem")}
