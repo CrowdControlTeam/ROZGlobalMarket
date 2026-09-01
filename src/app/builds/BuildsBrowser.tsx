@@ -174,13 +174,15 @@ export function BuildsBrowser({
                     <button
                       type="button"
                       onClick={() => setSelectedId(b.id)}
-                      className={`flex w-full items-center gap-3 rounded-xl border bg-ro-panel p-3 text-left transition-colors ${
+                      className={`flex w-full flex-col gap-2 rounded-xl border bg-ro-panel p-3 text-left transition-colors ${
                         active ? "border-ro-accent" : "border-ro-panel-border hover:border-ro-accent"
                       }`}
                     >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-ro-text">{b.name}</p>
-                        <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ro-text-muted">
+                      {/* Nombre a todo el ancho: los iconos van en la fila de
+                          abajo, así un nombre largo nunca se solapa con ellos. */}
+                      <p className="truncate text-sm font-bold text-ro-text">{b.name}</p>
+                      <div className="flex items-end justify-between gap-3">
+                        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ro-text-muted">
                           <span className="font-semibold text-ro-text">{getJob(b.jobId)?.name ?? "—"}</span>
                           <span>· {b.owner.id === meId ? t("list.you") : b.owner.username}</span>
                           {b.tags.map((tag) => (
@@ -189,14 +191,14 @@ export function BuildsBrowser({
                             </span>
                           ))}
                         </p>
-                      </div>
-                      {/* Iconos de las piezas (hasta 10) como vista rápida. */}
-                      <div className="flex shrink-0 -space-x-1">
-                        {b.entries.slice(0, 10).map((e) => (
-                          <div key={e.id} className="grid h-7 w-7 place-items-center overflow-hidden rounded border border-ro-panel-border bg-ro-panel-alt">
-                            <ItemIcon item={e.item} width={22} height={22} alt="" />
-                          </div>
-                        ))}
+                        {/* Iconos de las piezas (hasta 10) como vista rápida. */}
+                        <div className="flex shrink-0 -space-x-1">
+                          {b.entries.slice(0, 10).map((e) => (
+                            <div key={e.id} className="grid h-7 w-7 place-items-center overflow-hidden rounded border border-ro-panel-border bg-ro-panel-alt">
+                              <ItemIcon item={e.item} width={22} height={22} alt="" />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </button>
                   </li>
