@@ -780,7 +780,9 @@
       "deleteBuild": "Borrar build"
     },
     "detail": {
-      "noPieces": "Esta build no tiene piezas todavía."
+      "noPieces": "Esta build no tiene piezas todavía.",
+      "searchMarket": "Buscar en el mercado",
+      "onSale": "{n} en venta"
     },
     "slots": {
       "HEADGEAR_TOP": "Casco superior",

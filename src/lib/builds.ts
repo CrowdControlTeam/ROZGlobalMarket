@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   build,
@@ -10,6 +10,7 @@ import {
   buildEntryOption,
   buildEntryCard,
   item as itemTable,
+  listing,
 } from "@/db/schema";
 import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES, ItemCategory } from "@/db/enums";
 import { requireSession } from "@/lib/guard";
@@ -88,6 +89,28 @@ export async function getMyBuild(id: string) {
   if (!row) return null;
   if (row.ownerId !== session.user.discordId) return null;
   return row;
+}
+
+// Disponibilidad en el mercado de los items de una build: nº de publicaciones de
+// VENTA activas (no caducadas) por itemId. Para los badges "en venta" del
+// detalle. Mismo criterio de "activo" que el grid del mercado.
+export async function buildMarketAvailability(itemIds: string[]): Promise<Map<string, number>> {
+  await requireSession();
+  const ids = [...new Set(itemIds)];
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({ itemId: listing.itemId, n: count() })
+    .from(listing)
+    .where(
+      and(
+        inArray(listing.itemId, ids),
+        eq(listing.status, "ACTIVE"),
+        eq(listing.type, "SALE"),
+        or(isNull(listing.expiresAt), gt(listing.expiresAt, sql`now()`)),
+      ),
+    )
+    .groupBy(listing.itemId);
+  return new Map(rows.map((r) => [r.itemId, r.n]));
 }
 
 // Cuántas builds tiene el usuario actual (para el tope de "Crear").

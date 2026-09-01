@@ -780,7 +780,9 @@
       "deleteBuild": "Delete build"
     },
     "detail": {
-      "noPieces": "This build has no pieces yet."
+      "noPieces": "This build has no pieces yet.",
+      "searchMarket": "Search the market",
+      "onSale": "{n} on sale"
     },
     "slots": {
       "HEADGEAR_TOP": "Upper headgear",
