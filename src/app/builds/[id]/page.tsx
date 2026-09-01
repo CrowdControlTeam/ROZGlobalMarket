@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { Pencil, Store } from "lucide-react";
+import { Pencil, Search } from "lucide-react";
 import { requireSession } from "@/lib/guard";
 import { getBuild, buildMarketAvailability } from "@/lib/builds";
 import { getJob } from "@/lib/skill-planner";
@@ -34,6 +34,24 @@ export default async function BuildDetailPage({ params }: { params: Promise<{ id
   // muestra en TODAS sus celdas. `primary` marca la celda donde se guarda (ahí
   // van las options/cartas; en las demás solo el item).
   type Entry = (typeof buildRow.entries)[number];
+
+  // Enlace al mercado por pieza: nombre + refino (≥) + nº de ranuras + options
+  // (stat ≥ valor). El mercado no filtra por cartas concretas, así que se incluye
+  // el nº de ranuras (variante), no la carta en sí.
+  const marketHref = (e: Entry) => {
+    const p = new URLSearchParams();
+    p.set("newTab", "1");
+    p.set("q", e.item.name);
+    if (e.refineLevel > 0) p.set("refineMin", String(e.refineLevel));
+    p.set("cardSlotsMin", String(e.item.slotCount));
+    p.set("cardSlotsMax", String(e.item.slotCount));
+    for (const o of e.options) {
+      p.set(`option${o.slotIndex}Stat`, o.def.statCode);
+      p.set(`option${o.slotIndex}Min`, String(o.value));
+    }
+    return `/market?${p.toString()}`;
+  };
+
   const headAt = new Map<BuildSlot, { e: Entry; primary: boolean }>();
   for (const e of buildRow.entries) {
     for (const p of parsePositions(e.item.position)) {
@@ -90,11 +108,12 @@ export default async function BuildDetailPage({ params }: { params: Promise<{ id
               {showExtras && (
                 <div className={`mt-1 flex items-center gap-2 ${mirror ? "justify-end" : ""}`}>
                   <Link
-                    href={`/market?newTab=1&q=${encodeURIComponent(e.item.name)}`}
-                    className="inline-flex items-center gap-1 text-[0.65rem] font-medium text-ro-accent hover:underline"
+                    href={marketHref(e)}
+                    aria-label={t("detail.searchMarket")}
+                    title={t("detail.searchMarket")}
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-ro-panel-border text-ro-accent transition-colors hover:bg-ro-accent/10"
                   >
-                    <Store size={12} aria-hidden />
-                    {t("detail.searchMarket")}
+                    <Search size={14} aria-hidden />
                   </Link>
                   {onSale > 0 && (
                     <span className="rounded bg-green-600/15 px-1 py-0.5 text-[0.65rem] font-semibold text-green-600">
