@@ -178,18 +178,25 @@ export function BuildsBrowser({
                         active ? "border-ro-accent" : "border-ro-panel-border hover:border-ro-accent"
                       }`}
                     >
-                      {/* Nombre a todo el ancho: los iconos van en la fila de
-                          abajo, así un nombre largo nunca se solapa con ellos. */}
-                      <p className="truncate text-sm font-bold text-ro-text">{b.name}</p>
+                      {/* Fila del nombre: nombre a la izquierda y las etiquetas
+                          en la esquina superior derecha. Los iconos van en la
+                          fila de abajo, así un nombre largo no se solapa. */}
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 flex-1 truncate text-sm font-bold text-ro-text">{b.name}</p>
+                        {b.tags.length > 0 && (
+                          <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                            {b.tags.map((tag) => (
+                              <span key={tag} className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1 py-0.5 text-[0.65rem] text-ro-accent">
+                                {tTag(tag)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <div className="flex items-end justify-between gap-3">
                         <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ro-text-muted">
                           <span className="font-semibold text-ro-text">{getJob(b.jobId)?.name ?? "—"}</span>
                           <span>· {b.owner.id === meId ? t("list.you") : b.owner.username}</span>
-                          {b.tags.map((tag) => (
-                            <span key={tag} className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1 py-0.5 text-[0.65rem] text-ro-accent">
-                              {tTag(tag)}
-                            </span>
-                          ))}
                         </p>
                         {/* Iconos de las piezas (hasta 10) como vista rápida. */}
                         <div className="flex shrink-0 -space-x-1">
