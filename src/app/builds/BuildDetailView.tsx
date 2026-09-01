@@ -3,7 +3,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Pencil, Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search, Store } from "lucide-react";
 import type { BuildSlot } from "@/db/enums";
 import { getJob } from "@/lib/skill-planner";
 import { parsePositions, POSITION_TO_SLOT, PAPERDOLL_LEFT, PAPERDOLL_RIGHT } from "@/lib/build-constants";
@@ -34,6 +34,14 @@ export function BuildDetailView({
   const isOwner = build.owner.id === meId;
   const jobName = getJob(build.jobId)?.name ?? "—";
   const bySlot = new Map(build.entries.map((e) => [e.slot, e]));
+
+  // Botón "buscar todo en el mercado": abre una pestaña nueva del mercado
+  // filtrada por TODOS los items de la build (filtro itemIds). null si vacía.
+  const itemIds = [...new Set(build.entries.map((e) => e.item.id))];
+  const searchAllHref =
+    itemIds.length > 0
+      ? `/market?${new URLSearchParams({ newTab: "1", itemIds: itemIds.join(",") }).toString()}`
+      : null;
 
   // Ocupación de tocados: un tocado multi-slot (p. ej. "Middle, Lower") se
   // muestra en TODAS sus celdas. `primary` marca la celda donde se guarda (ahí
@@ -187,12 +195,20 @@ export function BuildDetailView({
             <span className="min-w-0 break-all">· {isOwner ? t("list.you") : build.owner.username}</span>
           </p>
         </div>
-        {isOwner && (
-          <Link href={`/builds/${build.id}/edit`} className={`shrink-0 ${buttonClass("outline")}`}>
-            <Pencil size={15} aria-hidden />
-            {t("list.edit")}
-          </Link>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {searchAllHref && (
+            <Link href={searchAllHref} className={buttonClass("outline")}>
+              <Store size={15} aria-hidden />
+              <span className="hidden sm:inline">{t("detail.searchAllMarket")}</span>
+            </Link>
+          )}
+          {isOwner && (
+            <Link href={`/builds/${build.id}/edit`} className={buttonClass("outline")}>
+              <Pencil size={15} aria-hidden />
+              {t("list.edit")}
+            </Link>
+          )}
+        </div>
       </div>
 
       {build.notes && (
