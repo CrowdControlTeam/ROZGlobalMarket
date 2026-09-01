@@ -371,6 +371,7 @@
       "buyOptionsHint": "Search buy requests that match these values.",
       "name": "Name",
       "namePlaceholder": "Search item...",
+      "clearName": "Clear search",
       "poster": "User",
       "type": "Type",
       "all": "All",

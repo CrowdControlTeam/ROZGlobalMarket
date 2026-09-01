@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ItemIcon } from "@/components/ItemIcon";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal, X } from "lucide-react";
 import { loadMoreListings } from "@/lib/market-actions";
 import type { MarketFilters } from "@/lib/market";
 import { buttonClass } from "@/lib/ui";
@@ -516,6 +516,17 @@ export function MarketResults({
               aria-label={t("filters.name")}
               className="min-w-0 flex-1 bg-transparent text-xs text-ro-text placeholder:text-ro-text-muted focus:outline-none"
             />
+            {q && (
+              <button
+                type="button"
+                onClick={() => setSearchFilter("q", "")}
+                aria-label={t("filters.clearName")}
+                title={t("filters.clearName")}
+                className="grid h-5 w-5 shrink-0 place-items-center rounded text-ro-text-muted transition-colors hover:bg-ro-panel-border/60 hover:text-ro-text"
+              >
+                <X size={14} aria-hidden />
+              </button>
+            )}
           </form>
         </div>
         {/* Fila B: resultados + orden (+ vista solo en desktop). */}

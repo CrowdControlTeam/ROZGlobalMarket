@@ -371,6 +371,7 @@
       "buyOptionsHint": "Busca compras que cumplan estos valores.",
       "name": "Nombre",
       "namePlaceholder": "Buscar item...",
+      "clearName": "Borrar búsqueda",
       "poster": "Usuario",
       "type": "Tipo",
       "all": "Todas",
