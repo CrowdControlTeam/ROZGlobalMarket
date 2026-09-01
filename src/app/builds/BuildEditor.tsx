@@ -1,25 +1,31 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { ItemIcon } from "@/components/ItemIcon";
-import { ItemPicker } from "@/app/market/ItemPicker";
+import { ItemPicker, type ItemResult } from "@/app/market/ItemPicker";
 import { CardPicker } from "./CardPicker";
 import type { BuildSlot, BuildTag, ItemOptionGroup } from "@/db/enums";
 import { BUILD_TAG_VALUES } from "@/db/enums";
 import { MAX_OPTION_SLOTS, emptyOptionSelections, type OptionSelection } from "@/lib/item-options-constants";
 import {
   BUILD_SLOTS,
+  HEADGEAR_SLOTS,
+  PAPERDOLL_LEFT,
+  PAPERDOLL_RIGHT,
   buildSlotToEquipSlot,
   BUILD_SLOT_POSITION,
+  headgearPrimary,
+  parsePositions,
+  type HeadgearPosition,
   MAX_BUILD_NAME_LENGTH,
   MAX_BUILD_NOTES_LENGTH,
 } from "@/lib/build-constants";
 import { createBuild, updateBuild, deleteBuild, type BuildInput } from "@/lib/builds";
 import { getErrorMessage } from "@/lib/errors";
-import { buttonClass, inputClass } from "@/lib/ui";
+import { buttonClass, inputClass, inputBaseClass, selectClass } from "@/lib/ui";
 
 export type OptionDef = {
   id: string;
@@ -30,7 +36,29 @@ export type OptionDef = {
   maxValue: number;
 };
 type JobOption = { id: number; name: string };
-type SlotItem = { id: string; name: string; iconUrl: string; slotCount: number; optionGroup: ItemOptionGroup | null };
+type SlotItem = {
+  id: string;
+  name: string;
+  iconUrl: string;
+  slotCount: number;
+  optionGroup: ItemOptionGroup | null;
+  // Ubicación del tocado ("Upper"/"Middle"/"Lower" o combinaciones); null en el
+  // resto. Determina qué slots ocupa (ocupación multi-slot).
+  position: string | null;
+};
+
+// Construye el SlotItem desde un resultado del picker (mismo campos en pick y
+// change).
+function toSlotItem(item: ItemResult): SlotItem {
+  return {
+    id: item.id,
+    name: item.name,
+    iconUrl: item.iconUrl,
+    slotCount: item.slotCount,
+    optionGroup: item.optionGroup,
+    position: item.position ?? null,
+  };
+}
 type CardSel = { id: string; name: string; iconUrl: string } | null;
 export type SlotState = { item: SlotItem; refine: number; options: OptionSelection[]; cards: CardSel[] };
 
@@ -64,6 +92,11 @@ export function BuildEditor({
   const [tags, setTags] = useState<BuildTag[]>(initial?.tags ?? []);
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [slots, setSlots] = useState<Partial<Record<BuildSlot, SlotState>>>(initial?.slots ?? {});
+  // Slot cuyo item se está cambiando (buscador abierto). Se eleva aquí —no en la
+  // fila— para que la ocupación de tocados lo trate como "libre" mientras se
+  // cambia (así un tocado multi-slot desbloquea sus otras ranuras), y vuelva a
+  // bloquearlas si se cancela.
+  const [changingSlot, setChangingSlot] = useState<BuildSlot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -102,6 +135,56 @@ export function BuildEditor({
       return next;
     });
   }
+
+  // Ocupación de tocados: cada tocado ocupa TODAS sus posiciones (Item.position)
+  // y se guarda en su slot principal (la posición más alta que ocupa). Las demás
+  // posiciones quedan bloqueadas (secundarias), como en el juego.
+  const headOcc = new Map<HeadgearPosition, { primarySlot: BuildSlot; item: SlotItem }>();
+  for (const hs of HEADGEAR_SLOTS) {
+    // El slot en modo "cambiar" se trata como libre: así sus otras posiciones se
+    // desbloquean mientras se elige el nuevo item (y se re-bloquean al cancelar).
+    if (hs === changingSlot) continue;
+    const s = slots[hs];
+    if (!s) continue;
+    for (const p of parsePositions(s.item.position)) headOcc.set(p, { primarySlot: hs, item: s.item });
+  }
+  // Props extra por slot de tocado: si está ocupado por OTRO tocado → secundario
+  // (bloqueado); si no, el filtro del picker (solo items cuyo slot principal es
+  // este y que no se solapen con lo ya ocupado por otros).
+  function headgearProps(slot: BuildSlot): { secondary?: { item: SlotItem; onRemove: () => void }; pickerFilter?: (item: ItemResult) => boolean } {
+    const pos = BUILD_SLOT_POSITION[slot];
+    if (!pos) return {};
+    const occ = headOcc.get(pos);
+    if (occ && occ.primarySlot !== slot) {
+      return { secondary: { item: occ.item, onRemove: () => clearSlot(occ.primarySlot) } };
+    }
+    const blocked = new Set<HeadgearPosition>();
+    for (const [p, o] of headOcc) if (o.primarySlot !== slot) blocked.add(p);
+    return {
+      pickerFilter: (item: ItemResult) =>
+        headgearPrimary(item.position) === pos && parsePositions(item.position).every((p) => !blocked.has(p)),
+    };
+  }
+
+  const renderSlot = (slot: BuildSlot) => (
+    <BuildSlotRow
+      slot={slot}
+      state={slots[slot]}
+      optionDefs={optionDefs}
+      maxRefine={maxRefine}
+      onPick={(item) => pickItem(slot, item)}
+      onChangeItem={(item) => {
+        changeItem(slot, item);
+        setChangingSlot(null);
+      }}
+      onClear={() => clearSlot(slot)}
+      onPatch={(patch) => patchSlot(slot, patch)}
+      isChanging={changingSlot === slot}
+      onStartChange={() => setChangingSlot(slot)}
+      onCancelChange={() => setChangingSlot(null)}
+      {...headgearProps(slot)}
+    />
+  );
 
   const canSave = name.trim().length > 0 && jobId !== null && tags.length > 0 && !isPending;
 
@@ -223,22 +306,16 @@ export function BuildEditor({
 
       <div className="flex flex-col gap-2">
         <span className="text-sm font-semibold text-ro-text">{t("slotsLabel")}</span>
-        <ul className="flex flex-col gap-2">
-          {BUILD_SLOTS.map((slot) => (
-            <li key={slot}>
-              <BuildSlotRow
-                slot={slot}
-                state={slots[slot]}
-                optionDefs={optionDefs}
-                maxRefine={maxRefine}
-                onPick={(item) => pickItem(slot, item)}
-                onChangeItem={(item) => changeItem(slot, item)}
-                onClear={() => clearSlot(slot)}
-                onPatch={(patch) => patchSlot(slot, patch)}
-              />
-            </li>
+        {/* Paperdoll (ventana de equipo): 2 columnas × 5 filas, mismo orden que
+            el detalle. items-start: cada celda crece con sus options/cartas. */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:items-start">
+          {PAPERDOLL_LEFT.map((left, i) => (
+            <Fragment key={left}>
+              {renderSlot(left)}
+              {renderSlot(PAPERDOLL_RIGHT[i])}
+            </Fragment>
           ))}
-        </ul>
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
@@ -269,6 +346,11 @@ function BuildSlotRow({
   onChangeItem,
   onClear,
   onPatch,
+  secondary,
+  pickerFilter,
+  isChanging,
+  onStartChange,
+  onCancelChange,
 }: {
   slot: BuildSlot;
   state: SlotState | undefined;
@@ -278,26 +360,61 @@ function BuildSlotRow({
   onChangeItem: (item: SlotItem) => void;
   onClear: () => void;
   onPatch: (patch: Partial<SlotState>) => void;
+  // Tocado ocupado por otro item multi-slot: se muestra bloqueado (solo lectura).
+  secondary?: { item: SlotItem; onRemove: () => void };
+  // Filtro extra del picker (ocupación multi-slot de tocados).
+  pickerFilter?: (item: ItemResult) => boolean;
+  // "Cambiar" controlado desde el padre (para que la ocupación se recalcule).
+  isChanging: boolean;
+  onStartChange: () => void;
+  onCancelChange: () => void;
 }) {
   const t = useTranslations("builds.form");
   const tSlot = useTranslations("builds.slots");
-  const [changing, setChanging] = useState(false);
+  const changing = isChanging;
+
+  const slotLabel = (
+    <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-ro-text-muted">{tSlot(slot)}</span>
+  );
+
+  // Ocupado por un tocado multi-slot guardado en otro slot: bloqueado.
+  if (secondary) {
+    return (
+      <div className="flex flex-col gap-1.5 rounded-lg border border-dashed border-ro-panel-border bg-ro-panel-alt/40 p-2">
+        {slotLabel}
+        <div className="flex items-center gap-2">
+          <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel opacity-70">
+            <ItemIcon item={secondary.item} width={26} height={26} alt="" />
+          </div>
+          <p className="min-w-0 flex-1 truncate text-sm text-ro-text-muted">
+            {t("occupiedBy", { item: secondary.item.name })}
+          </p>
+          <button
+            type="button"
+            onClick={secondary.onRemove}
+            aria-label={t("remove")}
+            title={t("remove")}
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel hover:text-ro-text"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!state) {
     return (
-      <div className="flex items-center gap-3 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
-        <span className="w-28 shrink-0 text-xs font-semibold text-ro-text-muted">{tSlot(slot)}</span>
-        <div className="min-w-0 flex-1">
-          <ItemPicker
-            selected={null}
-            onSelect={(item) =>
-              onPick({ id: item.id, name: item.name, iconUrl: item.iconUrl, slotCount: item.slotCount, optionGroup: item.optionGroup })
-            }
-            onClear={() => {}}
-            slotFilter={buildSlotToEquipSlot(slot)}
-            positionFilter={BUILD_SLOT_POSITION[slot]}
-          />
-        </div>
+      <div className="flex flex-col gap-1.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
+        {slotLabel}
+        <ItemPicker
+          selected={null}
+          onSelect={(item) => onPick(toSlotItem(item))}
+          onClear={() => {}}
+          slotFilter={buildSlotToEquipSlot(slot)}
+          positionFilter={BUILD_SLOT_POSITION[slot]}
+          filterResult={pickerFilter}
+        />
       </div>
     );
   }
@@ -316,8 +433,8 @@ function BuildSlotRow({
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
-      <div className="flex items-center gap-3">
-        <span className="w-28 shrink-0 text-xs font-semibold text-ro-text-muted">{tSlot(slot)}</span>
+      {slotLabel}
+      <div className="flex items-center gap-2">
         {changing ? (
           // Cambiar item conservando refino/options/cartas: buscador inline. Al
           // elegir, se sustituye el item (onChangeItem) y se sale del modo.
@@ -325,18 +442,16 @@ function BuildSlotRow({
             <div className="min-w-0 flex-1">
               <ItemPicker
                 selected={null}
-                onSelect={(item) => {
-                  onChangeItem({ id: item.id, name: item.name, iconUrl: item.iconUrl, slotCount: item.slotCount, optionGroup: item.optionGroup });
-                  setChanging(false);
-                }}
+                onSelect={(item) => onChangeItem(toSlotItem(item))}
                 onClear={() => {}}
                 slotFilter={buildSlotToEquipSlot(slot)}
                 positionFilter={BUILD_SLOT_POSITION[slot]}
+                filterResult={pickerFilter}
               />
             </div>
             <button
               type="button"
-              onClick={() => setChanging(false)}
+              onClick={onCancelChange}
               className="shrink-0 text-xs font-medium text-ro-text-muted hover:text-ro-text"
             >
               {t("cancel")}
@@ -350,7 +465,7 @@ function BuildSlotRow({
             <p className="min-w-0 flex-1 truncate text-sm text-ro-text">{state.item.name}</p>
             <button
               type="button"
-              onClick={() => setChanging(true)}
+              onClick={onStartChange}
               className="shrink-0 text-xs font-medium text-ro-accent hover:underline"
             >
               {t("changeItem")}
@@ -363,7 +478,7 @@ function BuildSlotRow({
                 max={maxRefine}
                 value={state.refine}
                 onChange={(e) => onPatch({ refine: Math.max(0, Math.min(maxRefine, Number(e.target.value) || 0)) })}
-                className={`${inputClass} h-8 w-16`}
+                className={`h-8 w-16 ${inputBaseClass}`}
               />
             </label>
             <button
@@ -381,7 +496,7 @@ function BuildSlotRow({
 
       {/* Options (si el item tiene grupo de options) */}
       {state.item.optionGroup && (
-        <div className="flex flex-col gap-1.5 pl-28">
+        <div className="flex flex-col gap-1.5">
           <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-ro-text-muted">{t("optionsLabel")}</span>
           {Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
             const index = slotIndex - 1;
@@ -395,7 +510,7 @@ function BuildSlotRow({
                   value={sel.defId}
                   disabled={!enabled}
                   onChange={(e) => setOption(index, { defId: e.target.value, value: "" })}
-                  className={`min-w-0 flex-1 ${inputClass} h-8 text-sm disabled:opacity-50`}
+                  className={`h-8 min-w-0 flex-1 ${selectClass}`}
                 >
                   <option value="">{t("optionPlaceholder", { slot: slotIndex })}</option>
                   {defsForSlot.map((d) => (
@@ -410,7 +525,7 @@ function BuildSlotRow({
                   value={sel.value}
                   disabled={!sel.defId}
                   onChange={(e) => setOption(index, { value: e.target.value === "" ? "" : Number(e.target.value) })}
-                  className={`${inputClass} h-8 w-24 text-sm disabled:opacity-50`}
+                  className={`h-8 w-24 shrink-0 ${inputBaseClass} disabled:opacity-50`}
                 />
               </div>
             );
@@ -420,7 +535,7 @@ function BuildSlotRow({
 
       {/* Cartas (una por ranura, hasta slotCount) */}
       {state.item.slotCount > 0 && (
-        <div className="flex flex-col gap-1.5 pl-28">
+        <div className="flex flex-col gap-1.5">
           <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-ro-text-muted">{t("cardsLabel")}</span>
           {state.cards.map((card, i) => (
             <div key={i}>

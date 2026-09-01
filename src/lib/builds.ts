@@ -21,13 +21,15 @@ import { loadMagicalWeaponTypes, getItemOptionGroup, validateOptions } from "@/l
 import {
   buildSlotToEquipSlot,
   BUILD_SLOT_POSITION,
-  positionAllows,
+  headgearPrimary,
+  parsePositions,
+  type HeadgearPosition,
   MAX_BUILD_NAME_LENGTH,
   MAX_BUILD_NOTES_LENGTH,
 } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
 
-const itemCols = { id: true, name: true, iconUrl: true, slotCount: true } as const;
+const itemCols = { id: true, name: true, iconUrl: true, slotCount: true, position: true } as const;
 const ownerCols = { id: true, username: true } as const;
 
 // TODAS las builds (de todos los usuarios) para la página de la comunidad, con
@@ -75,7 +77,7 @@ export async function getMyBuild(id: string) {
       entries: {
         with: {
           item: {
-            columns: { id: true, name: true, iconUrl: true, slotCount: true, category: true, slot: true, weaponType: true },
+            columns: { id: true, name: true, iconUrl: true, slotCount: true, category: true, slot: true, weaponType: true, position: true },
           },
           options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
           cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
@@ -167,8 +169,11 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
       const it = byId.get(e.itemId);
       if (!it) throw new Error(t("itemNotFound"));
       if (!itemFitsSlot(it, buildSlotToEquipSlot(e.slot))) throw new Error(t("buildItemSlotMismatch"));
-      // Tocados: el item debe poder ir en la posición del slot (Upper/Middle/Lower).
-      if (!positionAllows(it.position, BUILD_SLOT_POSITION[e.slot])) throw new Error(t("buildItemSlotMismatch"));
+      // Tocados: se guardan en su slot principal (la posición más alta que
+      // ocupan). El solapamiento entre tocados se comprueba aparte, más abajo.
+      if (BUILD_SLOT_POSITION[e.slot] && headgearPrimary(it.position) !== BUILD_SLOT_POSITION[e.slot]) {
+        throw new Error(t("buildItemSlotMismatch"));
+      }
       if (e.refineLevel > maxRefine) throw new Error(t("refineTooHigh", { max: maxRefine }));
 
       // Options: mismo validador que el mercado (grupo/slot/rango del def).
@@ -186,6 +191,16 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
         seen.add(c.slotIndex);
         const card = byId.get(c.cardItemId);
         if (!card || card.category !== ItemCategory.CARD) throw new Error(t("itemNotFound"));
+      }
+    }
+
+    // Ningún tocado puede solaparse con otro en una posición (Upper/Middle/Lower).
+    const usedPositions = new Set<HeadgearPosition>();
+    for (const e of entries) {
+      const it = byId.get(e.itemId)!;
+      for (const p of parsePositions(it.position)) {
+        if (usedPositions.has(p)) throw new Error(t("buildItemSlotMismatch"));
+        usedPositions.add(p);
       }
     }
   }
