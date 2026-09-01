@@ -173,7 +173,7 @@ export function BuildDetailView({
           <h1 className="truncate text-2xl font-extrabold text-ro-text">{build.name}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ro-text-muted">
             <span className="font-semibold text-ro-text">{jobName}</span>
-            <span>· {isOwner ? t("list.you") : build.owner.username}</span>
+            <span className="min-w-0 break-all">· {isOwner ? t("list.you") : build.owner.username}</span>
             {build.tags.map((tag) => (
               <span key={tag} className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-xs text-ro-accent">
                 {tTag(tag)}

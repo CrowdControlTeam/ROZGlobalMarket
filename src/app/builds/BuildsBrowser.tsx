@@ -194,9 +194,9 @@ export function BuildsBrowser({
                         )}
                       </div>
                       <div className="flex items-end justify-between gap-3">
-                        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ro-text-muted">
+                        <p className="min-w-0 flex-1 truncate text-xs text-ro-text-muted">
                           <span className="font-semibold text-ro-text">{getJob(b.jobId)?.name ?? "—"}</span>
-                          <span>· {b.owner.id === meId ? t("list.you") : b.owner.username}</span>
+                          <span>{" · "}{b.owner.id === meId ? t("list.you") : b.owner.username}</span>
                         </p>
                         {/* Iconos de las piezas (hasta 10) como vista rápida. */}
                         <div className="flex shrink-0 -space-x-1">
