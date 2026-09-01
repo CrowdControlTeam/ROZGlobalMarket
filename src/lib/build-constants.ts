@@ -54,6 +54,13 @@ export function positionAllows(
   return itemPosition.split(",").some((p) => p.trim() === required);
 }
 
+// Orden del paperdoll (ventana de equipo del juego), leído por filas (izq, der):
+// (1) casco sup · casco medio, (2) casco inf · armadura, (3) arma · escudo,
+// (4) manto · calzado, (5) accesorio izq. · accesorio der. Compartido por el
+// detalle y el editor.
+export const PAPERDOLL_LEFT: readonly BuildSlot[] = ["HEADGEAR_TOP", "HEADGEAR_LOW", "WEAPON", "GARMENT", "ACCESSORY_LEFT"];
+export const PAPERDOLL_RIGHT: readonly BuildSlot[] = ["HEADGEAR_MID", "ARMOR", "SHIELD", "FOOTGEAR", "ACCESSORY_RIGHT"];
+
 export const HEADGEAR_SLOTS: readonly BuildSlot[] = ["HEADGEAR_TOP", "HEADGEAR_MID", "HEADGEAR_LOW"];
 export function isHeadgearSlot(slot: BuildSlot): boolean {
   return slot in BUILD_SLOT_POSITION;

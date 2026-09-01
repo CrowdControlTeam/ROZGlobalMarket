@@ -7,19 +7,13 @@ import { requireSession } from "@/lib/guard";
 import { getBuild } from "@/lib/builds";
 import { getJob } from "@/lib/skill-planner";
 import type { BuildSlot } from "@/db/enums";
-import { parsePositions, POSITION_TO_SLOT } from "@/lib/build-constants";
+import { parsePositions, POSITION_TO_SLOT, PAPERDOLL_LEFT, PAPERDOLL_RIGHT } from "@/lib/build-constants";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { ItemIcon } from "@/components/ItemIcon";
 import { BackLink } from "@/components/BackLink";
 import { buttonClass } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
-
-// Paperdoll estilo ventana de equipo del juego: dos columnas, leídas por filas
-// (izq, der): (1) upper HG · middle HG, (2) lower HG · armadura, (3) arma ·
-// escudo, (4) manto · calzado, (5) accesorio izq. · accesorio der.
-const LEFT_SLOTS: readonly BuildSlot[] = ["HEADGEAR_TOP", "HEADGEAR_LOW", "WEAPON", "GARMENT", "ACCESSORY_LEFT"];
-const RIGHT_SLOTS: readonly BuildSlot[] = ["HEADGEAR_MID", "ARMOR", "SHIELD", "FOOTGEAR", "ACCESSORY_RIGHT"];
 
 export default async function BuildDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -132,8 +126,8 @@ export default async function BuildDetailPage({ params }: { params: Promise<{ id
           única rejilla con filas de igual alto (auto-rows-fr), así todos los
           slots ocupan lo mismo. Se intercalan izquierda/derecha por fila. */}
       <div className="mt-5 grid grid-cols-1 gap-2 sm:auto-rows-fr sm:grid-cols-2">
-        {LEFT_SLOTS.map((left, i) => {
-          const right = RIGHT_SLOTS[i];
+        {PAPERDOLL_LEFT.map((left, i) => {
+          const right = PAPERDOLL_RIGHT[i];
           return (
             <Fragment key={left}>
               <div className="h-full">{cell(left, false)}</div>

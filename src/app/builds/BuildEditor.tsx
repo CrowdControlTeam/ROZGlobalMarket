@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
@@ -13,6 +13,8 @@ import { MAX_OPTION_SLOTS, emptyOptionSelections, type OptionSelection } from "@
 import {
   BUILD_SLOTS,
   HEADGEAR_SLOTS,
+  PAPERDOLL_LEFT,
+  PAPERDOLL_RIGHT,
   buildSlotToEquipSlot,
   BUILD_SLOT_POSITION,
   headgearPrimary,
@@ -164,6 +166,26 @@ export function BuildEditor({
     };
   }
 
+  const renderSlot = (slot: BuildSlot) => (
+    <BuildSlotRow
+      slot={slot}
+      state={slots[slot]}
+      optionDefs={optionDefs}
+      maxRefine={maxRefine}
+      onPick={(item) => pickItem(slot, item)}
+      onChangeItem={(item) => {
+        changeItem(slot, item);
+        setChangingSlot(null);
+      }}
+      onClear={() => clearSlot(slot)}
+      onPatch={(patch) => patchSlot(slot, patch)}
+      isChanging={changingSlot === slot}
+      onStartChange={() => setChangingSlot(slot)}
+      onCancelChange={() => setChangingSlot(null)}
+      {...headgearProps(slot)}
+    />
+  );
+
   const canSave = name.trim().length > 0 && jobId !== null && tags.length > 0 && !isPending;
 
   function save() {
@@ -284,29 +306,16 @@ export function BuildEditor({
 
       <div className="flex flex-col gap-2">
         <span className="text-sm font-semibold text-ro-text">{t("slotsLabel")}</span>
-        <ul className="flex flex-col gap-2">
-          {BUILD_SLOTS.map((slot) => (
-            <li key={slot}>
-              <BuildSlotRow
-                slot={slot}
-                state={slots[slot]}
-                optionDefs={optionDefs}
-                maxRefine={maxRefine}
-                onPick={(item) => pickItem(slot, item)}
-                onChangeItem={(item) => {
-                  changeItem(slot, item);
-                  setChangingSlot(null);
-                }}
-                onClear={() => clearSlot(slot)}
-                onPatch={(patch) => patchSlot(slot, patch)}
-                isChanging={changingSlot === slot}
-                onStartChange={() => setChangingSlot(slot)}
-                onCancelChange={() => setChangingSlot(null)}
-                {...headgearProps(slot)}
-              />
-            </li>
+        {/* Paperdoll (ventana de equipo): 2 columnas × 5 filas, mismo orden que
+            el detalle. items-start: cada celda crece con sus options/cartas. */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:items-start">
+          {PAPERDOLL_LEFT.map((left, i) => (
+            <Fragment key={left}>
+              {renderSlot(left)}
+              {renderSlot(PAPERDOLL_RIGHT[i])}
+            </Fragment>
           ))}
-        </ul>
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
@@ -364,44 +373,48 @@ function BuildSlotRow({
   const tSlot = useTranslations("builds.slots");
   const changing = isChanging;
 
+  const slotLabel = (
+    <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-ro-text-muted">{tSlot(slot)}</span>
+  );
+
   // Ocupado por un tocado multi-slot guardado en otro slot: bloqueado.
   if (secondary) {
     return (
-      <div className="flex items-center gap-3 rounded-lg border border-dashed border-ro-panel-border bg-ro-panel-alt/40 p-2">
-        <span className="w-28 shrink-0 text-xs font-semibold text-ro-text-muted">{tSlot(slot)}</span>
-        <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel opacity-70">
-          <ItemIcon item={secondary.item} width={28} height={28} alt="" />
+      <div className="flex flex-col gap-1.5 rounded-lg border border-dashed border-ro-panel-border bg-ro-panel-alt/40 p-2">
+        {slotLabel}
+        <div className="flex items-center gap-2">
+          <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-ro-panel-border bg-ro-panel opacity-70">
+            <ItemIcon item={secondary.item} width={26} height={26} alt="" />
+          </div>
+          <p className="min-w-0 flex-1 truncate text-sm text-ro-text-muted">
+            {t("occupiedBy", { item: secondary.item.name })}
+          </p>
+          <button
+            type="button"
+            onClick={secondary.onRemove}
+            aria-label={t("remove")}
+            title={t("remove")}
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel hover:text-ro-text"
+          >
+            <X size={15} />
+          </button>
         </div>
-        <p className="min-w-0 flex-1 truncate text-sm text-ro-text-muted">
-          {t("occupiedBy", { item: secondary.item.name })}
-        </p>
-        <button
-          type="button"
-          onClick={secondary.onRemove}
-          aria-label={t("remove")}
-          title={t("remove")}
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-ro-text-muted hover:bg-ro-panel hover:text-ro-text"
-        >
-          <X size={15} />
-        </button>
       </div>
     );
   }
 
   if (!state) {
     return (
-      <div className="flex items-center gap-3 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
-        <span className="w-28 shrink-0 text-xs font-semibold text-ro-text-muted">{tSlot(slot)}</span>
-        <div className="min-w-0 flex-1">
-          <ItemPicker
-            selected={null}
-            onSelect={(item) => onPick(toSlotItem(item))}
-            onClear={() => {}}
-            slotFilter={buildSlotToEquipSlot(slot)}
-            positionFilter={BUILD_SLOT_POSITION[slot]}
-            filterResult={pickerFilter}
-          />
-        </div>
+      <div className="flex flex-col gap-1.5 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
+        {slotLabel}
+        <ItemPicker
+          selected={null}
+          onSelect={(item) => onPick(toSlotItem(item))}
+          onClear={() => {}}
+          slotFilter={buildSlotToEquipSlot(slot)}
+          positionFilter={BUILD_SLOT_POSITION[slot]}
+          filterResult={pickerFilter}
+        />
       </div>
     );
   }
@@ -420,8 +433,8 @@ function BuildSlotRow({
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-ro-panel-border bg-ro-panel-alt p-2">
-      <div className="flex items-center gap-3">
-        <span className="w-28 shrink-0 text-xs font-semibold text-ro-text-muted">{tSlot(slot)}</span>
+      {slotLabel}
+      <div className="flex items-center gap-2">
         {changing ? (
           // Cambiar item conservando refino/options/cartas: buscador inline. Al
           // elegir, se sustituye el item (onChangeItem) y se sale del modo.
@@ -483,7 +496,7 @@ function BuildSlotRow({
 
       {/* Options (si el item tiene grupo de options) */}
       {state.item.optionGroup && (
-        <div className="flex flex-col gap-1.5 pl-28">
+        <div className="flex flex-col gap-1.5">
           <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-ro-text-muted">{t("optionsLabel")}</span>
           {Array.from({ length: MAX_OPTION_SLOTS }, (_, i) => i + 1).map((slotIndex) => {
             const index = slotIndex - 1;
@@ -522,7 +535,7 @@ function BuildSlotRow({
 
       {/* Cartas (una por ranura, hasta slotCount) */}
       {state.item.slotCount > 0 && (
-        <div className="flex flex-col gap-1.5 pl-28">
+        <div className="flex flex-col gap-1.5">
           <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-ro-text-muted">{t("cardsLabel")}</span>
           {state.cards.map((card, i) => (
             <div key={i}>
