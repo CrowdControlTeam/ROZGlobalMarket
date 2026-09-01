@@ -182,7 +182,7 @@ export function BuildsBrowser({
                       {/* Fila del nombre: nombre a la izquierda y las etiquetas
                           en la esquina superior derecha. */}
                       <div className="flex items-start justify-between gap-2">
-                        <p className="min-w-0 flex-1 truncate text-sm font-bold text-ro-text">{b.name}</p>
+                        <p title={b.name} className="min-w-0 flex-1 truncate text-sm font-bold text-ro-text">{b.name}</p>
                         {b.tags.length > 0 && (
                           <div className="flex shrink-0 flex-wrap justify-end gap-1">
                             {b.tags.map((tag) => (

@@ -170,7 +170,7 @@ export function BuildDetailView({
     <div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-extrabold text-ro-text">{build.name}</h1>
+          <h1 title={build.name} className="truncate text-2xl font-extrabold text-ro-text">{build.name}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ro-text-muted">
             <span className="font-semibold text-ro-text">{jobName}</span>
             <span className="min-w-0 break-all">· {isOwner ? t("list.you") : build.owner.username}</span>
