@@ -196,12 +196,12 @@ export function BuildsBrowser({
                         <span className="font-semibold text-ro-text">{getJob(b.jobId)?.name ?? "—"}</span>
                         <span>{" · "}{b.owner.id === meId ? t("list.you") : b.owner.username}</span>
                       </p>
-                      {/* Iconos de las piezas (hasta 10) en su propia fila, así
-                          caben todos aunque la meta o el nombre sean largos. */}
+                      {/* Iconos de las piezas (hasta 10) en su propia fila,
+                          solapados y en una sola línea (nunca saltan de fila). */}
                       {b.entries.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex -space-x-1">
                           {b.entries.slice(0, 10).map((e) => (
-                            <div key={e.id} className="grid h-7 w-7 place-items-center overflow-hidden rounded border border-ro-panel-border bg-ro-panel-alt">
+                            <div key={e.id} className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded border border-ro-panel-border bg-ro-panel-alt">
                               <ItemIcon item={e.item} width={22} height={22} alt="" />
                             </div>
                           ))}
