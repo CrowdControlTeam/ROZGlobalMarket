@@ -782,6 +782,7 @@
     "detail": {
       "noPieces": "Esta build no tiene piezas todavía.",
       "searchMarket": "Buscar en el mercado",
+      "publishItem": "Publicar en el mercado",
       "onSale": "{n} en venta"
     },
     "slots": {

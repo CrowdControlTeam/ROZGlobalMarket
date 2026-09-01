@@ -64,6 +64,8 @@ export function PublishForm({
   onClose,
   editListing,
   repostListing,
+  seedListing,
+  seedRecipient,
 }: {
   recognitionEnabled: boolean;
   initialType: PublicationType;
@@ -72,16 +74,21 @@ export function PublishForm({
   // Republicar: precarga los mismos campos que editar PERO en modo CREACIÓN
   // (createListing, tipo/item desbloqueados). Nunca llegan ambos a la vez.
   repostListing?: EditListingData;
+  // Precarga desde una pieza de build (crear, título normal "Publicar"): mismo
+  // shape que repost. seedRecipient prerrellena el destinatario del regalo (el
+  // dueño de la build), por si se publica como regalo para esa persona.
+  seedListing?: EditListingData;
+  seedRecipient?: UserResult;
 }) {
   const router = useRouter();
   const isEdit = editListing !== undefined;
-  // Semilla de valores iniciales: edición o republicación (misma forma). isEdit
-  // distingue el comportamiento (bloqueo de tipo/item + update vs create); el
-  // resto del formulario solo lee de la semilla.
-  const seed = editListing ?? repostListing;
+  // Semilla de valores iniciales: edición, republicación o precarga desde build
+  // (misma forma). isEdit distingue el comportamiento (bloqueo de tipo/item +
+  // update vs create); el resto del formulario solo lee de la semilla.
+  const seed = editListing ?? repostListing ?? seedListing;
   const [type, setType] = useState<PublicationType>(seed?.type ?? initialType);
   const [selectedItem, setSelectedItem] = useState<ItemResult | null>(seed?.item ?? null);
-  const [selectedRecipient, setSelectedRecipient] = useState<UserResult | null>(null);
+  const [selectedRecipient, setSelectedRecipient] = useState<UserResult | null>(seedRecipient ?? null);
   const [optionDefs, setOptionDefs] = useState<ItemOptionDef[]>([]);
   const [optionSelections, setOptionSelections] = useState<OptionSelection[]>(
     seed?.optionSelections ?? emptyOptionSelections(),
@@ -505,7 +512,11 @@ export function PublishForm({
           {type === "GIFT" && !isEdit && (
             <div>
               <label className="mb-1 block text-xs font-medium text-ro-text-muted">{t("recipientLabel")}</label>
-              <UserPicker key={selectedRecipient?.id ?? "empty"} onSelect={setSelectedRecipient} />
+              <UserPicker
+                selected={selectedRecipient}
+                onSelect={setSelectedRecipient}
+                onClear={() => setSelectedRecipient(null)}
+              />
               <input type="hidden" name="recipientId" value={selectedRecipient?.id ?? ""} />
             </div>
           )}
