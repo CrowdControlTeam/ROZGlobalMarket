@@ -349,12 +349,14 @@ export async function createListing(formData: FormData) {
         price,
         // Regalo directo: nace ya cerrado (la entrega es instantánea).
         status: isDirectGift ? "COMPLETED" : "ACTIVE",
-        // Caduca a listingExpirationDays vista (config). El regalo directo ya
-        // nace COMPLETED, así que no caduca (expiresAt null). Cubre también los
+        // Caduca a listingExpirationDays vista (config). No caducan: el regalo
+        // directo (ya nace COMPLETED) ni las publicaciones de cantidad ILIMITADA
+        // (quantity null = oferta permanente) → expiresAt null. Cubre también los
         // reposts: van por createListing, así que reciben caducidad nueva.
-        expiresAt: isDirectGift
-          ? null
-          : new Date(Date.now() + listingExpirationDays * 24 * 60 * 60 * 1000),
+        expiresAt:
+          isDirectGift || quantity === null
+            ? null
+            : new Date(Date.now() + listingExpirationDays * 24 * 60 * 60 * 1000),
         refineLevel,
         notes,
       })
@@ -447,7 +449,7 @@ export async function updateListing(listingId: string, formData: FormData) {
   const session = await requireSession();
   const t = await getTranslations("errors");
 
-  const { maintenanceModeEnabled } = await loadMarketConfig();
+  const { maintenanceModeEnabled, listingExpirationDays } = await loadMarketConfig();
   if (maintenanceModeEnabled && !session.user.isAdmin) {
     throw new Error(t("maintenanceMode"));
   }
@@ -473,6 +475,14 @@ export async function updateListing(listingId: string, formData: FormData) {
   const { price, quantity, refineLevel, notes, rawOptions } =
     await parseListingFields(formData, type, item, t);
 
+  // Caducidad al editar: las ILIMITADAS (quantity null) no caducan (expiresAt
+  // null). Al pasar a limitada una que estaba exenta se le da caducidad nueva;
+  // si ya tenía una, se conserva (editar no reinicia el reloj).
+  const expiresAt =
+    quantity === null
+      ? null
+      : (existing.expiresAt ?? new Date(Date.now() + listingExpirationDays * 24 * 60 * 60 * 1000));
+
   // Editable solo SIN deals vivos (PENDING o ACCEPTED); CANCELLED/REJECTED no
   // cuentan. Se comprueba DENTRO de la transacción para cerrar la ventana con
   // una oferta que entre justo ahora. Esto excluye de suyo el regalo directo
@@ -488,7 +498,7 @@ export async function updateListing(listingId: string, formData: FormData) {
     await tx.delete(listingOption).where(eq(listingOption.listingId, listingId));
     await tx
       .update(listing)
-      .set({ type, itemId: item.id, quantity, price, refineLevel, notes })
+      .set({ type, itemId: item.id, quantity, price, refineLevel, notes, expiresAt })
       .where(eq(listing.id, listingId));
     if (rawOptions.length > 0) {
       await tx.insert(listingOption).values(
