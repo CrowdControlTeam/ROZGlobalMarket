@@ -169,6 +169,7 @@ export function BuildsBrowser({
             <ul className="flex flex-col gap-2">
               {visible.map((b) => {
                 const active = b.id === selectedId;
+                const owner = b.owner.id === meId ? t("list.you") : b.owner.username;
                 return (
                   <li key={b.id}>
                     <button
@@ -194,7 +195,7 @@ export function BuildsBrowser({
                       </div>
                       <p className="truncate text-xs text-ro-text-muted">
                         <span className="font-semibold text-ro-text">{getJob(b.jobId)?.name ?? "—"}</span>
-                        <span>{" · "}{b.owner.id === meId ? t("list.you") : b.owner.username}</span>
+                        <span title={owner}>{" · "}{owner}</span>
                       </p>
                       {/* Iconos de las piezas (hasta 10) en su propia fila,
                           solapados y en una sola línea (nunca saltan de fila). */}
