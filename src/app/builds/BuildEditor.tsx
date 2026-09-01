@@ -23,7 +23,7 @@ import {
 } from "@/lib/build-constants";
 import { createBuild, updateBuild, deleteBuild, type BuildInput } from "@/lib/builds";
 import { getErrorMessage } from "@/lib/errors";
-import { buttonClass, inputClass } from "@/lib/ui";
+import { buttonClass, inputClass, inputBaseClass, selectClass } from "@/lib/ui";
 
 export type OptionDef = {
   id: string;
@@ -465,7 +465,7 @@ function BuildSlotRow({
                 max={maxRefine}
                 value={state.refine}
                 onChange={(e) => onPatch({ refine: Math.max(0, Math.min(maxRefine, Number(e.target.value) || 0)) })}
-                className={`${inputClass} h-8 w-16`}
+                className={`h-8 w-16 ${inputBaseClass}`}
               />
             </label>
             <button
@@ -497,7 +497,7 @@ function BuildSlotRow({
                   value={sel.defId}
                   disabled={!enabled}
                   onChange={(e) => setOption(index, { defId: e.target.value, value: "" })}
-                  className={`min-w-0 flex-1 ${inputClass} h-8 text-sm disabled:opacity-50`}
+                  className={`h-8 min-w-0 flex-1 ${selectClass}`}
                 >
                   <option value="">{t("optionPlaceholder", { slot: slotIndex })}</option>
                   {defsForSlot.map((d) => (
@@ -512,7 +512,7 @@ function BuildSlotRow({
                   value={sel.value}
                   disabled={!sel.defId}
                   onChange={(e) => setOption(index, { value: e.target.value === "" ? "" : Number(e.target.value) })}
-                  className={`${inputClass} h-8 w-24 text-sm disabled:opacity-50`}
+                  className={`h-8 w-24 shrink-0 ${inputBaseClass} disabled:opacity-50`}
                 />
               </div>
             );
