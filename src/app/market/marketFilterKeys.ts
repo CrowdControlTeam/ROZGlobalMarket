@@ -16,6 +16,9 @@ export const FILTER_KEYS: string[] = [
   "weaponType",
   "posterId",
   "posterName",
+  // CSV de itemIds: filtra el listado a un conjunto de items concreto (p. ej.
+  // "buscar todas las piezas de una build"). Deep-link desde el detalle de build.
+  "itemIds",
   "minPrice",
   "maxPrice",
   "refineMin",
@@ -76,6 +79,7 @@ export function countFilters(f: Filters): number {
   n += csvCount(f.slot);
   n += csvCount(f.weaponType);
   if (f.posterId) n++;
+  if (f.itemIds) n++;
   if (f.minPrice || f.maxPrice) n++;
   if (f.refineMin || f.refineMax) n++;
   if (f.cardSlotsMin || f.cardSlotsMax) n++;

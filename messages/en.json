@@ -373,6 +373,9 @@
       "namePlaceholder": "Search item...",
       "clearName": "Clear search",
       "poster": "User",
+      "buildItems": "Build items",
+      "buildItemsCount": "{n} items",
+      "buildItemsHint": "Filtering by the {n} pieces of a build.",
       "type": "Type",
       "all": "All",
       "category": "Category",
@@ -795,6 +798,7 @@
     "detail": {
       "noPieces": "This build has no pieces yet.",
       "searchMarket": "Search the market",
+      "searchAllMarket": "Search all in the market",
       "publishItem": "Publish on the market",
       "onSale": "{n} on sale"
     },

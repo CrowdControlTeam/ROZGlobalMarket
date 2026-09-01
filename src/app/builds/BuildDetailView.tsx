@@ -35,6 +35,17 @@ export function BuildDetailView({
   const jobName = getJob(build.jobId)?.name ?? "—";
   const bySlot = new Map(build.entries.map((e) => [e.slot, e]));
 
+  // Botón "buscar todo en el mercado": abre una pestaña nueva del mercado
+  // filtrada por TODOS los items de la build (filtro itemIds) — incluye las
+  // piezas Y sus cartas por id. null si vacía.
+  const itemIds = [
+    ...new Set(build.entries.flatMap((e) => [e.item.id, ...e.cards.map((c) => c.card.id)])),
+  ];
+  const searchAllHref =
+    itemIds.length > 0
+      ? `/market?${new URLSearchParams({ newTab: "1", itemIds: itemIds.join(",") }).toString()}`
+      : null;
+
   // Ocupación de tocados: un tocado multi-slot (p. ej. "Middle, Lower") se
   // muestra en TODAS sus celdas. `primary` marca la celda donde se guarda (ahí
   // van las options/cartas; en las demás solo el item).
@@ -169,9 +180,9 @@ export function BuildDetailView({
   return (
     <div>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h1 title={build.name} className="min-w-0 flex-1 truncate text-2xl font-extrabold text-ro-text">{build.name}</h1>
+            <h1 title={build.name} className="min-w-0 truncate text-2xl font-extrabold text-ro-text">{build.name}</h1>
             {build.tags.length > 0 && (
               <div className="flex shrink-0 items-center gap-1">
                 {build.tags.map((tag) => (
@@ -187,12 +198,24 @@ export function BuildDetailView({
             <span className="min-w-0 break-all">· {isOwner ? t("list.you") : build.owner.username}</span>
           </p>
         </div>
-        {isOwner && (
-          <Link href={`/builds/${build.id}/edit`} className={`shrink-0 ${buttonClass("outline")}`}>
-            <Pencil size={15} aria-hidden />
-            {t("list.edit")}
-          </Link>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {searchAllHref && (
+            <Link
+              href={searchAllHref}
+              aria-label={t("detail.searchAllMarket")}
+              title={t("detail.searchAllMarket")}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-ro-panel-border text-ro-accent transition-colors hover:bg-ro-accent/10"
+            >
+              <Search size={16} aria-hidden />
+            </Link>
+          )}
+          {isOwner && (
+            <Link href={`/builds/${build.id}/edit`} className={buttonClass("outline")}>
+              <Pencil size={15} aria-hidden />
+              {t("list.edit")}
+            </Link>
+          )}
+        </div>
       </div>
 
       {build.notes && (

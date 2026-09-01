@@ -57,6 +57,9 @@ export type MarketFilters = {
   // cliente vía UserPicker, no un "contiene" de texto libre, para no
   // depender de coincidencias parciales entre nombres parecidos.
   posterId?: string;
+  // Conjunto de items concreto (CSV en la URL). Para "buscar todas las piezas de
+  // una build" en una sola búsqueda: lista publicaciones de cualquiera de ellos.
+  itemIds?: string[];
   // Filtro por random option, uno por slot posicional (1..MAX_OPTION_SLOTS
   // — ver src/lib/item-options-constants.ts). Filtra por statCode, no por
   // defId: la misma stat (p.ej. MaxHP %) existe como filas de
@@ -253,6 +256,7 @@ export async function getListings(filters: MarketFilters) {
   );
   if (filters.type) baseConditions.push(eq(listing.type, filters.type));
   if (filters.posterId) baseConditions.push(eq(listing.posterId, filters.posterId));
+  if (filters.itemIds && filters.itemIds.length > 0) baseConditions.push(inArray(listing.itemId, filters.itemIds));
   if (filters.minPrice !== undefined) baseConditions.push(gte(listing.price, filters.minPrice));
   if (filters.maxPrice !== undefined) baseConditions.push(lte(listing.price, filters.maxPrice));
   if (isPriceSort) baseConditions.push(isNotNull(listing.price));
