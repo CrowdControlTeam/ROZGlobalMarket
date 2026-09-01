@@ -751,7 +751,21 @@
       "you": "You",
       "create": "Create build",
       "empty": "No builds yet. Create the first one.",
+      "emptyMine": "You have no builds yet. Create the first one.",
+      "emptyFiltered": "No builds match the filters.",
+      "selectPrompt": "Select a build to see its details.",
+      "backToList": "Back to the list",
       "edit": "Edit"
+    },
+    "tabs": {
+      "all": "All",
+      "mine": "My builds"
+    },
+    "filters": {
+      "job": "Class",
+      "allJobs": "All classes",
+      "user": "User",
+      "allUsers": "All users"
     },
     "form": {
       "back": "Back to builds",

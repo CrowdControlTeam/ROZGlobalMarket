@@ -46,6 +46,26 @@ export async function listBuilds() {
   });
 }
 
+// TODAS las builds con el detalle completo (item + options + cartas), para el
+// navegador de builds: el panel derecho muestra cualquier build seleccionada sin
+// otra ida al servidor. Misma forma de pieza que getBuild.
+export async function listBuildsDetailed() {
+  await requireSession();
+  return db.query.build.findMany({
+    orderBy: desc(build.updatedAt),
+    with: {
+      owner: { columns: ownerCols },
+      entries: {
+        with: {
+          item: { columns: itemCols },
+          options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+          cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
+        },
+      },
+    },
+  });
+}
+
 // Una build concreta para el DETALLE — visible para cualquiera (logueado). Las
 // piezas traen item + options (con su def) + cartas (con el item de la carta).
 export async function getBuild(id: string) {
