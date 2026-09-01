@@ -371,6 +371,7 @@
       "buyOptionsHint": "Search buy requests that match these values.",
       "name": "Name",
       "namePlaceholder": "Search item...",
+      "clearName": "Clear search",
       "poster": "User",
       "type": "Type",
       "all": "All",
@@ -780,7 +781,10 @@
       "deleteBuild": "Delete build"
     },
     "detail": {
-      "noPieces": "This build has no pieces yet."
+      "noPieces": "This build has no pieces yet.",
+      "searchMarket": "Search the market",
+      "publishItem": "Publish on the market",
+      "onSale": "{n} on sale"
     },
     "slots": {
       "HEADGEAR_TOP": "Upper headgear",

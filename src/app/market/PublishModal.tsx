@@ -16,11 +16,15 @@ export function PublishModal({
   initialType,
   editListing,
   repostListing,
+  seedListing,
+  seedRecipient,
 }: {
   recognitionEnabled: boolean;
   initialType: PublicationType;
   editListing?: EditListingData;
   repostListing?: EditListingData;
+  seedListing?: EditListingData;
+  seedRecipient?: { id: string; username: string; avatarUrl: string | null };
 }) {
   const t = useTranslations();
   const close = useCloseModal();
@@ -70,7 +74,7 @@ export function PublishModal({
           </button>
         </div>
         {/* El propio form gestiona su scroll interno y su pie fijo (flex-1). */}
-        <PublishForm recognitionEnabled={recognitionEnabled} initialType={initialType} onClose={close} editListing={editListing} repostListing={repostListing} />
+        <PublishForm recognitionEnabled={recognitionEnabled} initialType={initialType} onClose={close} editListing={editListing} repostListing={repostListing} seedListing={seedListing} seedRecipient={seedRecipient} />
       </div>
     </div>
   );

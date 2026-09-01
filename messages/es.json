@@ -371,6 +371,7 @@
       "buyOptionsHint": "Busca compras que cumplan estos valores.",
       "name": "Nombre",
       "namePlaceholder": "Buscar item...",
+      "clearName": "Borrar búsqueda",
       "poster": "Usuario",
       "type": "Tipo",
       "all": "Todas",
@@ -780,7 +781,10 @@
       "deleteBuild": "Borrar build"
     },
     "detail": {
-      "noPieces": "Esta build no tiene piezas todavía."
+      "noPieces": "Esta build no tiene piezas todavía.",
+      "searchMarket": "Buscar en el mercado",
+      "publishItem": "Publicar en el mercado",
+      "onSale": "{n} en venta"
     },
     "slots": {
       "HEADGEAR_TOP": "Casco superior",
