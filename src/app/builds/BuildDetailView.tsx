@@ -170,15 +170,17 @@ export function BuildDetailView({
     <div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 title={build.name} className="truncate text-2xl font-extrabold text-ro-text">{build.name}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ro-text-muted">
-            <span className="font-semibold text-ro-text">{jobName}</span>
-            <span className="min-w-0 break-all">· {isOwner ? t("list.you") : build.owner.username}</span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h1 title={build.name} className="min-w-0 truncate text-2xl font-extrabold text-ro-text">{build.name}</h1>
             {build.tags.map((tag) => (
-              <span key={tag} className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-xs text-ro-accent">
+              <span key={tag} className="shrink-0 rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-xs text-ro-accent">
                 {tTag(tag)}
               </span>
             ))}
+          </div>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ro-text-muted">
+            <span className="font-semibold text-ro-text">{jobName}</span>
+            <span className="min-w-0 break-all">· {isOwner ? t("list.you") : build.owner.username}</span>
           </p>
         </div>
         {isOwner && (
