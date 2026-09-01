@@ -807,7 +807,12 @@
       "searchMarket": "Search the market",
       "searchAllMarket": "Search all in the market",
       "publishItem": "Publish on the market",
-      "onSale": "{n} on sale"
+      "avail": {
+        "SALE": "{n, plural, one {# sale} other {# sales}}",
+        "BUY": "{n, plural, one {# buy order} other {# buy orders}}",
+        "TRADE": "{n, plural, one {# trade} other {# trades}}",
+        "GIFT": "{n, plural, one {# gift} other {# gifts}}"
+      }
     },
     "slots": {
       "HEADGEAR_TOP": "Upper headgear",

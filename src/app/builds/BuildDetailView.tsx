@@ -3,20 +3,33 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Pencil, Plus, Search } from "lucide-react";
-import type { BuildSlot } from "@/db/enums";
+import { ArrowLeftRight, Gift, Pencil, Plus, Search, ShoppingCart, Tag } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { BuildSlot, ListingType } from "@/db/enums";
+import { LISTING_TYPE_VALUES } from "@/db/enums";
 import { getJob } from "@/lib/skill-planner";
 import { parsePositions, POSITION_TO_SLOT, PAPERDOLL_LEFT, PAPERDOLL_RIGHT } from "@/lib/build-constants";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
+import { LISTING_TYPE_BADGE_CLASS } from "@/lib/market-labels";
 import { ItemIcon } from "@/components/ItemIcon";
 import { buttonClass } from "@/lib/ui";
 import type { getBuild } from "@/lib/builds";
 
 // Detalle de una build (paperdoll estilo juego), reutilizado por la página de
 // detalle (/builds/[id]) y por el panel derecho del navegador de builds. La
-// disponibilidad en mercado llega como objeto plano (serializable) en vez de Map.
+// disponibilidad en mercado llega como objeto plano (serializable) en vez de Map:
+// por item, un conteo por tipo de publicación (venta/compra/intercambio/regalo).
 export type BuildDetail = NonNullable<Awaited<ReturnType<typeof getBuild>>>;
 type Entry = BuildDetail["entries"][number];
+
+// Icono por tipo (mismos que el SegmentedTypeSelector del mercado). El color va
+// por LISTING_TYPE_BADGE_CLASS, para que chip y mercado sean consistentes.
+const TYPE_ICON: Record<ListingType, LucideIcon> = {
+  SALE: Tag,
+  BUY: ShoppingCart,
+  TRADE: ArrowLeftRight,
+  GIFT: Gift,
+};
 
 export function BuildDetailView({
   build,
@@ -25,7 +38,7 @@ export function BuildDetailView({
 }: {
   build: BuildDetail;
   meId: string;
-  availability: Record<string, number>;
+  availability: Record<string, Partial<Record<ListingType, number>>>;
 }) {
   const t = useTranslations("builds");
   const tSlot = useTranslations("builds.slots");
@@ -103,7 +116,7 @@ export function BuildDetailView({
     // En una celda secundaria de un tocado multi-slot, las options/cartas y las
     // acciones se muestran solo en su celda principal.
     const showExtras = head ? head.primary : true;
-    const onSale = e ? (availability[e.item.id] ?? 0) : 0;
+    const avail = e ? (availability[e.item.id] ?? {}) : {};
     return (
       <div
         className={`flex h-full min-h-[3.5rem] flex-col gap-1.5 rounded-lg border border-ro-panel-border p-2 ${
@@ -113,12 +126,24 @@ export function BuildDetailView({
         <div className="flex items-start justify-between gap-2">
           <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-ro-text-muted">{tSlot(slot)}</span>
           {e && showExtras && (
-            <div className="flex shrink-0 items-center gap-1">
-              {onSale > 0 && (
-                <span className="rounded bg-green-600/15 px-1 py-0.5 text-[0.65rem] font-semibold text-green-600">
-                  {t("detail.onSale", { n: onSale })}
-                </span>
-              )}
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+              {/* Chips de disponibilidad por tipo (venta/compra/intercambio/regalo):
+                  icono + nº con el color del tipo; el detalle va en el tooltip. */}
+              {LISTING_TYPE_VALUES.map((type) => {
+                const n = avail[type] ?? 0;
+                if (n === 0) return null;
+                const Icon = TYPE_ICON[type];
+                return (
+                  <span
+                    key={type}
+                    title={t(`detail.avail.${type}`, { n })}
+                    className={`inline-flex items-center gap-0.5 rounded border px-1 py-0.5 text-[0.65rem] font-semibold ${LISTING_TYPE_BADGE_CLASS[type]}`}
+                  >
+                    <Icon size={11} aria-hidden />
+                    {n}
+                  </span>
+                );
+              })}
               <Link
                 href={marketHref(e)}
                 aria-label={t("detail.searchMarket")}

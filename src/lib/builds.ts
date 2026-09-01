@@ -12,7 +12,7 @@ import {
   item as itemTable,
   listing,
 } from "@/db/schema";
-import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES, ItemCategory } from "@/db/enums";
+import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES, ItemCategory, type ListingType } from "@/db/enums";
 import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { loadMaxRefineLevel } from "@/lib/refine";
@@ -111,26 +111,37 @@ export async function getMyBuild(id: string) {
   return row;
 }
 
-// Disponibilidad en el mercado de los items de una build: nº de publicaciones de
-// VENTA activas (no caducadas) por itemId. Para los badges "en venta" del
-// detalle. Mismo criterio de "activo" que el grid del mercado.
-export async function buildMarketAvailability(itemIds: string[]): Promise<Map<string, number>> {
+// Disponibilidad en el mercado de los items de una build: nº de publicaciones
+// activas (no caducadas) por itemId Y por tipo (venta/compra/intercambio/regalo).
+// Para los chips por tipo del detalle. Mismo criterio de "activo" que el grid del
+// mercado. Devuelve, por item, un objeto {SALE?, BUY?, TRADE?, GIFT?} con los
+// tipos que tienen al menos una publicación.
+export type MarketAvailability = Partial<Record<ListingType, number>>;
+
+export async function buildMarketAvailability(
+  itemIds: string[],
+): Promise<Map<string, MarketAvailability>> {
   await requireSession();
   const ids = [...new Set(itemIds)];
   if (ids.length === 0) return new Map();
   const rows = await db
-    .select({ itemId: listing.itemId, n: count() })
+    .select({ itemId: listing.itemId, type: listing.type, n: count() })
     .from(listing)
     .where(
       and(
         inArray(listing.itemId, ids),
         eq(listing.status, "ACTIVE"),
-        eq(listing.type, "SALE"),
         or(isNull(listing.expiresAt), gt(listing.expiresAt, sql`now()`)),
       ),
     )
-    .groupBy(listing.itemId);
-  return new Map(rows.map((r) => [r.itemId, r.n]));
+    .groupBy(listing.itemId, listing.type);
+  const map = new Map<string, MarketAvailability>();
+  for (const r of rows) {
+    const cur = map.get(r.itemId) ?? {};
+    cur[r.type] = r.n;
+    map.set(r.itemId, cur);
+  }
+  return map;
 }
 
 // Cuántas builds tiene el usuario actual (para el tope de "Crear").
