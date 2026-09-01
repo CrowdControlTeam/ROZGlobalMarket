@@ -86,8 +86,15 @@
     "listingsEmpty": "You haven't posted anything yet.",
     "listingsNoneMatch": "No listings match the filter.",
     "statusFilter": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "ACTIVE": "Active",
+      "COMPLETED": "Completed",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled"
+    },
+    "sort": {
+      "label": "Sort by post date",
+      "newest": "Newest first",
+      "oldest": "Oldest first"
     },
     "pendingEmpty": "Nothing pending.",
     "pendingIncoming": "To confirm",

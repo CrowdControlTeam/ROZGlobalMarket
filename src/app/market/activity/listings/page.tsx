@@ -10,13 +10,20 @@ import {
   formatOptionAmount,
 } from "@/lib/market-labels";
 import { ListingStatusFilter } from "@/components/ListingStatusFilter";
+import { ListingSortSelector } from "@/components/ListingSortSelector";
 import { ListingLink } from "@/components/ListingLink";
 import { MyListingActions } from "./MyListingActions";
 
 export default async function MyListingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ active?: string; inactive?: string }>;
+  searchParams: Promise<{
+    active?: string;
+    completed?: string;
+    expired?: string;
+    cancelled?: string;
+    sort?: string;
+  }>;
 }) {
   const [listings, params] = await Promise.all([getMyListings(), searchParams]);
   const t = await getTranslations("market");
@@ -26,22 +33,30 @@ export default async function MyListingsPage({
     return <p className="text-ro-text-light/70">{tMine("listingsEmpty")}</p>;
   }
 
-  // Filtro por estado: "activo" = ACTIVE; "no activo" = el resto (cerrada,
-  // cancelada, expirada). Sin parámetro = ambos visibles (se muestran todos).
-  const showActive = params.active !== "0";
-  const showInactive = params.inactive !== "0";
-  const filtered = listings.filter((l) =>
-    l.status === "ACTIVE" ? showActive : showInactive,
-  );
+  // Filtro por estado: un badge por estado (Activa/Completada/Expirada/Cancelada).
+  // Sin parámetro = todos visibles; `?<estado>=0` oculta ese estado.
+  const shownByStatus: Record<string, boolean> = {
+    ACTIVE: params.active !== "0",
+    COMPLETED: params.completed !== "0",
+    EXPIRED: params.expired !== "0",
+    CANCELLED: params.cancelled !== "0",
+  };
+  const filtered = listings.filter((l) => shownByStatus[l.status] ?? true);
+  // getMyListings ya viene por createdAt desc (más recientes primero); `?sort=asc`
+  // invierte a más antiguas primero.
+  const ordered = params.sort === "asc" ? [...filtered].reverse() : filtered;
 
   return (
     <>
-      <ListingStatusFilter />
-      {filtered.length === 0 ? (
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <ListingStatusFilter />
+        <ListingSortSelector />
+      </div>
+      {ordered.length === 0 ? (
         <p className="text-ro-text-light/70">{tMine("listingsNoneMatch")}</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {filtered.map((listing) => {
+          {ordered.map((listing) => {
         const isBuy = listing.type === "BUY";
         // Kebab en todas las filas: activa → Editar, no activa → Republicar. El
         // <a> reserva a la derecha (pr-12) el hueco de esa columna para no
