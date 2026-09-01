@@ -763,9 +763,7 @@
     },
     "filters": {
       "job": "Clase",
-      "allJobs": "Todas las clases",
-      "user": "Usuario",
-      "allUsers": "Todos los usuarios"
+      "allJobs": "Todas las clases"
     },
     "form": {
       "back": "Volver a builds",

@@ -8,6 +8,7 @@ import type { BuildTag } from "@/db/enums";
 import { BUILD_TAG_VALUES } from "@/db/enums";
 import { getJob } from "@/lib/skill-planner";
 import { ItemIcon } from "@/components/ItemIcon";
+import { UserPicker, type UserResult } from "@/components/UserPicker";
 import { buttonClass, selectClass } from "@/lib/ui";
 import { BuildDetailView, type BuildDetail } from "./BuildDetailView";
 
@@ -38,7 +39,7 @@ export function BuildsBrowser({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fJob, setFJob] = useState<string>("");
   const [fTag, setFTag] = useState<BuildTag | "">("");
-  const [fUser, setFUser] = useState<string>("");
+  const [fUser, setFUser] = useState<UserResult | null>(null);
 
   const atLimit = myCount >= maxBuildsPerUser;
 
@@ -50,20 +51,12 @@ export function BuildsBrowser({
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [builds]);
 
-  const userOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const b of builds) map.set(b.owner.id, b.owner.username);
-    return [...map.entries()]
-      .map(([id, username]) => ({ id, username }))
-      .sort((a, b) => a.username.localeCompare(b.username));
-  }, [builds]);
-
   const visible = useMemo(() => {
     let list = tab === "mine" ? builds.filter((b) => b.owner.id === meId) : builds;
     if (tab === "all") {
       if (fJob) list = list.filter((b) => String(b.jobId) === fJob);
       if (fTag) list = list.filter((b) => b.tags.includes(fTag));
-      if (fUser) list = list.filter((b) => b.owner.id === fUser);
+      if (fUser) list = list.filter((b) => b.owner.id === fUser.id);
     }
     return list;
   }, [builds, tab, meId, fJob, fTag, fUser]);
@@ -145,19 +138,14 @@ export function BuildsBrowser({
             ))}
           </div>
 
-          <select
-            value={fUser}
-            onChange={(e) => setFUser(e.target.value)}
-            aria-label={t("filters.user")}
-            className={selectClass}
-          >
-            <option value="">{t("filters.allUsers")}</option>
-            {userOptions.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.id === meId ? t("list.you") : u.username}
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-56">
+            <UserPicker
+              key={fUser?.id ?? "empty"}
+              selected={fUser}
+              onSelect={setFUser}
+              onClear={() => setFUser(null)}
+            />
+          </div>
         </div>
       )}
 
