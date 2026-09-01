@@ -64,7 +64,7 @@ export function BuildsBrowser({
   }
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-ro-text">{t("title")}</h1>
@@ -153,8 +153,10 @@ export function BuildsBrowser({
         </div>
       )}
 
-      {/* Split: lista (izq) + detalle (der). En móvil se apilan y se alterna. */}
-      <div className="lg:grid lg:h-[calc(100vh-16rem)] lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-4">
+      {/* Split: lista (izq) + detalle (der). Ocupa el alto restante de la página
+          (flex-1) y cada panel tiene su propio scroll; la página no scrollea. En
+          móvil se apilan y se alterna. */}
+      <div className="lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-4">
         {/* Lista */}
         <div
           className={`lg:h-full lg:min-h-0 lg:overflow-y-auto ${selectedId ? "hidden lg:block" : "block"}`}

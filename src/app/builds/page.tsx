@@ -19,7 +19,7 @@ export default async function BuildsPage() {
   const availability = await buildMarketAvailability(allItemIds);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
+    <main className="mx-auto flex max-w-6xl flex-col px-6 py-8 lg:h-[calc(100vh-117px)] lg:overflow-hidden">
       <BuildsBrowser
         builds={builds}
         meId={session.user.discordId}
