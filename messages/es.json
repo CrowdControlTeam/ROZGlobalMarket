@@ -86,8 +86,15 @@
     "listingsEmpty": "Todavía no has publicado nada.",
     "listingsNoneMatch": "No hay publicaciones con ese filtro.",
     "statusFilter": {
-      "active": "Activos",
-      "inactive": "No activos"
+      "ACTIVE": "Activa",
+      "COMPLETED": "Completada",
+      "EXPIRED": "Expirada",
+      "CANCELLED": "Cancelada"
+    },
+    "sort": {
+      "label": "Ordenar por fecha de publicación",
+      "newest": "Más recientes primero",
+      "oldest": "Más antiguas primero"
     },
     "pendingEmpty": "No tienes nada pendiente.",
     "pendingIncoming": "Por confirmar",

@@ -2,12 +2,13 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { LISTING_STATUS_VALUES } from "@/db/enums";
 
-// Badges para filtrar "Mis publicaciones" por estado: Activos / No activos.
-// Ambos cuentan como marcados por defecto (sin parámetro en la URL = se
-// muestran todos); al desmarcar uno se añade `?active=0` o `?inactive=0`. El
-// filtrado real lo hace el server component leyendo esos parámetros — aquí solo
-// se alterna la URL.
+// Badges para filtrar "Mis publicaciones" por estado (Activa / Completada /
+// Expirada / Cancelada). Todos cuentan como marcados por defecto (sin parámetro
+// en la URL = se muestran todos); al desmarcar uno se añade `?<estado>=0` (clave
+// en minúscula). El filtrado real lo hace el server component leyendo esos
+// parámetros — aquí solo se alterna la URL.
 function isOn(params: URLSearchParams, key: string): boolean {
   return params.get(key) !== "0";
 }
@@ -17,7 +18,8 @@ export function ListingStatusFilter() {
   const params = useSearchParams();
   const t = useTranslations("myActivity.statusFilter");
 
-  function toggle(key: "active" | "inactive") {
+  function toggle(status: string) {
+    const key = status.toLowerCase();
     const next = new URLSearchParams(params.toString());
     if (isOn(next, key)) next.set(key, "0");
     else next.delete(key);
@@ -26,14 +28,14 @@ export function ListingStatusFilter() {
   }
 
   return (
-    <div className="mb-4 flex flex-wrap gap-2">
-      {(["active", "inactive"] as const).map((key) => {
-        const on = isOn(params, key);
+    <div className="flex flex-wrap gap-2">
+      {LISTING_STATUS_VALUES.map((status) => {
+        const on = isOn(params, status.toLowerCase());
         return (
           <button
-            key={key}
+            key={status}
             type="button"
-            onClick={() => toggle(key)}
+            onClick={() => toggle(status)}
             aria-pressed={on}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               on
@@ -41,7 +43,7 @@ export function ListingStatusFilter() {
                 : "border-ro-panel-border text-ro-text-muted hover:text-ro-text"
             }`}
           >
-            {t(key)}
+            {t(status)}
           </button>
         );
       })}
