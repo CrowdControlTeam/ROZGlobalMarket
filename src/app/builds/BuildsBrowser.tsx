@@ -65,23 +65,9 @@ export function BuildsBrowser({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ro-text">{t("title")}</h1>
-          <p className="mt-1 text-sm text-ro-text-muted">
-            {t("list.myLimit", { n: myCount, max: maxBuildsPerUser })}
-          </p>
-        </div>
-        {!atLimit && (
-          <Link href="/builds/new" className={`shrink-0 ${buttonClass("primary")}`}>
-            <Plus size={16} aria-hidden />
-            {t("list.create")}
-          </Link>
-        )}
-      </div>
-
-      {/* Pestañas */}
-      <div className="mb-3 flex gap-1 border-b border-ro-panel-border">
+      {/* Pestañas + crear (sin título, como el resto de páginas). La pestaña
+          "Mis builds" muestra (usadas/tope). */}
+      <div className="mb-3 flex items-center gap-1 border-b border-ro-panel-border">
         {(["all", "mine"] as const).map((key) => (
           <button
             key={key}
@@ -94,8 +80,17 @@ export function BuildsBrowser({
             }`}
           >
             {t(`tabs.${key}`)}
+            {key === "mine" && (
+              <span className="ml-1 font-normal text-ro-text-muted">({myCount}/{maxBuildsPerUser})</span>
+            )}
           </button>
         ))}
+        {!atLimit && (
+          <Link href="/builds/new" className={`mb-1 ml-auto shrink-0 ${buttonClass("primary")}`}>
+            <Plus size={16} aria-hidden />
+            {t("list.create")}
+          </Link>
+        )}
       </div>
 
       {/* Filtros (solo en "todas") */}
