@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { ChevronLeft, Plus } from "lucide-react";
 import type { BuildTag } from "@/db/enums";
 import { BUILD_TAG_VALUES } from "@/db/enums";
-import { getJob } from "@/lib/skill-planner";
+import { getJob, selectableJobs } from "@/lib/skill-planner";
 import { ItemIcon } from "@/components/ItemIcon";
 import { UserPicker, type UserResult } from "@/components/UserPicker";
 import { buttonClass, selectClass } from "@/lib/ui";
@@ -43,13 +43,8 @@ export function BuildsBrowser({
 
   const atLimit = myCount >= maxBuildsPerUser;
 
-  // Opciones de filtro derivadas de las builds presentes (solo lo que existe).
-  const jobOptions = useMemo(() => {
-    const ids = [...new Set(builds.map((b) => b.jobId))];
-    return ids
-      .map((id) => ({ id, name: getJob(id)?.name ?? String(id) }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [builds]);
+  // Todas las clases seleccionables (1ª y 2ª), no solo las que tienen builds.
+  const jobs = useMemo(() => selectableJobs(), []);
 
   const visible = useMemo(() => {
     let list = tab === "mine" ? builds.filter((b) => b.owner.id === meId) : builds;
@@ -113,11 +108,20 @@ export function BuildsBrowser({
             className={selectClass}
           >
             <option value="">{t("filters.allJobs")}</option>
-            {jobOptions.map((j) => (
-              <option key={j.id} value={String(j.id)}>
-                {j.name}
-              </option>
-            ))}
+            <optgroup label={t("form.firstJobs")}>
+              {jobs.first.map((j) => (
+                <option key={j.id} value={String(j.id)}>
+                  {j.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label={t("form.secondJobs")}>
+              {jobs.second.map((j) => (
+                <option key={j.id} value={String(j.id)}>
+                  {j.name}
+                </option>
+              ))}
+            </optgroup>
           </select>
 
           <div className="flex items-center gap-1">
