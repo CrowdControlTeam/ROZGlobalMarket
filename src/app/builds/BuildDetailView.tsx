@@ -3,7 +3,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Pencil, Plus, Search, Store } from "lucide-react";
+import { Pencil, Plus, Search } from "lucide-react";
 import type { BuildSlot } from "@/db/enums";
 import { getJob } from "@/lib/skill-planner";
 import { parsePositions, POSITION_TO_SLOT, PAPERDOLL_LEFT, PAPERDOLL_RIGHT } from "@/lib/build-constants";
@@ -36,8 +36,11 @@ export function BuildDetailView({
   const bySlot = new Map(build.entries.map((e) => [e.slot, e]));
 
   // Botón "buscar todo en el mercado": abre una pestaña nueva del mercado
-  // filtrada por TODOS los items de la build (filtro itemIds). null si vacía.
-  const itemIds = [...new Set(build.entries.map((e) => e.item.id))];
+  // filtrada por TODOS los items de la build (filtro itemIds) — incluye las
+  // piezas Y sus cartas por id. null si vacía.
+  const itemIds = [
+    ...new Set(build.entries.flatMap((e) => [e.item.id, ...e.cards.map((c) => c.card.id)])),
+  ];
   const searchAllHref =
     itemIds.length > 0
       ? `/market?${new URLSearchParams({ newTab: "1", itemIds: itemIds.join(",") }).toString()}`
@@ -197,9 +200,13 @@ export function BuildDetailView({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {searchAllHref && (
-            <Link href={searchAllHref} className={buttonClass("outline")}>
-              <Store size={15} aria-hidden />
-              <span className="hidden sm:inline">{t("detail.searchAllMarket")}</span>
+            <Link
+              href={searchAllHref}
+              aria-label={t("detail.searchAllMarket")}
+              title={t("detail.searchAllMarket")}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-ro-panel-border text-ro-accent transition-colors hover:bg-ro-accent/10"
+            >
+              <Search size={16} aria-hidden />
             </Link>
           )}
           {isOwner && (
