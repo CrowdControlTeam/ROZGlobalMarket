@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool } from "@neondatabase/serverless";
-import { and, eq, lte, sql } from "drizzle-orm";
+import { and, eq, isNotNull, lte, sql } from "drizzle-orm";
 import { listing } from "../../src/db/schema";
 
 // Tipos mínimos de Workers inline (evitamos añadir @cloudflare/workers-types
@@ -27,10 +27,18 @@ async function expireListings(connectionString: string): Promise<void> {
     const db = drizzle(pool);
     // expiresAt NULL nunca cumple `<= now()` (comparación desconocida), así que
     // las filas sin caducidad quedan intactas — null = no caduca (por diseño).
+    // Además, las publicaciones ILIMITADAS (quantity NULL) NUNCA caducan aunque
+    // tuvieran un expiresAt heredado (red de seguridad; ver migración 0004).
     const result = await db
       .update(listing)
       .set({ status: "EXPIRED" })
-      .where(and(eq(listing.status, "ACTIVE"), lte(listing.expiresAt, sql`now()`)));
+      .where(
+        and(
+          eq(listing.status, "ACTIVE"),
+          isNotNull(listing.quantity),
+          lte(listing.expiresAt, sql`now()`),
+        ),
+      );
     console.log(`[cron] listings expired: ${result.rowCount ?? 0}`);
   } finally {
     await pool.end();
