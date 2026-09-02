@@ -100,6 +100,29 @@ export const listingOption = pgTable("ListingOption", {
 		}).onUpdate("cascade").onDelete("restrict"),
 ]);
 
+// Cartas insertadas en una publicación (una por ranura, hasta Item.slotCount).
+// Espejo de BuildEntryCard: la carta debe encajar en el slot de equipo del item
+// (ver cardFitsEquipSlot). onDelete restrict en la carta = no se borra un item
+// que sea carta usada en una publicación.
+export const listingCard = pgTable("ListingCard", {
+	id: text().notNull().$defaultFn(createId),
+	listingId: text().notNull(),
+	slotIndex: integer().notNull(),
+	cardItemId: text().notNull(),
+}, (table) => [
+	uniqueIndex("ListingCard_listingId_slotIndex_key").using("btree", table.listingId.asc().nullsLast().op("text_ops"), table.slotIndex.asc().nullsLast().op("int4_ops")),
+	foreignKey({
+			columns: [table.listingId],
+			foreignColumns: [listing.id],
+			name: "ListingCard_listingId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.cardItemId],
+			foreignColumns: [item.id],
+			name: "ListingCard_cardItemId_fkey"
+		}).onUpdate("cascade").onDelete("restrict"),
+]);
+
 export const itemOptionDef = pgTable("ItemOptionDef", {
 	id: text().notNull().$defaultFn(createId),
 	group: itemOptionGroup().notNull(),
@@ -337,6 +360,7 @@ export type Item = typeof item.$inferSelect;
 export type ItemOptionDef = typeof itemOptionDef.$inferSelect;
 export type Listing = typeof listing.$inferSelect;
 export type ListingOption = typeof listingOption.$inferSelect;
+export type ListingCard = typeof listingCard.$inferSelect;
 export type Deal = typeof deal.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type Build = typeof build.$inferSelect;

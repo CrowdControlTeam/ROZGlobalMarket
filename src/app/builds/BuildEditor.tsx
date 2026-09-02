@@ -238,7 +238,9 @@ export function BuildEditor({
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-semibold text-ro-text">{t("nameLabel")}</span>
+          <span className="text-sm font-semibold text-ro-text">
+            {t("nameLabel")} <span className="text-ro-red" aria-hidden>*</span>
+          </span>
           <input
             type="text"
             value={name}
@@ -249,7 +251,9 @@ export function BuildEditor({
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-semibold text-ro-text">{t("classLabel")}</span>
+          <span className="text-sm font-semibold text-ro-text">
+            {t("classLabel")} <span className="text-ro-red" aria-hidden>*</span>
+          </span>
           <select
             value={jobId ?? ""}
             onChange={(e) => setJobId(e.target.value ? Number(e.target.value) : null)}
@@ -271,7 +275,9 @@ export function BuildEditor({
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-semibold text-ro-text">{t("tagsLabel")}</span>
+        <span className="text-sm font-semibold text-ro-text">
+          {t("tagsLabel")} <span className="text-ro-red" aria-hidden>*</span>
+        </span>
         <div className="flex gap-2">
           {BUILD_TAG_VALUES.map((tag) => {
             const on = tags.includes(tag);

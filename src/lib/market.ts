@@ -25,6 +25,7 @@ import {
   itemOptionDef,
   listing,
   listingOption,
+  listingCard,
   user,
   ItemCategory,
   type EquipSlot,
@@ -344,6 +345,31 @@ export async function getListings(filters: MarketFilters) {
     optionsByListing.set(o.listingId, list);
   }
 
+  // Cartas de la página, misma técnica que las options: una consulta con JOIN al
+  // item de la carta, agrupadas por listing en la forma { slotIndex, card }.
+  type CardRow = { slotIndex: number; card: { id: string; name: string; iconUrl: string } };
+  const cardRows =
+    pageIds.length > 0
+      ? await db
+          .select({
+            listingId: listingCard.listingId,
+            slotIndex: listingCard.slotIndex,
+            cardId: item.id,
+            cardName: item.name,
+            cardIconUrl: item.iconUrl,
+          })
+          .from(listingCard)
+          .innerJoin(item, eq(listingCard.cardItemId, item.id))
+          .where(inArray(listingCard.listingId, pageIds))
+          .orderBy(asc(listingCard.slotIndex))
+      : [];
+  const cardsByListing = new Map<string, CardRow[]>();
+  for (const c of cardRows) {
+    const list = cardsByListing.get(c.listingId) ?? [];
+    list.push({ slotIndex: c.slotIndex, card: { id: c.cardId, name: c.cardName, iconUrl: c.cardIconUrl } });
+    cardsByListing.set(c.listingId, list);
+  }
+
   // Reconstrucción a la forma anidada que devolvía Prisma (item/poster/options).
   const page = pageRows.map((l) => ({
     id: l.id,
@@ -357,6 +383,7 @@ export async function getListings(filters: MarketFilters) {
     item: { id: l.itemId, name: l.itemName, iconUrl: l.itemIconUrl, slotCount: l.itemSlotCount },
     poster: { id: l.posterId, username: l.posterUsername },
     options: optionsByListing.get(l.id) ?? [],
+    cards: cardsByListing.get(l.id) ?? [],
   }));
   const last = page.at(-1);
 

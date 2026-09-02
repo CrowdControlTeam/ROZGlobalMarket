@@ -30,6 +30,10 @@ export async function EditSlot({
     with: {
       item: true,
       options: { orderBy: (o) => asc(o.slotIndex) },
+      cards: {
+        with: { card: { columns: { id: true, name: true, iconUrl: true } } },
+        orderBy: (c) => asc(c.slotIndex),
+      },
     },
   });
 
@@ -76,6 +80,7 @@ export async function EditSlot({
     optionSelections: buildOptionSelectionsFromDetected(
       listing.options.map((o) => ({ slotIndex: o.slotIndex, defId: o.defId, value: o.value })),
     ),
+    cards: listing.cards.map((c) => ({ slotIndex: c.slotIndex, card: c.card })),
   };
 
   // Editar = mismo modal que crear: con escáner (si está disponible) e item

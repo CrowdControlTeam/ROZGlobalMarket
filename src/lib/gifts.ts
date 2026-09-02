@@ -9,6 +9,7 @@ import { deal, listing, user } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { sendDirectMessage } from "@/lib/discord-bot";
+import { listingItemDetailFields } from "@/lib/discord-item-fields";
 import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
@@ -146,6 +147,7 @@ export async function claimGift(listingId: string, formData: FormData) {
     itemIconUrl: `${appUrl}${giftListing.item.iconUrl}`,
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
+      ...(await listingItemDetailFields(tField, listingId, false)),
       { name: tDiscord("fields.to"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -222,6 +224,7 @@ export async function acceptGiftClaim(dealId: string) {
     itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
     fields: [
       { name: tField("quantity"), value: String(dealRow.quantity), inline: true },
+      ...(await listingItemDetailFields(tField, dealRow.listingId, false)),
       { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -236,6 +239,7 @@ export async function rejectGiftClaim(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
 
   const dealRow = await loadOwnedPendingGiftDeal(dealId, "giver", session.user.discordId, t);
   await db.update(deal).set({ status: "REJECTED" }).where(eq(deal.id, dealId));
@@ -249,7 +253,10 @@ export async function rejectGiftClaim(dealId: string) {
     url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
     itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false }],
+    fields: [
+      ...(await listingItemDetailFields(tField, dealRow.listingId, false)),
+      { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
   revalidatePath(`/market/${dealRow.listingId}`);

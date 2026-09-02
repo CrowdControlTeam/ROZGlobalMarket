@@ -10,16 +10,18 @@ import {
   itemOptionDef,
   listing,
   listingOption,
+  listingCard,
   user,
   ItemOptionGroup,
   type EquipSlot,
   type Item,
 } from "@/db/schema";
-import { itemFitsSlot } from "@/lib/item-slots";
+import { itemFitsSlot, cardFitsEquipSlot } from "@/lib/item-slots";
 import { positionAllows, type HeadgearPosition } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/guard";
 import { sendListingCreatedWebhook } from "@/lib/discord-webhook";
+import { itemDetailFields, listingItemDetailFields } from "@/lib/discord-item-fields";
 import { sendDirectMessage } from "@/lib/discord-bot";
 import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
@@ -33,7 +35,6 @@ import {
 } from "@/lib/item-options";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
-import { formatOptionAmount } from "@/lib/market-labels";
 import { MAX_LISTING_NOTES_LENGTH, parseListingNotes } from "@/lib/listing-notes-constants";
 import { loadMarketConfig } from "@/lib/market-config";
 import { searchCatalog } from "@/lib/item-catalog";
@@ -66,11 +67,19 @@ export async function searchItems(query: string, slot?: EquipSlot, position?: He
   }));
 }
 
-// Búsqueda de CARTAS (categoría CARD) por nombre — para el editor de builds, que
-// asigna cartas a las ranuras de cada pieza. Mismo catálogo en memoria.
-export async function searchCards(query: string) {
+// Búsqueda de CARTAS (categoría CARD) por nombre — para el editor de builds y el
+// modal de publicar, que asignan cartas a las ranuras de cada pieza. Mismo
+// catálogo en memoria. Si se pasa `equipSlot`, solo devuelve cartas que encajan
+// en ese slot de equipo (cardFitsEquipSlot); sin él, cualquier carta.
+export async function searchCards(query: string, equipSlot?: EquipSlot) {
   await requireSession();
-  return searchCatalog(query, 20, (item) => item.category === "CARD");
+  return searchCatalog(
+    query,
+    20,
+    (item) =>
+      item.category === "CARD" &&
+      (equipSlot ? cardFitsEquipSlot(item.cardSlot, equipSlot) : true),
+  );
 }
 
 // Para que el filtro de mercado (client component, sin acceso directo a
@@ -95,6 +104,14 @@ export async function getMaxRefineLevel() {
   return loadMaxRefineLevel();
 }
 
+// Días de caducidad configurados (para la vista previa de publicar, que muestra
+// el indicador de caducidad tal cual saldrá en el mercado).
+export async function getListingExpirationDays() {
+  await requireSession();
+  const { listingExpirationDays } = await loadMarketConfig();
+  return listingExpirationDays;
+}
+
 // Todas mis publicaciones (los 3 tipos, cualquier estado) para la pantalla
 // "Mi actividad" — a diferencia de getListings (mercado general), no
 // filtra por status: "ACTIVE" ni por búsqueda/orden, es mi historial
@@ -110,6 +127,10 @@ export async function getMyListings() {
       // select en item (no fila completa): la card solo usa nombre/icono/slots.
       item: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
       options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+      cards: {
+        with: { card: { columns: { id: true, name: true, iconUrl: true, slotCount: true } } },
+        orderBy: (c) => asc(c.slotIndex),
+      },
     },
   });
 
@@ -279,15 +300,46 @@ async function parseListingFields(
     }
   }
 
-  // Las ranuras de carta ya no las indica quien publica: son fijas por item
-  // (Item.slotCount, extraído del cliente).
+  // Cartas: una por ranura (form: card1..cardN, hasta Item.slotCount). Cada carta
+  // debe ser de categoría CARD y encajar en el slot de equipo del item.
+  const cards = await parseCardsFromFormData(formData, item, t);
 
   const notes = parseListingNotes(formData.get("notes"));
   if (notes && notes.length > MAX_LISTING_NOTES_LENGTH) {
     throw new Error(t("notesTooLong", { max: MAX_LISTING_NOTES_LENGTH }));
   }
 
-  return { price, quantity, refineLevel, notes, rawOptions, defsById };
+  return { price, quantity, refineLevel, notes, rawOptions, defsById, cards };
+}
+
+// Lee y valida las cartas del form (card1..cardN, 1-based en el form → slotIndex
+// 0-based). Solo hasta Item.slotCount ranuras; cada carta debe existir, ser
+// categoría CARD y encajar en el slot de equipo del item (cardFitsEquipSlot).
+async function parseCardsFromFormData(
+  formData: FormData,
+  item: Item,
+  t: Awaited<ReturnType<typeof getTranslations>>,
+): Promise<{ slotIndex: number; cardItemId: string; name: string }[]> {
+  if (item.slotCount <= 0) return [];
+  const picked: { slotIndex: number; cardItemId: string }[] = [];
+  for (let i = 0; i < item.slotCount; i++) {
+    const v = formData.get(`card${i + 1}`);
+    if (typeof v === "string" && v) picked.push({ slotIndex: i, cardItemId: v });
+  }
+  if (picked.length === 0) return [];
+
+  const ids = [...new Set(picked.map((p) => p.cardItemId))];
+  const rows = await db
+    .select({ id: itemTable.id, name: itemTable.name, category: itemTable.category, cardSlot: itemTable.cardSlot })
+    .from(itemTable)
+    .where(inArray(itemTable.id, ids));
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return picked.map((p) => {
+    const card = byId.get(p.cardItemId);
+    if (!card || card.category !== "CARD") throw new Error(t("itemNotFound"));
+    if (!cardFitsEquipSlot(card.cardSlot, item.slot)) throw new Error(t("cardSlotMismatch"));
+    return { slotIndex: p.slotIndex, cardItemId: p.cardItemId, name: card.name };
+  });
 }
 
 export async function createListing(formData: FormData) {
@@ -335,7 +387,7 @@ export async function createListing(formData: FormData) {
   }
   const isDirectGift = parsed.data.type === "GIFT" && !!recipientId;
 
-  const { price, quantity, refineLevel, notes, rawOptions, defsById } =
+  const { price, quantity, refineLevel, notes, rawOptions, defsById, cards } =
     await parseListingFields(formData, parsed.data.type, item, t);
 
   const createdListing = await db.transaction(async (tx) => {
@@ -364,6 +416,11 @@ export async function createListing(formData: FormData) {
     if (rawOptions.length > 0) {
       await tx.insert(listingOption).values(
         rawOptions.map((o) => ({ listingId: created.id, slotIndex: o.slotIndex, defId: o.defId, value: o.value })),
+      );
+    }
+    if (cards.length > 0) {
+      await tx.insert(listingCard).values(
+        cards.map((c) => ({ listingId: created.id, slotIndex: c.slotIndex, cardItemId: c.cardItemId })),
       );
     }
     // Regalo directo: además del listing, un Deal ACCEPTED para el destinatario
@@ -395,17 +452,12 @@ export async function createListing(formData: FormData) {
       itemIconUrl: `${appUrl}${item.iconUrl}`,
       fields: [
         { name: tField("quantity"), value: String(quantity), inline: true },
-        ...(rawOptions.length > 0
-          ? [
-              {
-                name: tField("options"),
-                value: rawOptions
-                  .map((o) => `${defsById.get(o.defId)!.label}: ${formatOptionAmount(o.value, false)}`)
-                  .join("\n"),
-                inline: false,
-              },
-            ]
-          : []),
+        ...itemDetailFields(
+          tField,
+          rawOptions.map((o) => ({ label: defsById.get(o.defId)!.label, value: o.value })),
+          cards.map((c) => ({ name: c.name })),
+          false,
+        ),
         { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
       ],
     });
@@ -431,6 +483,7 @@ export async function createListing(formData: FormData) {
       label: defsById.get(o.defId)!.label,
       value: o.value,
     })),
+    cards: cards.map((c) => ({ name: c.name })),
   });
 
   revalidatePath("/market");
@@ -472,7 +525,7 @@ export async function updateListing(listingId: string, formData: FormData) {
   const [item] = await db.select().from(itemTable).where(eq(itemTable.id, itemId)).limit(1);
   if (!item) throw new Error(t("itemNotFound"));
 
-  const { price, quantity, refineLevel, notes, rawOptions } =
+  const { price, quantity, refineLevel, notes, rawOptions, cards } =
     await parseListingFields(formData, type, item, t);
 
   // Caducidad al editar: las ILIMITADAS (quantity null) no caducan (expiresAt
@@ -496,6 +549,7 @@ export async function updateListing(listingId: string, formData: FormData) {
     if (live > 0) throw new Error(t("listingHasDeals"));
 
     await tx.delete(listingOption).where(eq(listingOption.listingId, listingId));
+    await tx.delete(listingCard).where(eq(listingCard.listingId, listingId));
     await tx
       .update(listing)
       .set({ type, itemId: item.id, quantity, price, refineLevel, notes, expiresAt })
@@ -503,6 +557,11 @@ export async function updateListing(listingId: string, formData: FormData) {
     if (rawOptions.length > 0) {
       await tx.insert(listingOption).values(
         rawOptions.map((o) => ({ listingId, slotIndex: o.slotIndex, defId: o.defId, value: o.value })),
+      );
+    }
+    if (cards.length > 0) {
+      await tx.insert(listingCard).values(
+        cards.map((c) => ({ listingId, slotIndex: c.slotIndex, cardItemId: c.cardItemId })),
       );
     }
   });
@@ -663,6 +722,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
+      ...(await listingItemDetailFields(tField, listingId, false)),
       { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -763,6 +823,7 @@ export async function acceptSaleReservation(dealId: string) {
         value: formatPrice(dealRow.quantity * (dealRow.unitPrice ?? 0)),
         inline: true,
       },
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
       { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -777,6 +838,7 @@ export async function rejectSaleReservation(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
 
   const dealRow = await loadOwnedPendingSaleDeal(dealId, "poster", session.user.discordId, t);
   await db.update(deal).set({ status: "REJECTED" }).where(eq(deal.id, dealId));
@@ -790,7 +852,10 @@ export async function rejectSaleReservation(dealId: string) {
     url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
     itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false }],
+    fields: [
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
+      { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
   revalidatePath(`/market/${dealRow.listingId}`);
@@ -899,6 +964,7 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
+      ...(await listingItemDetailFields(tField, listingId, true)),
       { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -997,6 +1063,7 @@ export async function acceptFulfillOffer(dealId: string) {
         value: formatPrice(dealRow.quantity * (dealRow.unitPrice ?? 0)),
         inline: true,
       },
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
       { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -1011,6 +1078,7 @@ export async function rejectFulfillOffer(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
 
   const dealRow = await loadOwnedPendingBuyDeal(dealId, "buyer", session.user.discordId, t);
   await db.update(deal).set({ status: "REJECTED" }).where(eq(deal.id, dealId));
@@ -1024,7 +1092,10 @@ export async function rejectFulfillOffer(dealId: string) {
     url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
     itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false }],
+    fields: [
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
+      { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
   revalidatePath(`/market/${dealRow.listingId}`);

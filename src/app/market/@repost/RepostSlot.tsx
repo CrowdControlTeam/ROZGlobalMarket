@@ -27,7 +27,14 @@ export async function RepostSlot({
 
   const listing = await db.query.listing.findFirst({
     where: eq(listingTable.id, listingId),
-    with: { item: true, options: { orderBy: (o) => asc(o.slotIndex) } },
+    with: {
+      item: true,
+      options: { orderBy: (o) => asc(o.slotIndex) },
+      cards: {
+        with: { card: { columns: { id: true, name: true, iconUrl: true } } },
+        orderBy: (c) => asc(c.slotIndex),
+      },
+    },
   });
 
   if (!listing || listing.posterId !== session.user.discordId) return null;
@@ -63,6 +70,7 @@ export async function RepostSlot({
     optionSelections: buildOptionSelectionsFromDetected(
       listing.options.map((o) => ({ slotIndex: o.slotIndex, defId: o.defId, value: o.value })),
     ),
+    cards: listing.cards.map((c) => ({ slotIndex: c.slotIndex, card: c.card })),
   };
 
   // Sin escáner: los datos ya vienen precargados (modal de una columna, como @edit).

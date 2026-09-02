@@ -224,6 +224,23 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
+      {listing.cards.length > 0 && (
+        <div className="mt-3">
+          <p className={labelClass}>{t("field.cards")}</p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {listing.cards.map((c) => (
+              <span
+                key={c.slotIndex}
+                className="inline-flex items-center gap-1 rounded border border-ro-panel-border bg-ro-panel-alt px-1.5 py-0.5 text-xs text-ro-text-muted"
+              >
+                <ItemIcon item={c.card} width={16} height={16} alt="" />
+                {c.card.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {listing.notes && (
         <div className="mt-3">
           <p className={labelClass}>{t("field.notes")}</p>

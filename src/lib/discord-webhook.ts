@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 import { formatPrice } from "@/lib/price";
 import { loadMarketConfig } from "@/lib/market-config";
-import { formatOptionAmount } from "@/lib/market-labels";
+import { itemDetailFields } from "@/lib/discord-item-fields";
 
 type ListingWebhookPayload = {
   itemName: string;
@@ -15,6 +15,7 @@ type ListingWebhookPayload = {
   posterId: string; // discordId, para la mención clicable "Publicado por"
   listingUrl: string; // absoluta
   options?: { label: string; value: number }[];
+  cards?: { name: string }[];
 };
 
 export async function sendListingCreatedWebhook(payload: ListingWebhookPayload) {
@@ -61,17 +62,12 @@ export async function sendListingCreatedWebhook(payload: ListingWebhookPayload) 
             value: payload.quantity === null ? "∞" : String(payload.quantity),
             inline: true,
           },
-          ...(payload.options && payload.options.length > 0
-            ? [
-                {
-                  name: tField("options"),
-                  value: payload.options
-                    .map((o) => `${o.label}: ${formatOptionAmount(o.value, payload.type === "BUY")}`)
-                    .join("\n"),
-                  inline: false,
-                },
-              ]
-            : []),
+          ...itemDetailFields(
+            tField,
+            payload.options ?? [],
+            payload.cards ?? [],
+            payload.type === "BUY",
+          ),
           { name: t("fields.postedBy"), value: `<@${payload.posterId}>`, inline: false },
         ],
         timestamp: new Date().toISOString(),

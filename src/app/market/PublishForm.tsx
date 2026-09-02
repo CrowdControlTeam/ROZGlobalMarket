@@ -4,11 +4,11 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ItemIcon } from "@/components/ItemIcon";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon } from "lucide-react";
+import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Clock, Infinity as InfinityIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ItemOptionDef } from "@/db/schema";
 import type { ListingType } from "@/db/enums";
-import { createListing, updateListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
+import { createListing, updateListing, getOptionChoices, getMaxRefineLevel, getListingExpirationDays } from "@/lib/listings";
 import { recognizeItemFromScreenshot } from "@/lib/item-recognition";
 import { buttonClass, selectClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
@@ -28,7 +28,11 @@ import { getErrorMessage, rethrowFrameworkErrors } from "@/lib/errors";
 import { ItemPicker, type ItemResult } from "./ItemPicker";
 import { ScreenshotDropzone } from "./ScreenshotDropzone";
 import { UserPicker, type UserResult } from "@/components/UserPicker";
+import { CardPicker } from "@/app/builds/CardPicker";
 import type { PublicationType } from "./publication-type";
+
+// Carta seleccionada en una ranura (solo lo que se muestra/envía).
+type CardSel = { id: string; name: string; iconUrl: string } | null;
 
 type TypeSegment = { value: PublicationType; Icon: LucideIcon; activeBg: string; iconColor: string };
 const TYPE_SEGMENTS: TypeSegment[] = [
@@ -56,7 +60,19 @@ export type EditListingData = {
   refineLevel: number;
   notes: string;
   optionSelections: OptionSelection[];
+  // Cartas por ranura (0-based). Opcional: la precarga desde build no las lleva.
+  cards?: { slotIndex: number; card: { id: string; name: string; iconUrl: string } }[];
 };
+
+// Array de cartas (indexado por ranura) para el estado del form, a partir de la
+// semilla y el nº de ranuras del item.
+function seedCards(slotCount: number, seedCardsData?: EditListingData["cards"]): CardSel[] {
+  const arr: CardSel[] = Array.from({ length: slotCount }, () => null);
+  for (const { slotIndex, card } of seedCardsData ?? []) {
+    if (slotIndex >= 0 && slotIndex < slotCount) arr[slotIndex] = card;
+  }
+  return arr;
+}
 
 export function PublishForm({
   recognitionEnabled,
@@ -93,6 +109,7 @@ export function PublishForm({
   const [optionSelections, setOptionSelections] = useState<OptionSelection[]>(
     seed?.optionSelections ?? emptyOptionSelections(),
   );
+  const [cards, setCards] = useState<CardSel[]>(seedCards(seed?.item.slotCount ?? 0, seed?.cards));
   const [refineLevel, setRefineLevel] = useState(seed?.refineLevel ?? 0);
   const [quantity, setQuantity] = useState<number | "">(seed ? (seed.quantity ?? "") : 1);
   const [price, setPrice] = useState<number | "">(seed ? (seed.price ?? "") : "");
@@ -106,10 +123,11 @@ export function PublishForm({
   const [error, setError] = useState<string | null>(null);
   const [priceMissing, setPriceMissing] = useState(false);
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
+  const [expirationDays, setExpirationDays] = useState(7);
   const [isRecognizing, startRecognizeTransition] = useTransition();
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [recognitionNote, setRecognitionNote] = useState<string | null>(null);
-  const [tab, setTab] = useState<"info" | "options">("info");
+  const [tab, setTab] = useState<"info" | "options" | "cards">("info");
   // Paso de confirmación: al pulsar Publicar se muestra la vista previa (la
   // tarjeta tal cual saldrá) y solo Confirmar publica de verdad.
   const [preview, setPreview] = useState(false);
@@ -121,7 +139,20 @@ export function PublishForm({
 
   useEffect(() => {
     getMaxRefineLevel().then(setMaxRefineLevel);
+    getListingExpirationDays().then(setExpirationDays);
   }, []);
+
+  // Cartas: se redimensionan a las ranuras del item. Al CAMBIAR de item se
+  // vacían (una carta válida para un slot puede no encajar en otro); al montar
+  // (mismo id) se conservan las de la semilla.
+  const prevItemIdRef = useRef(selectedItem?.id);
+  useEffect(() => {
+    const n = selectedItem?.slotCount ?? 0;
+    if (prevItemIdRef.current !== selectedItem?.id) {
+      prevItemIdRef.current = selectedItem?.id;
+      setCards(Array.from({ length: n }, () => null));
+    }
+  }, [selectedItem?.id, selectedItem?.slotCount]);
 
   const optionGroup = selectedItem?.optionGroup ?? null;
   const refineEligible = selectedItem !== null && isRefineEligible(selectedItem);
@@ -139,6 +170,11 @@ export function PublishForm({
 
   const hasOptionCatalog = optionGroup !== null && optionDefs.length > 0;
   const optionsCount = optionSelections.filter((s) => s.defId !== "").length;
+  // Cartas: el item tiene ranuras. La pestaña/columna de cartas aparece entonces.
+  const slotCount = selectedItem?.slotCount ?? 0;
+  const hasCards = slotCount > 0;
+  const cardsCount = cards.filter((c) => c !== null).length;
+  const hasTabs = hasOptionCatalog || hasCards;
 
   function handleTypeChange(next: PublicationType) {
     setType(next);
@@ -261,6 +297,9 @@ export function PublishForm({
         fd.set(`option${i + 1}Value`, String(sel.value));
       }
     });
+    cards.forEach((card, i) => {
+      if (card) fd.set(`card${i + 1}`, card.id);
+    });
     return fd;
   }
 
@@ -365,6 +404,18 @@ export function PublishForm({
           ))}
         </div>
       )}
+      {cardsCount > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {cards.map((c, i) =>
+            c ? (
+              <span key={i} className="inline-flex items-center gap-0.5 rounded border border-ro-panel-border bg-ro-panel px-1 py-0.5 text-[0.65rem] text-ro-text-muted">
+                <ItemIcon item={c} width={14} height={14} alt="" />
+                {c.name}
+              </span>
+            ) : null,
+          )}
+        </div>
+      )}
       <div className="mt-2 flex items-end justify-between gap-2 text-sm">
         <span className="text-xs text-ro-text-muted">{previewCount}</span>
         <span>
@@ -381,6 +432,17 @@ export function PublishForm({
           )}
         </span>
       </div>
+      {/* Caducidad tal cual saldrá: no caduca si es ILIMITADO o REGALO DIRECTO
+          (mismo criterio que createListing). En la vista previa se muestra el
+          plazo configurado ("caduca en N días"), no una cuenta atrás en vivo. */}
+      {!unlimited && !(type === "GIFT" && selectedRecipient !== null) && (
+        <div className="mt-0.5 flex justify-end">
+          <span className="inline-flex items-center gap-1 text-[0.65rem] text-ro-text-muted">
+            <Clock size={12} aria-hidden />
+            {tMarket("expiry.days", { days: expirationDays })}
+          </span>
+        </div>
+      )}
     </div>
   );
 
@@ -420,25 +482,37 @@ export function PublishForm({
 
       {/* Pestañas SOLO en desktop y si el ítem admite opciones. En móvil no hay
           pestañas: Info y Opciones se apilan en una columna (ver más abajo). */}
-      {hasOptionCatalog && (
+      {hasTabs && (
         <div className="hidden gap-1 border-b border-ro-panel-border sm:flex">
           <TabButton active={tab === "info"} onClick={() => setTab("info")}>
             {t("tabs.info")}
           </TabButton>
-          <TabButton active={tab === "options"} onClick={() => setTab("options")}>
-            {type === "BUY" ? tField("minStats") : tField("options")}
-            {optionsCount > 0 && (
-              <span className="grid h-3.5 min-w-3.5 place-items-center rounded-full bg-ro-accent px-1 text-[8px] font-bold text-ro-accent-contrast">
-                {optionsCount}
-              </span>
-            )}
-          </TabButton>
+          {hasOptionCatalog && (
+            <TabButton active={tab === "options"} onClick={() => setTab("options")}>
+              {type === "BUY" ? tField("minStats") : tField("options")}
+              {optionsCount > 0 && (
+                <span className="grid h-3.5 min-w-3.5 place-items-center rounded-full bg-ro-accent px-1 text-[8px] font-bold text-ro-accent-contrast">
+                  {optionsCount}
+                </span>
+              )}
+            </TabButton>
+          )}
+          {hasCards && (
+            <TabButton active={tab === "cards"} onClick={() => setTab("cards")}>
+              {t("cardsTab")}
+              {cardsCount > 0 && (
+                <span className="grid h-3.5 min-w-3.5 place-items-center rounded-full bg-ro-accent px-1 text-[8px] font-bold text-ro-accent-contrast">
+                  {cardsCount}
+                </span>
+              )}
+            </TabButton>
+          )}
         </div>
       )}
 
       {/* Info: en móvil siempre visible; en desktop solo si la pestaña activa es
           Info (o el ítem no tiene opciones). */}
-      <div className={`flex min-h-0 flex-1 flex-col gap-3 ${hasOptionCatalog && tab === "options" ? "sm:hidden" : ""}`}>
+      <div className={`flex min-h-0 flex-1 flex-col gap-3 ${hasTabs && tab !== "info" ? "sm:hidden" : ""}`}>
           <div className="grid grid-cols-2 gap-3">
             {showPrice && (
               <FloatingField
@@ -538,7 +612,7 @@ export function PublishForm({
           encabezado (no hay pestañas); en desktop solo si la pestaña activa es
           Opciones. */}
       {hasOptionCatalog && (
-        <div className={tab === "info" ? "sm:hidden" : ""}>
+        <div className={tab === "options" ? "" : "sm:hidden"}>
           <div className="mb-2 flex items-center gap-2 border-t border-ro-panel-border pt-3 text-[11px] font-medium uppercase tracking-wide text-ro-text-muted sm:hidden">
             {type === "BUY" ? tField("minStats") : tField("options")}
             {optionsCount > 0 && (
@@ -593,6 +667,54 @@ export function PublishForm({
               </div>
             );
           })}
+          </div>
+        </div>
+      )}
+
+      {/* Cartas: solo si el item tiene ranuras. Una por ranura; solo cartas que
+          encajan en el slot de equipo del item (CardPicker con equipSlot). En
+          móvil siempre visibles con encabezado; en desktop solo en su pestaña. */}
+      {hasCards && (
+        <div className={tab === "cards" ? "" : "sm:hidden"}>
+          <div className="mb-2 flex items-center gap-2 border-t border-ro-panel-border pt-3 text-[11px] font-medium uppercase tracking-wide text-ro-text-muted sm:hidden">
+            {t("cardsTab")}
+            {cardsCount > 0 && (
+              <span className="grid h-3.5 min-w-3.5 place-items-center rounded-full bg-ro-accent px-1 text-[8px] font-bold text-ro-accent-contrast">
+                {cardsCount}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: slotCount }, (_, i) => i).map((index) => {
+              const card = cards[index] ?? null;
+              return (
+                <div key={index} className="flex items-center gap-2">
+                  {card ? (
+                    <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-ro-panel-border bg-ro-panel-alt px-2 py-1.5">
+                      <ItemIcon item={card} width={22} height={22} alt="" />
+                      <span className="min-w-0 flex-1 truncate text-sm text-ro-text">{card.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setCards((prev) => prev.map((c, i) => (i === index ? null : c)))}
+                        className="shrink-0 text-xs text-ro-text-muted hover:text-ro-text"
+                      >
+                        {t("cardRemove")}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <CardPicker
+                        placeholder={t("cardPlaceholder", { n: index + 1 })}
+                        equipSlot={selectedItem?.slot ?? undefined}
+                        onSelect={(c) =>
+                          setCards((prev) => prev.map((x, i) => (i === index ? { id: c.id, name: c.name, iconUrl: c.iconUrl } : x)))
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
