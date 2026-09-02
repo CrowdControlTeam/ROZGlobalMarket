@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { ArrowLeftRight, Gift, Pencil, Plus, Search, ShoppingCart, Tag } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { BuildSlot, ListingType } from "@/db/enums";
-import { LISTING_TYPE_VALUES } from "@/db/enums";
 import { getJob } from "@/lib/skill-planner";
 import { parsePositions, POSITION_TO_SLOT, PAPERDOLL_LEFT, PAPERDOLL_RIGHT } from "@/lib/build-constants";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
@@ -30,6 +29,9 @@ const TYPE_ICON: Record<ListingType, LucideIcon> = {
   TRADE: ArrowLeftRight,
   GIFT: Gift,
 };
+
+// Orden de los chips de disponibilidad: venta, compra, intercambio, regalo.
+const TYPE_ORDER: ListingType[] = ["SALE", "BUY", "TRADE", "GIFT"];
 
 export function BuildDetailView({
   build,
@@ -129,7 +131,7 @@ export function BuildDetailView({
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
               {/* Chips de disponibilidad por tipo (venta/compra/intercambio/regalo):
                   icono + nº con el color del tipo; el detalle va en el tooltip. */}
-              {LISTING_TYPE_VALUES.map((type) => {
+              {TYPE_ORDER.map((type) => {
                 const n = avail[type] ?? 0;
                 if (n === 0) return null;
                 const Icon = TYPE_ICON[type];
