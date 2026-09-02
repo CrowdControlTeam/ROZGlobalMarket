@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { item as itemTable, user } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { sendDirectMessage, isDmFeatureAvailable } from "@/lib/discord-bot";
+import { listingItemDetailFields } from "@/lib/discord-item-fields";
 import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 
@@ -66,6 +67,10 @@ export async function sendContactMessage(formData: FormData) {
     itemIconUrl: `${appUrl}${item.iconUrl}`,
     fields: [
       { name: tField("message"), value: parsed.data.message, inline: false },
+      // Detalle del item (options + cartas) cuando el mensaje viene de un listing.
+      ...(parsed.data.listingId
+        ? await listingItemDetailFields(tField, parsed.data.listingId, false)
+        : []),
       // Mención nativa de Discord: dentro del canal privado bot<->destinatario
       // no le hace ping a nadie (el remitente no está en ese canal), solo
       // renderiza un chip clicable que abre su perfil — desde ahí se puede

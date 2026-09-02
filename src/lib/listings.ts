@@ -21,6 +21,7 @@ import { positionAllows, type HeadgearPosition } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/guard";
 import { sendListingCreatedWebhook } from "@/lib/discord-webhook";
+import { itemDetailFields, listingItemDetailFields } from "@/lib/discord-item-fields";
 import { sendDirectMessage } from "@/lib/discord-bot";
 import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
@@ -34,7 +35,6 @@ import {
 } from "@/lib/item-options";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
-import { formatOptionAmount } from "@/lib/market-labels";
 import { MAX_LISTING_NOTES_LENGTH, parseListingNotes } from "@/lib/listing-notes-constants";
 import { loadMarketConfig } from "@/lib/market-config";
 import { searchCatalog } from "@/lib/item-catalog";
@@ -311,7 +311,7 @@ async function parseCardsFromFormData(
   formData: FormData,
   item: Item,
   t: Awaited<ReturnType<typeof getTranslations>>,
-): Promise<{ slotIndex: number; cardItemId: string }[]> {
+): Promise<{ slotIndex: number; cardItemId: string; name: string }[]> {
   if (item.slotCount <= 0) return [];
   const picked: { slotIndex: number; cardItemId: string }[] = [];
   for (let i = 0; i < item.slotCount; i++) {
@@ -322,16 +322,16 @@ async function parseCardsFromFormData(
 
   const ids = [...new Set(picked.map((p) => p.cardItemId))];
   const rows = await db
-    .select({ id: itemTable.id, category: itemTable.category, cardSlot: itemTable.cardSlot })
+    .select({ id: itemTable.id, name: itemTable.name, category: itemTable.category, cardSlot: itemTable.cardSlot })
     .from(itemTable)
     .where(inArray(itemTable.id, ids));
   const byId = new Map(rows.map((r) => [r.id, r]));
-  for (const p of picked) {
+  return picked.map((p) => {
     const card = byId.get(p.cardItemId);
     if (!card || card.category !== "CARD") throw new Error(t("itemNotFound"));
     if (!cardFitsEquipSlot(card.cardSlot, item.slot)) throw new Error(t("cardSlotMismatch"));
-  }
-  return picked;
+    return { slotIndex: p.slotIndex, cardItemId: p.cardItemId, name: card.name };
+  });
 }
 
 export async function createListing(formData: FormData) {
@@ -444,17 +444,12 @@ export async function createListing(formData: FormData) {
       itemIconUrl: `${appUrl}${item.iconUrl}`,
       fields: [
         { name: tField("quantity"), value: String(quantity), inline: true },
-        ...(rawOptions.length > 0
-          ? [
-              {
-                name: tField("options"),
-                value: rawOptions
-                  .map((o) => `${defsById.get(o.defId)!.label}: ${formatOptionAmount(o.value, false)}`)
-                  .join("\n"),
-                inline: false,
-              },
-            ]
-          : []),
+        ...itemDetailFields(
+          tField,
+          rawOptions.map((o) => ({ label: defsById.get(o.defId)!.label, value: o.value })),
+          cards.map((c) => ({ name: c.name })),
+          false,
+        ),
         { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
       ],
     });
@@ -480,6 +475,7 @@ export async function createListing(formData: FormData) {
       label: defsById.get(o.defId)!.label,
       value: o.value,
     })),
+    cards: cards.map((c) => ({ name: c.name })),
   });
 
   revalidatePath("/market");
@@ -718,6 +714,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
+      ...(await listingItemDetailFields(tField, listingId, false)),
       { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -818,6 +815,7 @@ export async function acceptSaleReservation(dealId: string) {
         value: formatPrice(dealRow.quantity * (dealRow.unitPrice ?? 0)),
         inline: true,
       },
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
       { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -832,6 +830,7 @@ export async function rejectSaleReservation(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
 
   const dealRow = await loadOwnedPendingSaleDeal(dealId, "poster", session.user.discordId, t);
   await db.update(deal).set({ status: "REJECTED" }).where(eq(deal.id, dealId));
@@ -845,7 +844,10 @@ export async function rejectSaleReservation(dealId: string) {
     url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
     itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false }],
+    fields: [
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
+      { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
   revalidatePath(`/market/${dealRow.listingId}`);
@@ -954,6 +956,7 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
+      ...(await listingItemDetailFields(tField, listingId, true)),
       { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -1052,6 +1055,7 @@ export async function acceptFulfillOffer(dealId: string) {
         value: formatPrice(dealRow.quantity * (dealRow.unitPrice ?? 0)),
         inline: true,
       },
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
       { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -1066,6 +1070,7 @@ export async function rejectFulfillOffer(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
 
   const dealRow = await loadOwnedPendingBuyDeal(dealId, "buyer", session.user.discordId, t);
   await db.update(deal).set({ status: "REJECTED" }).where(eq(deal.id, dealId));
@@ -1079,7 +1084,10 @@ export async function rejectFulfillOffer(dealId: string) {
     url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
     itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false }],
+    fields: [
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
+      { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
   revalidatePath(`/market/${dealRow.listingId}`);

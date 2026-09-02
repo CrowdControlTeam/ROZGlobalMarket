@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/guard";
 import { listingCardState } from "@/lib/listing-card";
 import { loadMarketConfig } from "@/lib/market-config";
 import { sendDirectMessage } from "@/lib/discord-bot";
+import { listingItemDetailFields } from "@/lib/discord-item-fields";
 import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
@@ -96,6 +97,7 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
   // venta/compra/regalo, que también avisan al recibir la oferta). Best-effort.
   const appUrl = getAppUrl();
   const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
   const zenyField =
     parsed.data.zenyOffered > 0
       ? [{ name: tDiscord("fields.zenyIncluded"), value: String(parsed.data.zenyOffered), inline: true }]
@@ -111,6 +113,7 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
     fields: [
       { name: tDiscord("fields.offeredItem"), value: formatItemDisplayName(item.name, refineLevel, item.slotCount), inline: true },
       ...zenyField,
+      ...(await listingItemDetailFields(tField, listingId, false)),
       { name: tDiscord("fields.offerer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -144,6 +147,7 @@ export async function acceptTradeOffer(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
 
   const dealRow = await loadOwnedPendingDeal(dealId, "poster", session.user.discordId, t);
 
@@ -192,6 +196,10 @@ export async function acceptTradeOffer(dealId: string) {
       ? [{ name: tDiscord("fields.zenyIncluded"), value: String(dealRow.zenyOffered), inline: true }]
       : [];
 
+  // Options + cartas del item de la publicación (TRADE): ambas partes ven el
+  // detalle del item que se intercambia. Una sola consulta reutilizada.
+  const listingDetail = await listingItemDetailFields(tField, dealRow.listingId, false);
+
   // En un trade ambas partes reciben algo, así que a diferencia de una compra
   // (donde solo se notifica al vendedor) se manda un DM a cada lado. Best-effort
   // (sendDirectMessage no tumba la transacción, ya cerrada arriba).
@@ -206,6 +214,7 @@ export async function acceptTradeOffer(dealId: string) {
     fields: [
       { name: tDiscord("fields.yourOffer"), value: offeredItemName, inline: true },
       ...zenyField,
+      ...listingDetail,
       { name: tDiscord("fields.tradedWith"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -220,6 +229,7 @@ export async function acceptTradeOffer(dealId: string) {
     fields: [
       { name: tDiscord("fields.youReceived"), value: offeredItemName, inline: true },
       ...zenyField,
+      ...listingDetail,
       { name: tDiscord("fields.tradedWith"), value: `<@${dealRow.userId}>`, inline: false },
     ],
   });
