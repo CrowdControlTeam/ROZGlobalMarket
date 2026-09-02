@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, Plus } from "lucide-react";
-import type { BuildTag } from "@/db/enums";
+import type { BuildTag, ListingType } from "@/db/enums";
 import { BUILD_TAG_VALUES } from "@/db/enums";
 import { getJob, selectableJobs } from "@/lib/skill-planner";
 import { ItemIcon } from "@/components/ItemIcon";
@@ -28,7 +28,7 @@ export function BuildsBrowser({
 }: {
   builds: BuildDetail[];
   meId: string;
-  availability: Record<string, number>;
+  availability: Record<string, Partial<Record<ListingType, number>>>;
   maxBuildsPerUser: number;
   myCount: number;
 }) {
