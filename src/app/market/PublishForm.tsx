@@ -4,11 +4,11 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ItemIcon } from "@/components/ItemIcon";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Infinity as InfinityIcon } from "lucide-react";
+import { Tag, ShoppingCart, ArrowLeftRight, Gift, Coins, Clock, Infinity as InfinityIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ItemOptionDef } from "@/db/schema";
 import type { ListingType } from "@/db/enums";
-import { createListing, updateListing, getOptionChoices, getMaxRefineLevel } from "@/lib/listings";
+import { createListing, updateListing, getOptionChoices, getMaxRefineLevel, getListingExpirationDays } from "@/lib/listings";
 import { recognizeItemFromScreenshot } from "@/lib/item-recognition";
 import { buttonClass, selectClass } from "@/lib/ui";
 import { formatPrice, priceColorClass } from "@/lib/price";
@@ -123,6 +123,7 @@ export function PublishForm({
   const [error, setError] = useState<string | null>(null);
   const [priceMissing, setPriceMissing] = useState(false);
   const [maxRefineLevel, setMaxRefineLevel] = useState(DEFAULT_MAX_REFINE_LEVEL);
+  const [expirationDays, setExpirationDays] = useState(7);
   const [isRecognizing, startRecognizeTransition] = useTransition();
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [recognitionNote, setRecognitionNote] = useState<string | null>(null);
@@ -138,6 +139,7 @@ export function PublishForm({
 
   useEffect(() => {
     getMaxRefineLevel().then(setMaxRefineLevel);
+    getListingExpirationDays().then(setExpirationDays);
   }, []);
 
   // Cartas: se redimensionan a las ranuras del item. Al CAMBIAR de item se
@@ -402,6 +404,18 @@ export function PublishForm({
           ))}
         </div>
       )}
+      {cardsCount > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {cards.map((c, i) =>
+            c ? (
+              <span key={i} className="inline-flex items-center gap-0.5 rounded border border-ro-panel-border bg-ro-panel px-1 py-0.5 text-[0.65rem] text-ro-text-muted">
+                <ItemIcon item={c} width={14} height={14} alt="" />
+                {c.name}
+              </span>
+            ) : null,
+          )}
+        </div>
+      )}
       <div className="mt-2 flex items-end justify-between gap-2 text-sm">
         <span className="text-xs text-ro-text-muted">{previewCount}</span>
         <span>
@@ -418,6 +432,17 @@ export function PublishForm({
           )}
         </span>
       </div>
+      {/* Caducidad tal cual saldrá: no caduca si es ILIMITADO o REGALO DIRECTO
+          (mismo criterio que createListing). En la vista previa se muestra el
+          plazo configurado ("caduca en N días"), no una cuenta atrás en vivo. */}
+      {!unlimited && !(type === "GIFT" && selectedRecipient !== null) && (
+        <div className="mt-0.5 flex justify-end">
+          <span className="inline-flex items-center gap-1 text-[0.65rem] text-ro-text-muted">
+            <Clock size={12} aria-hidden />
+            {tMarket("expiry.days", { days: expirationDays })}
+          </span>
+        </div>
+      )}
     </div>
   );
 

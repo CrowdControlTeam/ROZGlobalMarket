@@ -104,6 +104,14 @@ export async function getMaxRefineLevel() {
   return loadMaxRefineLevel();
 }
 
+// Días de caducidad configurados (para la vista previa de publicar, que muestra
+// el indicador de caducidad tal cual saldrá en el mercado).
+export async function getListingExpirationDays() {
+  await requireSession();
+  const { listingExpirationDays } = await loadMarketConfig();
+  return listingExpirationDays;
+}
+
 // Todas mis publicaciones (los 3 tipos, cualquier estado) para la pantalla
 // "Mi actividad" — a diferencia de getListings (mercado general), no
 // filtra por status: "ACTIVE" ni por búsqueda/orden, es mi historial
