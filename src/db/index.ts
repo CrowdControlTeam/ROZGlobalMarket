@@ -1,8 +1,16 @@
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
-import { Pool as NeonPool } from "@neondatabase/serverless";
+import { Pool as NeonPool, neonConfig } from "@neondatabase/serverless";
 import { cache } from "react";
 import * as tables from "./schema";
 import * as relations from "./relations";
+
+// En Cloudflare Workers, las queries SUELTAS del Pool se rutan por HTTP fetch en
+// vez de abrir un WebSocket: es lo recomendado por Neon en Workers y evita que
+// una query normal (p. ej. loadMarketConfig en el layout) falle al montar el
+// socket. Las TRANSACCIONES interactivas (compras/trades) siguen usando el
+// WebSocket del Pool, que poolQueryViaFetch no toca. Es un flag global e
+// idempotente; en local (rama pg) no aplica.
+neonConfig.poolQueryViaFetch = true;
 
 // The client schema includes tables + relations, to enable the relational query
 // API (`db.query.<table>.findFirst({ with: { … } })`) that replaces Prisma's
