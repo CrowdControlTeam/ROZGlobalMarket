@@ -6,7 +6,14 @@ const nextConfig: NextConfig = {
   // production Worker uses Neon's serverless driver (WebSocket) and never takes
   // that branch. It's marked external so it does NOT enter the Worker bundle (it's
   // Node-only and wouldn't work there). See src/db/index.ts.
-  serverExternalPackages: ["pg"],
+  //
+  // `pg-cloudflare` is an optional dep `pg` requires (pg/lib/stream.js). It ships a
+  // real "workerd" export (esm/index.mjs, the Cloudflare socket) and an empty
+  // stub for the CJS `require` condition. OpenNext only copies+rewrites to the
+  // workerd build the external packages listed here, so without it the build
+  // resolves the stub's missing `dist/index.js` and fails. Listing it makes
+  // OpenNext use the workerd export. See copyWorkerdPackages in @opennextjs/cloudflare.
+  serverExternalPackages: ["pg", "pg-cloudflare"],
   images: {
     remotePatterns: [
       {
