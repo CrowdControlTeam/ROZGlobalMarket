@@ -6,17 +6,21 @@ import { ItemIcon } from "@/components/ItemIcon";
 import { searchCards } from "@/lib/listings";
 import { inputClass } from "@/lib/ui";
 import { getErrorMessage } from "@/lib/errors";
+import type { EquipSlot } from "@/db/enums";
 
 export type CardResult = Awaited<ReturnType<typeof searchCards>>[number];
 
 // Buscador de cartas (categoría CARD) para una ranura de una pieza. Mismo patrón
 // debounce + desplegable que ItemPicker, pero simple (sin pista de categoría).
+// Si se pasa `equipSlot`, solo ofrece cartas que encajan en ese slot de equipo.
 export function CardPicker({
   onSelect,
   placeholder,
+  equipSlot,
 }: {
   onSelect: (card: CardResult) => void;
   placeholder: string;
+  equipSlot?: EquipSlot;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CardResult[]>([]);
@@ -35,7 +39,7 @@ export function CardPicker({
     debounceRef.current = setTimeout(() => {
       startTransition(async () => {
         try {
-          setResults(await searchCards(value));
+          setResults(await searchCards(value, equipSlot));
         } catch (err) {
           setError(getErrorMessage(err, tCommon("searchError")));
         }

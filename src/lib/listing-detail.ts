@@ -16,6 +16,10 @@ export const getListingDetail = cache((id: string) =>
       item: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
       poster: { columns: { id: true, username: true } },
       options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+      cards: {
+        with: { card: { columns: { id: true, name: true, iconUrl: true, slotCount: true } } },
+        orderBy: (c) => asc(c.slotIndex),
+      },
       deals: {
         with: {
           user: { columns: { id: true, username: true } },

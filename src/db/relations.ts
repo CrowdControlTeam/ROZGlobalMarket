@@ -4,6 +4,7 @@ import {
   listing,
   user,
   listingOption,
+  listingCard,
   itemOptionDef,
   deal,
   savedSearch,
@@ -24,6 +25,7 @@ export const listingRelations = relations(listing, ({one, many}) => ({
 		references: [user.id]
 	}),
 	options: many(listingOption),
+	cards: many(listingCard),
 	deals: many(deal),
 }));
 
@@ -48,6 +50,18 @@ export const listingOptionRelations = relations(listingOption, ({one}) => ({
 	def: one(itemOptionDef, {
 		fields: [listingOption.defId],
 		references: [itemOptionDef.id]
+	}),
+}));
+
+export const listingCardRelations = relations(listingCard, ({one}) => ({
+	listing: one(listing, {
+		fields: [listingCard.listingId],
+		references: [listing.id]
+	}),
+	// `card` = el item de la carta (mismo nombre que BuildEntryCard.card).
+	card: one(item, {
+		fields: [listingCard.cardItemId],
+		references: [item.id]
 	}),
 }));
 

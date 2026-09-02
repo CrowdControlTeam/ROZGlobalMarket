@@ -21,6 +21,9 @@ export type CatalogItem = {
   // por comas). Solo relevante para headgears; null en el resto. Lo usa el
   // filtrado por slot del editor de builds.
   position?: string | null;
+  // Slot de equipo donde encaja una carta ("Weapon"/"Armor"/…), solo en CARD.
+  // Lo usa el filtrado de cartas por slot al publicar (ver cardFitsEquipSlot).
+  cardSlot?: string | null;
 };
 
 const CATALOG = catalogData as unknown as CatalogItem[];

@@ -207,6 +207,7 @@
     "buildNeedTag": "Pick at least one tag (PvP/PvE)",
     "buildInvalidJob": "Invalid class",
     "buildItemSlotMismatch": "The item doesn't match this slot",
+    "cardSlotMismatch": "The card doesn't fit this equipment type",
     "buildTooManyCards": "This item doesn't support that many cards"
   },
   "admin": {
@@ -363,6 +364,7 @@
     },
     "field": {
       "options": "Options",
+      "cards": "Cards",
       "quantity": "Quantity",
       "message": "Message",
       "refine": "Refine",
@@ -652,6 +654,9 @@
       "notes": "Notes",
       "confirm": "Confirm",
       "previewHint": "This is how it will appear in the market.",
+      "cardsTab": "Cards",
+      "cardPlaceholder": "Card {n}…",
+      "cardRemove": "Remove",
       "tabs": {
         "info": "Info"
       },

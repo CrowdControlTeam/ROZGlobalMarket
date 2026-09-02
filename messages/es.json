@@ -207,6 +207,7 @@
     "buildNeedTag": "Selecciona al menos una etiqueta (PvP/PvE)",
     "buildInvalidJob": "Clase no válida",
     "buildItemSlotMismatch": "El item no corresponde a este slot",
+    "cardSlotMismatch": "La carta no encaja en este tipo de equipo",
     "buildTooManyCards": "Este item no admite tantas cartas"
   },
   "admin": {
@@ -363,6 +364,7 @@
     },
     "field": {
       "options": "Options",
+      "cards": "Cartas",
       "quantity": "Cantidad",
       "message": "Mensaje",
       "refine": "Refine",
@@ -652,6 +654,9 @@
       "notes": "Notas",
       "confirm": "Confirmar",
       "previewHint": "La ficha tal cual saldrá en el mercado.",
+      "cardsTab": "Cartas",
+      "cardPlaceholder": "Carta {n}…",
+      "cardRemove": "Quitar",
       "tabs": {
         "info": "Info"
       },
