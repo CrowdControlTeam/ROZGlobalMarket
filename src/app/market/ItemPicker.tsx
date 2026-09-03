@@ -30,6 +30,7 @@ export function ItemPicker({
   slotFilter,
   positionFilter,
   filterResult,
+  dualWieldOffhand = false,
 }: {
   selected: ItemResult | null;
   onSelect: (item: ItemResult) => void;
@@ -50,6 +51,9 @@ export function ItemPicker({
   // Filtro extra en cliente sobre los resultados (el editor de builds lo usa
   // para la ocupación multi-slot de tocados: solo los que puede colocar aquí).
   filterResult?: (item: ItemResult) => boolean;
+  // Off-hand de una clase con dual wield: además de escudos, ofrece armas de una
+  // mano (lo activa el editor de builds en el slot SHIELD para Assassin/Ninja).
+  dualWieldOffhand?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ItemResult[]>([]);
@@ -72,7 +76,7 @@ export function ItemPicker({
     debounceRef.current = setTimeout(() => {
       startTransition(async () => {
         try {
-          const found = await searchItems(value, slotFilter, positionFilter);
+          const found = await searchItems(value, slotFilter, positionFilter, dualWieldOffhand);
           setResults(found);
         } catch (err) {
           setError(getErrorMessage(err, tCommon("searchError")));
