@@ -20,11 +20,15 @@ interface Ctx {
 // Worker de cron: al dispararse el trigger, marca EXPIRED las publicaciones
 // ACTIVE cuya expiresAt ya venció. Reutiliza el schema de la app (import
 // relativo a ../../src/db/schema), así no duplica el modelo.
-export default {
+// Objeto asignado a una constante antes del export default (evita el warning
+// import/no-anonymous-default-export del linter).
+const worker = {
   async scheduled(_event: unknown, env: Env, ctx: Ctx): Promise<void> {
     ctx.waitUntil(expireListings(env.DATABASE_URL));
   },
 };
+
+export default worker;
 
 async function expireListings(connectionString: string): Promise<void> {
   const pool = new Pool({ connectionString });
