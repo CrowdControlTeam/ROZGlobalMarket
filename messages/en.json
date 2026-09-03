@@ -30,6 +30,7 @@
       "decrease": "Decrease level",
       "increase": "Increase level",
       "requires": "Requires",
+      "spCost": "SP cost",
       "lvShort": "Lv",
       "close": "Close",
       "showTooltip": "Show description",

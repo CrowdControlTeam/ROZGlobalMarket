@@ -30,6 +30,7 @@
       "decrease": "Bajar nivel",
       "increase": "Subir nivel",
       "requires": "Requiere",
+      "spCost": "Consumo de SP",
       "lvShort": "Nv",
       "close": "Cerrar",
       "showTooltip": "Mostrar descripción",

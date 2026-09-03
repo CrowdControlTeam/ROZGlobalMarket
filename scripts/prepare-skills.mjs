@@ -46,6 +46,11 @@ for (const id of usedIds) {
   }
   const reqDefault = (s.requiredSkills ?? []).map((x) => ({ id: x.skillId, lv: x.level }));
 
+  // Consumo de SP por nivel (spCost del cliente). Solo se guarda si hay algún
+  // coste > 0 (las pasivas y las que no gastan SP se omiten). Se muestra en el
+  // detalle de la skill (SkillModal), no en el tooltip de hover.
+  const sp = Array.isArray(s.spCost) && s.spCost.some((n) => n > 0) ? s.spCost : undefined;
+
   skills[id] = {
     name: s.name,
     max: s.maxLevel || 1,
@@ -56,6 +61,7 @@ for (const id of usedIds) {
     desc: Array.isArray(s.description) ? s.description : [],
     req,
     reqDefault,
+    ...(sp ? { sp } : {}),
   };
 }
 

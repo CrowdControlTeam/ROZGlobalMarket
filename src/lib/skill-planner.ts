@@ -19,6 +19,7 @@ export type Skill = {
   desc: string[];
   req: Record<string, SkillReq[]>; // prereqs por jobId
   reqDefault: SkillReq[]; // fallback plano (requiredSkills)
+  sp?: number[]; // consumo de SP por nivel (ausente si no gasta SP)
 };
 type SkillData = { jobs: Job[]; noviceCells: Cell[]; skills: Record<string, Skill> };
 

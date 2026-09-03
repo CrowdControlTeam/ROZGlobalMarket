@@ -98,6 +98,17 @@ export function SkillModal({
           )}
         </div>
 
+        {skill.sp && skill.sp.length > 0 && (
+          // Consumo de SP al nivel seleccionado (idx = nivel actual, o Lv1 si aún
+          // no está aprendida). Solo en el detalle, nunca en el tooltip de hover.
+          <p className="mt-2 text-xs text-ro-text-muted">
+            {t("spCost")}:{" "}
+            <span className="tabular-nums text-ro-text">
+              {skill.sp[Math.min(Math.max(lv, 1), skill.sp.length) - 1]}
+            </span>
+          </p>
+        )}
+
         {prereqs.length > 0 && (
           <p className="mt-2 text-xs text-ro-text-muted">
             {t("requires")}:{" "}
