@@ -3,9 +3,10 @@
 // deleted. Fully replaces the Item table. Idempotent.
 //
 // IMPORTANT: the source is the SUBSET of items TRANSLATED to English
-// (`server/output/icons/items.json`), not the full extractor dump
-// (`server/output/items.json`), which holds ~12k items, many untranslated. If the
-// subset's location changes, pass it as an explicit argument.
+// (`server/output/items.json`), not the full extractor dump
+// (`server/output/all_items.json` / `raw_items.json`, ~12k items, many
+// untranslated). If the subset's location changes, pass it as an explicit
+// argument.
 //
 // Usage:
 //   npm run import:items -- [path/items.json]
@@ -19,7 +20,7 @@ import { count, eq, notInArray } from "drizzle-orm";
 import { buildEntry, buildEntryCard, item, listing, type EquipSlot, type ItemCategory, type WeaponType } from "../schema";
 import { db, runSeed } from "./client";
 
-const SRC = process.argv[2] ?? "E:/Proyectos/Git/ROZDataBaseExtractor/server/output/icons/items.json";
+const SRC = process.argv[2] ?? "E:/Proyectos/Git/ROZDataBaseExtractor/server/output/items.json";
 
 // --- Mappings (validated against the 3,925 items of the translated catalog) ---
 const CATEGORY_MAP: Record<string, ItemCategory> = {
