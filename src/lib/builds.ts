@@ -17,6 +17,7 @@ import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { loadMaxRefineLevel } from "@/lib/refine";
 import { getJob } from "@/lib/skill-planner";
+import { isTwoHandWeapon } from "@/lib/item-slots";
 import { loadMagicalWeaponTypes, getItemOptionGroup, validateOptions } from "@/lib/item-options";
 import {
   itemFitsBuildSlot,
@@ -257,6 +258,14 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
         if (usedPositions.has(p)) throw new Error(t("buildItemSlotMismatch"));
         usedPositions.add(p);
       }
+    }
+
+    // Un arma de dos manos ocupa las dos manos: no puede coexistir con una
+    // off-hand (escudo o arma de dual wield en SHIELD).
+    const weaponEntry = entries.find((e) => e.slot === "WEAPON");
+    const weaponItem = weaponEntry ? byId.get(weaponEntry.itemId) : undefined;
+    if (weaponItem && isTwoHandWeapon(weaponItem) && entries.some((e) => e.slot === "SHIELD")) {
+      throw new Error(t("buildItemSlotMismatch"));
     }
   }
 

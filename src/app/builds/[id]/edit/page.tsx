@@ -57,6 +57,7 @@ export default async function EditBuildPage({ params }: { params: Promise<{ id: 
         optionGroup: getItemOptionGroup(e.item, magicalTypes),
         position: e.item.position,
         category: e.item.category,
+        weaponType: e.item.weaponType,
       },
       refine: e.refineLevel,
       options,

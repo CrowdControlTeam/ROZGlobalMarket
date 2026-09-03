@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { EquipSlot, ItemCategory, WeaponType } from "@/db/enums";
-import { isOneHandWeapon } from "@/lib/item-slots";
+import { isOneHandWeapon, isTwoHandWeapon } from "@/lib/item-slots";
 import { isDualWieldJob, itemFitsBuildSlot } from "@/lib/build-constants";
 
 const ASSASSIN = 12;
@@ -30,6 +30,22 @@ describe("isOneHandWeapon", () => {
   it("rechaza no-armas y armas sin tipo", () => {
     expect(isOneHandWeapon(shield)).toBe(false);
     expect(isOneHandWeapon(weapon(null))).toBe(false);
+  });
+});
+
+describe("isTwoHandWeapon", () => {
+  it("acepta armas de dos manos y rechaza el resto", () => {
+    expect(isTwoHandWeapon(weapon(WeaponType.TWO_HAND_SWORD))).toBe(true);
+    expect(isTwoHandWeapon(weapon(WeaponType.KATAR))).toBe(true);
+    expect(isTwoHandWeapon(weapon(WeaponType.BOW))).toBe(true);
+    expect(isTwoHandWeapon(weapon(WeaponType.DAGGER))).toBe(false);
+    expect(isTwoHandWeapon(weapon(null))).toBe(false);
+    expect(isTwoHandWeapon(shield)).toBe(false);
+  });
+  it("es el complemento de isOneHandWeapon para armas con tipo", () => {
+    for (const wt of [WeaponType.DAGGER, WeaponType.MACE, WeaponType.TWO_HAND_AXE, WeaponType.RIFLE]) {
+      expect(isOneHandWeapon(weapon(wt))).toBe(!isTwoHandWeapon(weapon(wt)));
+    }
   });
 });
 

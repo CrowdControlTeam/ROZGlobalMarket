@@ -34,6 +34,20 @@ export function isOneHandWeapon(item: {
   );
 }
 
+// ¿Es un arma de dos manos? (categoría WEAPON con un weaponType de dos manos).
+// Ocupa las dos manos: bloquea la off-hand (ver la ocupación en el editor de
+// builds, análoga a la de los tocados multi-posición).
+export function isTwoHandWeapon(item: {
+  category: ItemCategory;
+  weaponType: WeaponType | null;
+}): boolean {
+  return (
+    item.category === ItemCategory.WEAPON &&
+    item.weaponType != null &&
+    TWO_HAND_WEAPON_TYPES.has(item.weaponType)
+  );
+}
+
 // ¿Un item encaja en el slot de equipo dado? El arma va en WEAPON; el resto de
 // slots requieren una armadura cuyo `slot` coincida (headgear unificado en
 // EquipSlot). Se usa para filtrar el buscador de items por slot (mercado y, más
