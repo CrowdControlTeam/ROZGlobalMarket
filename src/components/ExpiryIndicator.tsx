@@ -56,9 +56,14 @@ export function ExpiryIndicator({
     >
       <Clock size={12} aria-hidden />
       {label}
+      {/* `hidden` (display:none) en vez de opacity-0: un tooltip absolute con
+          whitespace-nowrap sigue ocupando layout aunque sea transparente, y al
+          ir pegado al borde derecho (p. ej. en el panel de detalle) desbordaba y
+          provocaba scroll horizontal. Con display:none no ocupa nada hasta el
+          hover/focus. */}
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-ro-panel-border bg-ro-panel px-2 py-1 text-xs font-normal text-ro-text opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-ro-panel-border bg-ro-panel px-2 py-1 text-xs font-normal text-ro-text shadow-lg group-hover:block group-focus-within:block"
       >
         {tooltip}
       </span>
