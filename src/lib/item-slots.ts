@@ -1,6 +1,38 @@
 // Puro y sin dependencias de servidor, para usarse también desde componentes
 // cliente (mismo patrón que item-options-constants.ts).
-import { EquipSlot, ItemCategory } from "@/db/enums";
+import { EquipSlot, ItemCategory, WeaponType } from "@/db/enums";
+
+// Armas de dos manos: ocupan las dos manos, así que nunca van en la off-hand ni
+// permiten dual wield. El resto de armas (con weaponType conocido) son de una
+// mano. Se lista el conjunto de dos manos (más pequeño y estable) y todo lo demás
+// se considera de una mano.
+const TWO_HAND_WEAPON_TYPES: ReadonlySet<WeaponType> = new Set<WeaponType>([
+  WeaponType.TWO_HAND_SWORD,
+  WeaponType.TWO_HAND_SPEAR,
+  WeaponType.TWO_HAND_AXE,
+  WeaponType.TWO_HAND_ROD,
+  WeaponType.BOW,
+  WeaponType.KATAR,
+  WeaponType.RIFLE,
+  WeaponType.GATLING_GUN,
+  WeaponType.SHOTGUN,
+  WeaponType.GRENADE_LAUNCHER,
+  WeaponType.FUUMA_SHURIKEN,
+]);
+
+// ¿Es un arma de una mano? (categoría WEAPON con un weaponType conocido que no
+// sea de dos manos). Se usa para el dual wield: la off-hand solo admite armas de
+// una mano.
+export function isOneHandWeapon(item: {
+  category: ItemCategory;
+  weaponType: WeaponType | null;
+}): boolean {
+  return (
+    item.category === ItemCategory.WEAPON &&
+    item.weaponType != null &&
+    !TWO_HAND_WEAPON_TYPES.has(item.weaponType)
+  );
+}
 
 // ¿Un item encaja en el slot de equipo dado? El arma va en WEAPON; el resto de
 // slots requieren una armadura cuyo `slot` coincida (headgear unificado en

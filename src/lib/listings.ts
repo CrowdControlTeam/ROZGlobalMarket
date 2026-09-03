@@ -16,7 +16,7 @@ import {
   type EquipSlot,
   type Item,
 } from "@/db/schema";
-import { itemFitsSlot, cardFitsEquipSlot } from "@/lib/item-slots";
+import { itemFitsSlot, isOneHandWeapon, cardFitsEquipSlot } from "@/lib/item-slots";
 import { positionAllows, type HeadgearPosition } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/guard";
@@ -41,19 +41,28 @@ import { searchCatalog } from "@/lib/item-catalog";
 import { listingStatusOnClose, availableFrom, isSoldOut } from "@/lib/deals";
 import { listingCardState } from "@/lib/listing-card";
 
-export async function searchItems(query: string, slot?: EquipSlot, position?: HeadgearPosition) {
+export async function searchItems(
+  query: string,
+  slot?: EquipSlot,
+  position?: HeadgearPosition,
+  dualWieldOffhand?: boolean,
+) {
   await requireSession();
   // Búsqueda en memoria (catálogo empaquetado, ver src/lib/item-catalog.ts) en
   // vez de pegar a la BD en cada tecla. `slot` acota a los items que encajan en
   // ese slot de equipo; `position` (Upper/Middle/Lower) acota además los tocados
   // al slot correcto del editor de builds. Así el picker no ofrece un item que
   // luego el servidor rechazaría.
+  // `dualWieldOffhand`: la off-hand de una clase con dual wield (Assassin/Ninja)
+  // admite escudos (el `slot` recibido = SHIELD) o armas de una mano.
   const items = searchCatalog(
     query,
     20,
-    slot || position
-      ? (item) => (!slot || itemFitsSlot(item, slot)) && positionAllows(item.position, position)
-      : undefined,
+    dualWieldOffhand
+      ? (item) => (slot ? itemFitsSlot(item, slot) : false) || isOneHandWeapon(item)
+      : slot || position
+        ? (item) => (!slot || itemFitsSlot(item, slot)) && positionAllows(item.position, position)
+        : undefined,
   );
   if (items.length === 0) return [];
 

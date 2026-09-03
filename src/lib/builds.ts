@@ -17,10 +17,9 @@ import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { loadMaxRefineLevel } from "@/lib/refine";
 import { getJob } from "@/lib/skill-planner";
-import { itemFitsSlot } from "@/lib/item-slots";
 import { loadMagicalWeaponTypes, getItemOptionGroup, validateOptions } from "@/lib/item-options";
 import {
-  buildSlotToEquipSlot,
+  itemFitsBuildSlot,
   BUILD_SLOT_POSITION,
   headgearPrimary,
   parsePositions,
@@ -222,7 +221,9 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
     for (const e of entries) {
       const it = byId.get(e.itemId);
       if (!it) throw new Error(t("itemNotFound"));
-      if (!itemFitsSlot(it, buildSlotToEquipSlot(e.slot))) throw new Error(t("buildItemSlotMismatch"));
+      // La off-hand (SHIELD) admite un arma de una mano si la clase lleva dual
+      // wield (Assassin/Ninja); el resto de slots, según su categoría/slot.
+      if (!itemFitsBuildSlot(it, e.slot, data.jobId)) throw new Error(t("buildItemSlotMismatch"));
       // Tocados: se guardan en su slot principal (la posición más alta que
       // ocupan). El solapamiento entre tocados se comprueba aparte, más abajo.
       if (BUILD_SLOT_POSITION[e.slot] && headgearPrimary(it.position) !== BUILD_SLOT_POSITION[e.slot]) {

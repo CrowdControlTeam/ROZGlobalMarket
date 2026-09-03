@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 import { ItemIcon } from "@/components/ItemIcon";
 import { ItemPicker, type ItemResult } from "@/app/market/ItemPicker";
 import { CardPicker } from "./CardPicker";
-import type { BuildSlot, BuildTag, ItemOptionGroup } from "@/db/enums";
+import type { BuildSlot, BuildTag, ItemCategory, ItemOptionGroup } from "@/db/enums";
 import { BUILD_TAG_VALUES } from "@/db/enums";
 import { MAX_OPTION_SLOTS, emptyOptionSelections, type OptionSelection } from "@/lib/item-options-constants";
 import {
@@ -16,6 +16,7 @@ import {
   PAPERDOLL_LEFT,
   PAPERDOLL_RIGHT,
   buildSlotToEquipSlot,
+  isDualWieldJob,
   BUILD_SLOT_POSITION,
   headgearPrimary,
   parsePositions,
@@ -45,6 +46,9 @@ type SlotItem = {
   // Ubicación del tocado ("Upper"/"Middle"/"Lower" o combinaciones); null en el
   // resto. Determina qué slots ocupa (ocupación multi-slot).
   position: string | null;
+  // Categoría del item: se usa para vaciar la off-hand si tiene un arma y la
+  // clase deja de permitir dual wield (ver handleJobChange).
+  category: ItemCategory;
 };
 
 // Construye el SlotItem desde un resultado del picker (mismo campos en pick y
@@ -57,6 +61,7 @@ function toSlotItem(item: ItemResult): SlotItem {
     slotCount: item.slotCount,
     optionGroup: item.optionGroup,
     position: item.position ?? null,
+    category: item.category,
   };
 }
 type CardSel = { id: string; name: string; iconUrl: string } | null;
@@ -102,6 +107,22 @@ export function BuildEditor({
 
   function toggleTag(tag: BuildTag) {
     setTags((prev) => (prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]));
+  }
+  // Dual wield solo lo permiten ciertas clases (Assassin/Ninja) en la off-hand.
+  // Si se cambia a una clase que no, se vacía un arma que hubiera quedado en la
+  // off-hand (un escudo se conserva); así no queda un estado que el servidor
+  // rechazaría al guardar.
+  function handleJobChange(newJobId: number | null) {
+    setJobId(newJobId);
+    if (!isDualWieldJob(newJobId)) {
+      setSlots((prev) => {
+        const s = prev.SHIELD;
+        if (!s || s.item.category !== "WEAPON") return prev;
+        const next = { ...prev };
+        delete next.SHIELD;
+        return next;
+      });
+    }
   }
   function patchSlot(slot: BuildSlot, patch: Partial<SlotState>) {
     setSlots((prev) => (prev[slot] ? { ...prev, [slot]: { ...prev[slot]!, ...patch } } : prev));
@@ -182,6 +203,7 @@ export function BuildEditor({
       isChanging={changingSlot === slot}
       onStartChange={() => setChangingSlot(slot)}
       onCancelChange={() => setChangingSlot(null)}
+      dualWieldOffhand={slot === "SHIELD" && isDualWieldJob(jobId)}
       {...headgearProps(slot)}
     />
   );
@@ -256,7 +278,7 @@ export function BuildEditor({
           </span>
           <select
             value={jobId ?? ""}
-            onChange={(e) => setJobId(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) => handleJobChange(e.target.value ? Number(e.target.value) : null)}
             className={inputClass}
           >
             <option value="">{t("chooseClass")}</option>
@@ -357,6 +379,7 @@ function BuildSlotRow({
   isChanging,
   onStartChange,
   onCancelChange,
+  dualWieldOffhand,
 }: {
   slot: BuildSlot;
   state: SlotState | undefined;
@@ -374,6 +397,8 @@ function BuildSlotRow({
   isChanging: boolean;
   onStartChange: () => void;
   onCancelChange: () => void;
+  // Off-hand con dual wield: el picker ofrece también armas de una mano.
+  dualWieldOffhand?: boolean;
 }) {
   const t = useTranslations("builds.form");
   const tSlot = useTranslations("builds.slots");
@@ -420,6 +445,7 @@ function BuildSlotRow({
           slotFilter={buildSlotToEquipSlot(slot)}
           positionFilter={BUILD_SLOT_POSITION[slot]}
           filterResult={pickerFilter}
+          dualWieldOffhand={dualWieldOffhand}
         />
       </div>
     );
@@ -453,6 +479,7 @@ function BuildSlotRow({
                 slotFilter={buildSlotToEquipSlot(slot)}
                 positionFilter={BUILD_SLOT_POSITION[slot]}
                 filterResult={pickerFilter}
+                dualWieldOffhand={dualWieldOffhand}
               />
             </div>
             <button
