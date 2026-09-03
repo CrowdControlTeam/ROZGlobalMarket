@@ -1,7 +1,7 @@
 // Separado de item-options.ts (que importa @/lib/prisma) para poder usarse
 // también desde componentes cliente sin arrastrar código server-only al
 // bundle del navegador.
-import { ItemCategory, EquipSlot, ItemOptionGroup, WeaponType } from "@prisma/client";
+import { ItemCategory, EquipSlot, ItemOptionGroup, WeaponType } from "@/db/enums";
 
 export const MAX_OPTION_SLOTS = 3;
 

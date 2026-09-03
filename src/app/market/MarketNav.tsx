@@ -9,9 +9,9 @@ import type { LucideIcon } from "lucide-react";
 // Barra de navegación superior del mercado (el "hub" del diseño): accesos a las
 // secciones principales, con la activa resaltada. Publicar es la acción
 // destacada (rojo). Sustituye al antiguo <h1> "Mercado".
-type NavItem = { href: string; labelKey: string; Icon: LucideIcon; active: boolean; cta?: boolean };
+type NavItem = { href: string; labelKey: string; Icon: LucideIcon; active: boolean; cta?: boolean; badge?: number };
 
-export function MarketNav({ isAdmin }: { isAdmin: boolean }) {
+export function MarketNav({ isAdmin, pendingCount = 0 }: { isAdmin: boolean; pendingCount?: number }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations();
@@ -33,6 +33,9 @@ export function MarketNav({ isAdmin }: { isAdmin: boolean }) {
       labelKey: "nav.account.myActivity",
       Icon: User,
       active: pathname.startsWith("/market/activity"),
+      // Ofertas entrantes por resolver (reservas/ofertas/reclamaciones sobre mis
+      // publicaciones). 0 = sin badge.
+      badge: pendingCount,
     },
     // Estadísticas solo para admins (la ruta /market/statistics ya está protegida
     // con requireAdmin). Sustituye al antiguo botón de Regalos (Regalo es un tipo
@@ -63,7 +66,7 @@ export function MarketNav({ isAdmin }: { isAdmin: boolean }) {
             // modo de "título de página"; en sm+ todos muestran el texto.
             aria-label={label}
             title={label}
-            className={`flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold transition-colors ${
+            className={`relative flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold transition-colors ${
               it.active ? "flex-1 sm:flex-none" : ""
             } ${
               it.cta
@@ -77,6 +80,16 @@ export function MarketNav({ isAdmin }: { isAdmin: boolean }) {
             {/* El activo muestra su texto (título de página); el resto solo icono
                 en móvil. En sm+ todos muestran texto. */}
             <span className={it.active ? "" : "hidden sm:inline"}>{label}</span>
+            {/* Badge de ofertas entrantes pendientes: en la esquina, visible aun
+                cuando el botón muestra solo el icono (móvil). */}
+            {it.badge ? (
+              <span
+                aria-label={t("myActivity.pendingBadge", { count: it.badge })}
+                className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-ro-red px-1 text-[10px] font-bold leading-none text-white"
+              >
+                {it.badge > 99 ? "99+" : it.badge}
+              </span>
+            ) : null}
           </Link>
         );
       })}

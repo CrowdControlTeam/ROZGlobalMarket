@@ -6,6 +6,7 @@
     },
     "items": {
       "searchPlaceholder": "Buscar item por nombre…",
+      "clearSearch": "Limpiar búsqueda",
       "allCategories": "Todas las categorías",
       "count": "{total} items",
       "empty": "Ningún item coincide con la búsqueda.",
@@ -64,7 +65,7 @@
     "sections": {
       "label": "Secciones",
       "market": "Mercado",
-      "bis": "BiS",
+      "builds": "Builds",
       "db": "DB"
     },
     "account": {
@@ -85,12 +86,20 @@
     "listingsEmpty": "Todavía no has publicado nada.",
     "listingsNoneMatch": "No hay publicaciones con ese filtro.",
     "statusFilter": {
-      "active": "Activos",
-      "inactive": "No activos"
+      "ACTIVE": "Activa",
+      "COMPLETED": "Completada",
+      "EXPIRED": "Expirada",
+      "CANCELLED": "Cancelada"
+    },
+    "sort": {
+      "label": "Ordenar por fecha de publicación",
+      "newest": "Más recientes primero",
+      "oldest": "Más antiguas primero"
     },
     "pendingEmpty": "No tienes nada pendiente.",
     "pendingIncoming": "Por confirmar",
     "pendingOutgoing": "Mis solicitudes",
+    "pendingBadge": "{count, plural, one {# oferta por confirmar} other {# ofertas por confirmar}}",
     "tabs": {
       "listings": "Mis publicaciones",
       "pending": "Pendientes",
@@ -110,7 +119,7 @@
       "publish": { "label": "Publicar", "desc": "Pon un objeto a la venta, compra o intercambio." },
       "stats": { "label": "Estadísticas", "desc": "Rankings y actividad del mercado." },
       "settings": { "label": "Ajustes", "desc": "Configuración del mercado." },
-      "bis": { "label": "BiSes", "desc": "Listado de los mejores items por slot." },
+      "builds": { "label": "Builds", "desc": "Builds de la comunidad por clase." },
       "items": { "label": "Items", "desc": "Base de datos de objetos con su ficha de juego." },
       "skills": { "label": "Skills", "desc": "Planifica tu árbol de skills por clase." },
       "comingSoon": "Próximamente"
@@ -118,7 +127,7 @@
   },
   "maintenancePage": {
     "title": "En mantenimiento",
-    "message": "El mercado está temporalmente en mantenimiento. Mientras tanto puedes seguir usando BiS y la base de datos.",
+    "message": "El mercado está temporalmente en mantenimiento. Mientras tanto puedes seguir usando Builds y la base de datos.",
     "adminNote": "Eres admin: sigues teniendo acceso completo.",
     "backToMarket": "Ir al mercado",
     "backHome": "Volver al inicio"
@@ -192,14 +201,14 @@
     "imageTooLarge": "La imagen no puede superar los {max} MB",
     "rateLimited": "Demasiadas peticiones. Espera {seconds} s e inténtalo de nuevo.",
     "recognitionFailed": "Ha fallado la detección automática. Prueba de nuevo o rellena el item a mano.",
-    "notBisEditor": "No tienes permiso para editar BiS",
-    "stageNotFound": "La etapa no existe",
-    "bisEntryNotFound": "El BiS no existe o ya se ha eliminado",
-    "bisNeedTag": "Selecciona al menos un rol o un job",
-    "bisNeedItemOrOption": "Elige un item o al menos una option",
-    "bisNoOptionsForSlot": "Este slot no admite random options",
-    "bisWeaponTypeRequired": "Elige un tipo de arma para las options",
-    "bisItemSlotMismatch": "El item no corresponde a este slot de equipo"
+    "buildNotFound": "La build no existe o ya se ha eliminado",
+    "notYourBuild": "No tienes permiso sobre esta build",
+    "buildLimitReached": "Has alcanzado el máximo de builds ({max})",
+    "buildNeedTag": "Selecciona al menos una etiqueta (PvP/PvE)",
+    "buildInvalidJob": "Clase no válida",
+    "buildItemSlotMismatch": "El item no corresponde a este slot",
+    "cardSlotMismatch": "La carta no encaja en este tipo de equipo",
+    "buildTooManyCards": "Este item no admite tantas cartas"
   },
   "admin": {
     "title": "Configuración",
@@ -209,19 +218,10 @@
       "features": "Funcionalidades"
     },
     "features": {
-      "bis": {
-        "title": "BiS",
-        "hint": "Etapas del juego que aparecen en la página de BiS. La primera (arriba) es la que sale por defecto.",
-        "empty": "No hay etapas todavía.",
-        "entryCount": "{count} BiS",
-        "moveUp": "Subir",
-        "moveDown": "Bajar",
-        "rename": "Renombrar",
-        "save": "Guardar",
-        "delete": "Borrar etapa",
-        "confirmDelete": "Borrar etapa y {count} BiS",
-        "addPlaceholder": "Nueva etapa…",
-        "add": "Añadir"
+      "builds": {
+        "title": "Builds",
+        "maxBuildsLabel": "Máximo de builds por usuario",
+        "maxBuildsHint": "Cuántas builds puede guardar cada usuario."
       }
     },
     "stats": {
@@ -290,12 +290,6 @@
       "none": "Sin restricción (solo pertenencia)",
       "roleIdPlaceholder": "ID del rol de acceso (vacío = sin restricción)"
     },
-    "bisEditor": {
-      "legend": "Editor de BiS",
-      "hint": "Rol que puede crear y modificar objetos BiS, además de los administradores (que siempre pueden). Sin rol = solo los administradores; para el resto, BiS de solo lectura.",
-      "none": "Solo administradores",
-      "roleIdPlaceholder": "ID del rol de editor (vacío = solo lectura)"
-    },
     "webhook": {
       "legend": "Notificaciones a Discord",
       "toggleLabel": "Enviar notificación de nueva venta al webhook",
@@ -344,7 +338,9 @@
     "market": {
       "legend": "Mercado",
       "maintenanceToggleLabel": "Modo mantenimiento (bloquea el acceso al mercado para todos menos administradores; BiS y DB siguen abiertos)",
-      "maxRefineLabel": "Refine máximo permitido"
+      "maxRefineLabel": "Refine máximo permitido",
+      "listingExpirationLabel": "Días hasta caducar una publicación",
+      "listingExpirationHint": "Las publicaciones activas caducan automáticamente pasados estos días. Solo afecta a las nuevas; las existentes conservan su caducidad."
     }
   },
   "market": {
@@ -368,6 +364,7 @@
     },
     "field": {
       "options": "Options",
+      "cards": "Cartas",
       "quantity": "Cantidad",
       "message": "Mensaje",
       "refine": "Refine",
@@ -383,7 +380,11 @@
       "buyOptionsHint": "Busca compras que cumplan estos valores.",
       "name": "Nombre",
       "namePlaceholder": "Buscar item...",
+      "clearName": "Borrar búsqueda",
       "poster": "Usuario",
+      "buildItems": "Items de la build",
+      "buildItemsCount": "{n} items",
+      "buildItemsHint": "Filtrando por las {n} piezas de una build.",
       "type": "Tipo",
       "all": "Todas",
       "category": "Categoría",
@@ -561,12 +562,21 @@
       "loadMore": "Cargar más",
       "loadMoreError": "No se ha podido cargar más. Inténtalo de nuevo."
     },
+    "expiry": {
+      "clockLabel": "Tiempo hasta caducar",
+      "today": "Hoy",
+      "days": "{days, plural, one {# día} other {# días}}",
+      "hours": "{hours, plural, one {# hora} other {# horas}}",
+      "tooltip": "Caduca el {date}"
+    },
     "detail": {
       "available": "Disponibles",
       "unitPrice": "Precio/ud",
       "posted": "Publicado",
+      "expires": "Caduca",
       "sold": "Vendidos",
       "given": "Entregados",
+      "fulfilled": "Cumplido",
       "of": "de",
       "cancelListing": "Cancelar",
       "closeListing": "Cerrar",
@@ -607,7 +617,7 @@
       "reservationActions": {
         "confirm": "Vender",
         "reject": "Rechazar",
-        "cancel": "Cancelar compra"
+        "cancel": "Cancelar"
       },
       "fulfillForm": {
         "quantityLabel": "Cantidad a vender",
@@ -622,7 +632,7 @@
       "fulfillActions": {
         "confirm": "Comprar",
         "reject": "Rechazar",
-        "cancel": "Cancelar oferta"
+        "cancel": "Cancelar"
       },
       "claimForm": {
         "quantityLabel": "Cantidad a reclamar",
@@ -635,7 +645,7 @@
       "claimActions": {
         "confirm": "Entregar",
         "reject": "Rechazar",
-        "cancel": "Cancelar reclamación"
+        "cancel": "Cancelar"
       }
     },
     "form": {
@@ -644,6 +654,9 @@
       "notes": "Notas",
       "confirm": "Confirmar",
       "previewHint": "La ficha tal cual saldrá en el mercado.",
+      "cardsTab": "Cartas",
+      "cardPlaceholder": "Carta {n}…",
+      "cardRemove": "Quitar",
       "tabs": {
         "info": "Info"
       },
@@ -746,70 +759,81 @@
       "contactMessage": "{username} te ha escrito sobre {item}"
     }
   },
-  "bis": {
-    "title": "BiS · Best in Slot",
-    "subtitle": "Los mejores objetos por slot de equipo para cada etapa del juego.",
-    "stageLabel": "Etapa",
+  "builds": {
+    "title": "Builds",
+    "list": {
+      "myLimit": "Tienes {n} de {max} builds",
+      "you": "Tú",
+      "create": "Crear build",
+      "empty": "Todavía no hay builds. Crea la primera.",
+      "emptyMine": "Todavía no tienes builds. Crea la primera.",
+      "emptyFiltered": "Ninguna build coincide con los filtros.",
+      "selectPrompt": "Selecciona una build para ver el detalle.",
+      "backToList": "Volver a la lista",
+      "edit": "Editar"
+    },
+    "tabs": {
+      "all": "Todas",
+      "mine": "Mis builds"
+    },
     "filters": {
-      "roleLegend": "Rol",
-      "jobLegend": "Job",
-      "clear": "Quitar filtros"
+      "job": "Clase",
+      "allJobs": "Todas las clases"
     },
-    "cells": {
-      "head": "Cabeza",
-      "weapon": "Arma",
-      "garment": "Manto",
-      "accessory": "Accesorio",
-      "armor": "Armadura",
-      "shield": "Escudo",
-      "footgear": "Calzado"
-    },
-    "cell": {
-      "empty": "Sin BiS todavía",
-      "noMatches": "Sin coincidencias"
-    },
-    "detail": {
-      "close": "Cerrar",
-      "options": "Options",
-      "roles": "Roles",
-      "jobs": "Jobs",
-      "note": "Nota"
-    },
-    "showAll": "Ver todas ({count})",
-    "showLess": "Ver menos",
-    "anyItem": "Cualquiera",
-    "noStages": "Todavía no hay etapas configuradas.",
-    "add": "Añadir",
-    "edit": "Editar",
-    "kebabLabel": "Opciones",
-    "deleteConfirm": "¿Borrar este BiS?",
-    "hasNotes": "Tiene notas",
-    "searchInMarket": "Buscar en el mercado",
     "form": {
-      "addTitle": "Añadir BiS",
-      "editTitle": "Editar BiS",
-      "slotLabel": "Slot",
-      "itemLabel": "Item",
-      "itemOrOptionHint": "Opcional. Elige un item, unas options, o ambos (item con options concretas).",
-      "refine": "Refine",
-      "cardSlots": "Slots",
-      "weaponType": "Tipo de arma",
-      "weaponTypeNone": "Sin especificar",
+      "back": "Volver a builds",
+      "newTitle": "Nueva build",
+      "editTitle": "Editar build",
+      "nameLabel": "Nombre",
+      "namePlaceholder": "p. ej. Knight PvP burst",
+      "classLabel": "Clase",
+      "chooseClass": "Elige una clase…",
+      "firstJobs": "Clases 1ª",
+      "secondJobs": "Clases 2ª",
+      "tagsLabel": "Etiquetas",
+      "notesLabel": "Notas",
+      "notesPlaceholder": "Detalles de la build, sinergias, alternativas…",
+      "slotsLabel": "Piezas",
+      "refine": "Refino",
+      "changeItem": "Cambiar",
+      "occupiedBy": "Ocupado por {item}",
       "optionsLabel": "Options",
-      "optionNone": "— Sin option —",
-      "optionsHint": "El valor es un mínimo opcional; vacío = cualquier valor.",
-      "optionOutOfRange": "Cada valor debe estar dentro del rango de su option.",
-      "min": "Mín",
-      "rolesLabel": "Roles",
-      "jobsLabel": "Jobs",
-      "needTag": "Selecciona al menos un rol o un job.",
-      "noteLabel": "Nota",
+      "optionPlaceholder": "Option {slot}",
+      "cardsLabel": "Cartas",
+      "cardPlaceholder": "Carta {n}…",
+      "remove": "Quitar",
       "save": "Guardar",
       "saving": "Guardando…",
       "cancel": "Cancelar",
-      "delete": "Borrar",
-      "confirmDelete": "¿Seguro? Borrar",
-      "saveError": "No se pudo guardar. Inténtalo de nuevo."
+      "deleteBuild": "Borrar build"
+    },
+    "detail": {
+      "noPieces": "Esta build no tiene piezas todavía.",
+      "searchMarket": "Buscar en el mercado",
+      "searchAllMarket": "Buscar todo en el mercado",
+      "publishItem": "Publicar en el mercado",
+      "avail": {
+        "SALE": "{n, plural, one {# venta} other {# ventas}}",
+        "BUY": "{n, plural, one {# compra} other {# compras}}",
+        "TRADE": "{n, plural, one {# intercambio} other {# intercambios}}",
+        "GIFT": "{n, plural, one {# regalo} other {# regalos}}"
+      }
+    },
+    "slots": {
+      "HEADGEAR_TOP": "Casco superior",
+      "HEADGEAR_MID": "Casco medio",
+      "HEADGEAR_LOW": "Casco inferior",
+      "ARMOR": "Armadura",
+      "WEAPON": "Arma",
+      "SHIELD": "Escudo",
+      "GARMENT": "Manto",
+      "FOOTGEAR": "Calzado",
+      "ACCESSORY_LEFT": "Accesorio izq.",
+      "ACCESSORY_RIGHT": "Accesorio der."
+    },
+    "tags": {
+      "PVP": "PvP",
+      "PVE": "PvE"
     }
   }
 }

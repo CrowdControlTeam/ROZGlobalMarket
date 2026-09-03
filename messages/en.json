@@ -6,6 +6,7 @@
     },
     "items": {
       "searchPlaceholder": "Search item by name…",
+      "clearSearch": "Clear search",
       "allCategories": "All categories",
       "count": "{total} items",
       "empty": "No item matches your search.",
@@ -64,7 +65,7 @@
     "sections": {
       "label": "Sections",
       "market": "Market",
-      "bis": "BiS",
+      "builds": "Builds",
       "db": "DB"
     },
     "account": {
@@ -85,12 +86,20 @@
     "listingsEmpty": "You haven't posted anything yet.",
     "listingsNoneMatch": "No listings match the filter.",
     "statusFilter": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "ACTIVE": "Active",
+      "COMPLETED": "Completed",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled"
+    },
+    "sort": {
+      "label": "Sort by post date",
+      "newest": "Newest first",
+      "oldest": "Oldest first"
     },
     "pendingEmpty": "Nothing pending.",
     "pendingIncoming": "To confirm",
     "pendingOutgoing": "My requests",
+    "pendingBadge": "{count, plural, one {# offer to confirm} other {# offers to confirm}}",
     "tabs": {
       "listings": "My listings",
       "pending": "Pending",
@@ -110,7 +119,7 @@
       "publish": { "label": "Create listing", "desc": "Put an item up for sale, purchase or trade." },
       "stats": { "label": "Statistics", "desc": "Market rankings and activity." },
       "settings": { "label": "Settings", "desc": "Market configuration." },
-      "bis": { "label": "BiSes", "desc": "List of the best items per slot." },
+      "builds": { "label": "Builds", "desc": "Community builds by class." },
       "items": { "label": "Items", "desc": "Item database with its in-game tooltip." },
       "skills": { "label": "Skills", "desc": "Plan your skill tree by class." },
       "comingSoon": "Coming soon"
@@ -118,7 +127,7 @@
   },
   "maintenancePage": {
     "title": "Under maintenance",
-    "message": "The market is temporarily down for maintenance. In the meantime you can still use BiS and the database.",
+    "message": "The market is temporarily down for maintenance. In the meantime you can still use Builds and the database.",
     "adminNote": "You're an admin: you still have full access.",
     "backToMarket": "Go to the market",
     "backHome": "Back to home"
@@ -192,14 +201,14 @@
     "imageTooLarge": "The image can't be larger than {max} MB",
     "rateLimited": "Too many requests. Wait {seconds}s and try again.",
     "recognitionFailed": "Automatic detection failed. Try again or fill in the item by hand.",
-    "notBisEditor": "You don't have permission to edit BiS",
-    "stageNotFound": "The stage does not exist",
-    "bisEntryNotFound": "The BiS doesn't exist or was already removed",
-    "bisNeedTag": "Pick at least one role or job",
-    "bisNeedItemOrOption": "Pick an item or at least one option",
-    "bisNoOptionsForSlot": "This slot doesn't allow random options",
-    "bisWeaponTypeRequired": "Choose a weapon type for the options",
-    "bisItemSlotMismatch": "The item doesn't match this equipment slot"
+    "buildNotFound": "The build doesn't exist or was already removed",
+    "notYourBuild": "You don't have permission over this build",
+    "buildLimitReached": "You've reached the maximum number of builds ({max})",
+    "buildNeedTag": "Pick at least one tag (PvP/PvE)",
+    "buildInvalidJob": "Invalid class",
+    "buildItemSlotMismatch": "The item doesn't match this slot",
+    "cardSlotMismatch": "The card doesn't fit this equipment type",
+    "buildTooManyCards": "This item doesn't support that many cards"
   },
   "admin": {
     "title": "Settings",
@@ -209,19 +218,10 @@
       "features": "Features"
     },
     "features": {
-      "bis": {
-        "title": "BiS",
-        "hint": "Game stages shown on the BiS page. The first one (top) is the default.",
-        "empty": "No stages yet.",
-        "entryCount": "{count} BiS",
-        "moveUp": "Move up",
-        "moveDown": "Move down",
-        "rename": "Rename",
-        "save": "Save",
-        "delete": "Delete stage",
-        "confirmDelete": "Delete stage and {count} BiS",
-        "addPlaceholder": "New stage…",
-        "add": "Add"
+      "builds": {
+        "title": "Builds",
+        "maxBuildsLabel": "Max builds per user",
+        "maxBuildsHint": "How many builds each user can save."
       }
     },
     "stats": {
@@ -290,12 +290,6 @@
       "none": "No restriction (membership only)",
       "roleIdPlaceholder": "Access role ID (empty = no restriction)"
     },
-    "bisEditor": {
-      "legend": "BiS editor",
-      "hint": "Role that can create and edit BiS items, in addition to admins (who always can). No role = admins only; read-only for everyone else.",
-      "none": "Admins only",
-      "roleIdPlaceholder": "Editor role ID (empty = read-only)"
-    },
     "webhook": {
       "legend": "Discord notifications",
       "toggleLabel": "Send a new-sale notification to the webhook",
@@ -344,7 +338,9 @@
     "market": {
       "legend": "Market",
       "maintenanceToggleLabel": "Maintenance mode (blocks access to the market for everyone except admins; BiS and DB stay open)",
-      "maxRefineLabel": "Maximum allowed refine"
+      "maxRefineLabel": "Maximum allowed refine",
+      "listingExpirationLabel": "Days until a listing expires",
+      "listingExpirationHint": "Active listings auto-expire after this many days. Only affects new listings; existing ones keep their expiry."
     }
   },
   "market": {
@@ -368,6 +364,7 @@
     },
     "field": {
       "options": "Options",
+      "cards": "Cards",
       "quantity": "Quantity",
       "message": "Message",
       "refine": "Refine",
@@ -383,7 +380,11 @@
       "buyOptionsHint": "Search buy requests that match these values.",
       "name": "Name",
       "namePlaceholder": "Search item...",
+      "clearName": "Clear search",
       "poster": "User",
+      "buildItems": "Build items",
+      "buildItemsCount": "{n} items",
+      "buildItemsHint": "Filtering by the {n} pieces of a build.",
       "type": "Type",
       "all": "All",
       "category": "Category",
@@ -561,12 +562,21 @@
       "loadMore": "Load more",
       "loadMoreError": "Couldn't load more. Please try again."
     },
+    "expiry": {
+      "clockLabel": "Time until expiry",
+      "today": "Today",
+      "days": "{days, plural, one {# day} other {# days}}",
+      "hours": "{hours, plural, one {# hour} other {# hours}}",
+      "tooltip": "Expires on {date}"
+    },
     "detail": {
       "available": "Available",
       "unitPrice": "Price/ea",
       "posted": "Posted",
+      "expires": "Expires",
       "sold": "Sold",
       "given": "Given",
+      "fulfilled": "Fulfilled",
       "of": "of",
       "cancelListing": "Cancel",
       "closeListing": "Close",
@@ -607,7 +617,7 @@
       "reservationActions": {
         "confirm": "Sell",
         "reject": "Reject",
-        "cancel": "Cancel purchase"
+        "cancel": "Cancel"
       },
       "fulfillForm": {
         "quantityLabel": "Quantity to sell",
@@ -622,7 +632,7 @@
       "fulfillActions": {
         "confirm": "Buy",
         "reject": "Reject",
-        "cancel": "Cancel offer"
+        "cancel": "Cancel"
       },
       "claimForm": {
         "quantityLabel": "Quantity to claim",
@@ -635,7 +645,7 @@
       "claimActions": {
         "confirm": "Hand over",
         "reject": "Reject",
-        "cancel": "Cancel claim"
+        "cancel": "Cancel"
       }
     },
     "form": {
@@ -644,6 +654,9 @@
       "notes": "Notes",
       "confirm": "Confirm",
       "previewHint": "This is how it will appear in the market.",
+      "cardsTab": "Cards",
+      "cardPlaceholder": "Card {n}…",
+      "cardRemove": "Remove",
       "tabs": {
         "info": "Info"
       },
@@ -746,70 +759,81 @@
       "contactMessage": "{username} wrote to you about {item}"
     }
   },
-  "bis": {
-    "title": "BiS · Best in Slot",
-    "subtitle": "The best gear per equipment slot for each stage of the game.",
-    "stageLabel": "Stage",
+  "builds": {
+    "title": "Builds",
+    "list": {
+      "myLimit": "You have {n} of {max} builds",
+      "you": "You",
+      "create": "Create build",
+      "empty": "No builds yet. Create the first one.",
+      "emptyMine": "You have no builds yet. Create the first one.",
+      "emptyFiltered": "No builds match the filters.",
+      "selectPrompt": "Select a build to see its details.",
+      "backToList": "Back to the list",
+      "edit": "Edit"
+    },
+    "tabs": {
+      "all": "All",
+      "mine": "My builds"
+    },
     "filters": {
-      "roleLegend": "Role",
-      "jobLegend": "Job",
-      "clear": "Clear filters"
+      "job": "Class",
+      "allJobs": "All classes"
     },
-    "cells": {
-      "head": "Headgear",
-      "weapon": "Weapon",
-      "garment": "Garment",
-      "accessory": "Accessory",
-      "armor": "Armor",
-      "shield": "Shield",
-      "footgear": "Footgear"
-    },
-    "cell": {
-      "empty": "No BiS yet",
-      "noMatches": "No matches"
-    },
-    "detail": {
-      "close": "Close",
-      "options": "Options",
-      "roles": "Roles",
-      "jobs": "Jobs",
-      "note": "Note"
-    },
-    "showAll": "Show all ({count})",
-    "showLess": "Show less",
-    "anyItem": "Any item",
-    "noStages": "No stages configured yet.",
-    "add": "Add",
-    "edit": "Edit",
-    "kebabLabel": "Options",
-    "deleteConfirm": "Delete this BiS?",
-    "hasNotes": "Has notes",
-    "searchInMarket": "Search in market",
     "form": {
-      "addTitle": "Add BiS",
-      "editTitle": "Edit BiS",
-      "slotLabel": "Slot",
-      "itemLabel": "Item",
-      "itemOrOptionHint": "Optional. Pick an item, some options, or both (a specific item with options).",
+      "back": "Back to builds",
+      "newTitle": "New build",
+      "editTitle": "Edit build",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Knight PvP burst",
+      "classLabel": "Class",
+      "chooseClass": "Choose a class…",
+      "firstJobs": "1st classes",
+      "secondJobs": "2nd classes",
+      "tagsLabel": "Tags",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Build details, synergies, alternatives…",
+      "slotsLabel": "Pieces",
       "refine": "Refine",
-      "cardSlots": "Slots",
-      "weaponType": "Weapon type",
-      "weaponTypeNone": "Unspecified",
+      "changeItem": "Change",
+      "occupiedBy": "Occupied by {item}",
       "optionsLabel": "Options",
-      "optionNone": "— No option —",
-      "optionsHint": "The value is an optional minimum; empty = any value.",
-      "optionOutOfRange": "Each value must be within its option's range.",
-      "min": "Min",
-      "rolesLabel": "Roles",
-      "jobsLabel": "Jobs",
-      "needTag": "Pick at least one role or job.",
-      "noteLabel": "Note",
+      "optionPlaceholder": "Option {slot}",
+      "cardsLabel": "Cards",
+      "cardPlaceholder": "Card {n}…",
+      "remove": "Remove",
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "delete": "Delete",
-      "confirmDelete": "Sure? Delete",
-      "saveError": "Couldn't save. Try again."
+      "deleteBuild": "Delete build"
+    },
+    "detail": {
+      "noPieces": "This build has no pieces yet.",
+      "searchMarket": "Search the market",
+      "searchAllMarket": "Search all in the market",
+      "publishItem": "Publish on the market",
+      "avail": {
+        "SALE": "{n, plural, one {# sale} other {# sales}}",
+        "BUY": "{n, plural, one {# buy order} other {# buy orders}}",
+        "TRADE": "{n, plural, one {# trade} other {# trades}}",
+        "GIFT": "{n, plural, one {# gift} other {# gifts}}"
+      }
+    },
+    "slots": {
+      "HEADGEAR_TOP": "Upper headgear",
+      "HEADGEAR_MID": "Middle headgear",
+      "HEADGEAR_LOW": "Lower headgear",
+      "ARMOR": "Armor",
+      "WEAPON": "Weapon",
+      "SHIELD": "Shield",
+      "GARMENT": "Garment",
+      "FOOTGEAR": "Footgear",
+      "ACCESSORY_LEFT": "Accessory L",
+      "ACCESSORY_RIGHT": "Accessory R"
+    },
+    "tags": {
+      "PVP": "PvP",
+      "PVE": "PvE"
     }
   }
 }

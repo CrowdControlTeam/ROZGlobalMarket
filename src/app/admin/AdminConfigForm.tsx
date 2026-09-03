@@ -139,18 +139,6 @@ export function AdminConfigForm({ config }: { config: Config }) {
             onSave={(v) => save({ field: "accessRoleId", value: v })}
           />
 
-          <RoleSelectField
-            legend={t("bisEditor.legend")}
-            hint={t("bisEditor.hint")}
-            noneLabel={t("bisEditor.none")}
-            placeholder={t("bisEditor.roleIdPlaceholder")}
-            value={config.bisEditorRoleId}
-            roles={config.guildRolesResult.status === "ok" ? config.guildRolesResult.roles : null}
-            state={state.bisEditorRoleId}
-            error={errors.bisEditorRoleId}
-            onSave={(v) => save({ field: "bisEditorRoleId", value: v })}
-          />
-
           <EditableField
             label={t("market.maxRefineLabel")}
             initial={String(config.maxRefineLevel)}
@@ -159,6 +147,17 @@ export function AdminConfigForm({ config }: { config: Config }) {
             state={state.maxRefineLevel}
             error={errors.maxRefineLevel}
             onSave={(v) => save({ field: "maxRefineLevel", value: Number(v) })}
+          />
+
+          <EditableField
+            label={t("market.listingExpirationLabel")}
+            hint={t("market.listingExpirationHint")}
+            initial={String(config.listingExpirationDays)}
+            type="number"
+            min={1}
+            state={state.listingExpirationDays}
+            error={errors.listingExpirationDays}
+            onSave={(v) => save({ field: "listingExpirationDays", value: Number(v) })}
           />
         </div>
 

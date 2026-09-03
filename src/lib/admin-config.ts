@@ -1,12 +1,13 @@
 "use server";
 
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { marketConfig } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
-import { loadMarketConfig } from "@/lib/market-config";
+import { loadMarketConfig, bustConfigCache } from "@/lib/market-config";
 import { getOptionsCatalogCount } from "@/lib/item-options";
 import { fetchGuildRoles, getBotStatus } from "@/lib/discord-bot";
 import { GEMINI_MODEL_VALUES, isGeminiModel } from "@/lib/gemini-model-constants";
@@ -34,10 +35,16 @@ export async function getMarketConfig() {
     getBotStatus(),
     // logoUrl/homeImageUrl ya no vienen de loadMarketConfig (se dejaron fuera
     // por egress); aquí sí se leen (admin-only, poco tráfico) para el formulario.
-    prisma.marketConfig.findUnique({
-      where: { id: 1 },
-      select: { siteName: true, logoUrl: true, homeImageUrl: true },
-    }),
+    db
+      .select({
+        siteName: marketConfig.siteName,
+        logoUrl: marketConfig.logoUrl,
+        homeImageUrl: marketConfig.homeImageUrl,
+      })
+      .from(marketConfig)
+      .where(eq(marketConfig.id, 1))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
     getTranslations("admin.recognition.models"),
   ]);
 
@@ -54,6 +61,8 @@ export async function getMarketConfig() {
     siteName: rawConfig?.siteName ?? "",
     siteNamePlaceholder: config.siteName,
     maxRefineLevel: config.maxRefineLevel,
+    listingExpirationDays: config.listingExpirationDays,
+    maxBuildsPerUser: config.maxBuildsPerUser,
     webhookEnabled: config.webhookEnabled,
     webhookUrlMasked: config.webhookUrl ? maskSecret(config.webhookUrl) : null,
     imageRecognitionEnabled: config.imageRecognitionEnabled,
@@ -67,7 +76,6 @@ export async function getMarketConfig() {
     optionsCatalogCount,
     adminRoleIds: config.adminRoleIds,
     accessRoleId: config.accessRoleId,
-    bisEditorRoleId: config.bisEditorRoleId,
     guildRolesResult,
     // Se devuelven completos (admin-only): el formulario los reenvía tal cual
     // si no se cambian (así "sin tocar" = conservar; vacío = borrar).
@@ -97,19 +105,23 @@ export type ConfigFieldUpdate =
   | { field: BoolField; value: boolean }
   | { field: "siteName"; value: string }
   | { field: "maxRefineLevel"; value: number }
+  | { field: "listingExpirationDays"; value: number }
+  | { field: "maxBuildsPerUser"; value: number }
   | { field: "webhookUrl"; value: string }
   | { field: "geminiModel"; value: string }
-  | { field: "accessRoleId" | "bisEditorRoleId"; value: string }
+  | { field: "accessRoleId"; value: string }
   | { field: "adminRoleIds"; value: string[] }
   | { field: "logoUrl" | "homeImageUrl"; value: string | null };
 
 // Valida un campo y devuelve el fragmento de update de Prisma. Lanza con el
 // mensaje i18n adecuado si el valor no es válido. El switch es exhaustivo sobre
 // el union (TS lo verifica por el tipo de retorno sin `undefined`).
+type MarketConfigUpdate = Partial<typeof marketConfig.$inferInsert>;
+
 function buildFieldData(
   u: ConfigFieldUpdate,
   t: Awaited<ReturnType<typeof getTranslations>>,
-): Prisma.MarketConfigUncheckedUpdateInput {
+): MarketConfigUpdate {
   switch (u.field) {
     case "webhookEnabled":
     case "imageRecognitionEnabled":
@@ -124,6 +136,18 @@ function buildFieldData(
       if (!n.success) throw new Error(t("invalidData"));
       return { maxRefineLevel: n.data };
     }
+    case "listingExpirationDays": {
+      // Mínimo 1 día (0 caducaría al instante). Tope generoso (365) por sanidad.
+      const n = z.coerce.number().int().min(1).max(365).safeParse(u.value);
+      if (!n.success) throw new Error(t("invalidData"));
+      return { listingExpirationDays: n.data };
+    }
+    case "maxBuildsPerUser": {
+      // Al menos 1; tope de 50 por sanidad.
+      const n = z.coerce.number().int().min(1).max(50).safeParse(u.value);
+      if (!n.success) throw new Error(t("invalidData"));
+      return { maxBuildsPerUser: n.data };
+    }
     case "webhookUrl": {
       const v = u.value.trim();
       // Vacío no se guarda por aquí (patrón enmascarado): la UI solo manda ✓ con
@@ -135,10 +159,9 @@ function buildFieldData(
     case "geminiModel":
       if (!isGeminiModel(u.value)) throw new Error(t("unsupportedGeminiModel"));
       return { geminiModel: u.value };
-    case "accessRoleId":
-    case "bisEditorRoleId": {
+    case "accessRoleId": {
       const v = u.value.trim();
-      return { [u.field]: SNOWFLAKE.test(v) ? v : null };
+      return { accessRoleId: SNOWFLAKE.test(v) ? v : null };
     }
     case "adminRoleIds": {
       const ids = Array.from(
@@ -163,10 +186,12 @@ export async function setMarketConfigField(update: ConfigFieldUpdate): Promise<v
   await requireAdmin();
   const t = await getTranslations("errors");
   const data = buildFieldData(update, t);
-  await prisma.marketConfig.upsert({
-    where: { id: 1 },
-    create: { id: 1, ...data } as Prisma.MarketConfigUncheckedCreateInput,
-    update: data,
-  });
+  await db
+    .insert(marketConfig)
+    .values({ id: 1, ...data })
+    .onConflictDoUpdate({ target: marketConfig.id, set: data });
+  // Invalida el cache en memoria para que el cambio se refleje ya (al menos en
+  // este isolate; el resto caduca en <=TTL).
+  bustConfigCache();
   revalidatePath("/admin");
 }

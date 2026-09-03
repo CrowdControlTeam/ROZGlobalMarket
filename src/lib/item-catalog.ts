@@ -1,4 +1,4 @@
-import type { ItemCategory, EquipSlot, WeaponType } from "@prisma/client";
+import type { ItemCategory, EquipSlot, WeaponType } from "@/db/schema";
 import catalogData from "@/data/catalog-search.json";
 
 // Catálogo de items recortado a los campos de búsqueda, empaquetado con la app
@@ -17,6 +17,13 @@ export type CatalogItem = {
   // Nº de ranuras de carta del item (fijo por id) — lo usan el match del
   // reconocimiento (nombre + slots) y la vista previa.
   slotCount: number;
+  // Ubicación del tocado ("Upper"/"Middle"/"Lower", o combinaciones separadas
+  // por comas). Solo relevante para headgears; null en el resto. Lo usa el
+  // filtrado por slot del editor de builds.
+  position?: string | null;
+  // Slot de equipo donde encaja una carta ("Weapon"/"Armor"/…), solo en CARD.
+  // Lo usa el filtrado de cartas por slot al publicar (ver cardFitsEquipSlot).
+  cardSlot?: string | null;
 };
 
 const CATALOG = catalogData as unknown as CatalogItem[];

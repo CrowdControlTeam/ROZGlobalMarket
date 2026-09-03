@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ItemIcon } from "@/components/ItemIcon";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, Search, Eye, Share2, Pencil, MessageSquare, SlidersHorizontal, X } from "lucide-react";
 import { loadMoreListings } from "@/lib/market-actions";
 import type { MarketFilters } from "@/lib/market";
 import { buttonClass } from "@/lib/ui";
@@ -16,6 +16,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { UserMention, ContactModal } from "@/components/UserMention";
 import { KebabMenu, type KebabItem } from "@/components/KebabMenu";
 import { NoteIndicator } from "@/components/NoteIndicator";
+import { ExpiryIndicator } from "@/components/ExpiryIndicator";
 import { Toast } from "@/components/Toast";
 import { SortSelect } from "./SortSelect";
 import { useMarketSearch } from "./marketSearchStore";
@@ -25,6 +26,7 @@ import type { ListingCardPatch } from "@/lib/listing-card";
 type Item = { id: string; name: string; iconUrl: string; slotCount: number };
 type Poster = { id: string; username: string };
 type ListingOption = { slotIndex: number; value: number; def: { label: string } };
+type ListingCardChip = { slotIndex: number; card: { id: string; name: string; iconUrl: string } };
 type Listing = {
   id: string;
   type: "SALE" | "TRADE" | "BUY" | "GIFT";
@@ -35,9 +37,11 @@ type Listing = {
   price: number | null;
   refineLevel: number;
   notes: string | null;
+  expiresAt: Date | string | null; // caducidad (indicador de reloj); null = no caduca
   item: Item;
   poster: Poster;
   options: ListingOption[];
+  cards: ListingCardChip[];
 };
 
 type MarketView = "grid" | "list";
@@ -175,6 +179,9 @@ function ListingCard({
       </span>
     </p>
   );
+  const expiryLine = listing.expiresAt ? (
+    <ExpiryIndicator expiresAt={listing.expiresAt} className="text-[0.65rem] text-ro-text-muted" />
+  ) : null;
   const optionChips =
     listing.options.length > 0 ? (
       <div className="mt-2 flex flex-wrap gap-1">
@@ -184,6 +191,20 @@ function ListingCard({
             className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-[0.65rem] text-ro-accent"
           >
             {o.def.label} {formatOptionAmount(o.value, listing.type === "BUY")}
+          </span>
+        ))}
+      </div>
+    ) : null;
+  const cardChips =
+    listing.cards.length > 0 ? (
+      <div className="mt-1 flex flex-wrap gap-1">
+        {listing.cards.map((c) => (
+          <span
+            key={c.slotIndex}
+            className="inline-flex items-center gap-0.5 rounded border border-ro-panel-border bg-ro-panel px-1 py-0.5 text-[0.65rem] text-ro-text-muted"
+          >
+            <ItemIcon item={c.card} width={14} height={14} alt="" />
+            {c.card.name}
           </span>
         ))}
       </div>
@@ -270,10 +291,12 @@ function ListingCard({
             <p className="truncate text-sm font-bold text-ro-text">{name}</p>
             {meta}
             {optionChips}
+            {cardChips}
           </div>
           <div className="shrink-0 text-right">
             <div className="text-sm">{priceLine}</div>
             <div className="mt-0.5 text-xs text-ro-text-muted">{countLabel}</div>
+            {expiryLine && <div className="mt-0.5 flex justify-end">{expiryLine}</div>}
           </div>
         </Link>
         {cornerActions}
@@ -301,10 +324,14 @@ function ListingCard({
           </div>
         </div>
         {optionChips}
+        {cardChips}
         {/* mt-auto ancla el precio abajo: con auto-rows-fr todas las tarjetas
             de la fila igualan altura y el precio queda alineado. */}
         <div className="mt-auto flex items-end justify-between gap-2 pt-2">
-          <span className="text-xs text-ro-text-muted">{countLabel}</span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-xs text-ro-text-muted">{countLabel}</span>
+            {expiryLine}
+          </div>
           <span className="text-sm">{priceLine}</span>
         </div>
       </Link>
@@ -507,6 +534,17 @@ export function MarketResults({
               aria-label={t("filters.name")}
               className="min-w-0 flex-1 bg-transparent text-xs text-ro-text placeholder:text-ro-text-muted focus:outline-none"
             />
+            {q && (
+              <button
+                type="button"
+                onClick={() => setSearchFilter("q", "")}
+                aria-label={t("filters.clearName")}
+                title={t("filters.clearName")}
+                className="grid h-5 w-5 shrink-0 place-items-center rounded text-ro-text-muted transition-colors hover:bg-ro-panel-border/60 hover:text-ro-text"
+              >
+                <X size={14} aria-hidden />
+              </button>
+            )}
           </form>
         </div>
         {/* Fila B: resultados + orden (+ vista solo en desktop). */}

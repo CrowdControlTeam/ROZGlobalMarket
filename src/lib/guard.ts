@@ -8,7 +8,7 @@ import { loadMarketConfig } from "@/lib/market-config";
 // recordando la página actual (callbackUrl) para volver tras reloguearse. El
 // pathname lo expone el middleware en x-pathname (App Router no lo da en el
 // servidor). El mantenimiento NO se comprueba aquí (ver requireMarketSession):
-// así /bis y /db siguen abiertos aunque el mercado esté en mantenimiento.
+// así /builds y /db siguen abiertos aunque el mercado esté en mantenimiento.
 export async function requireSession() {
   const session = await auth();
   if (!session?.user) {
@@ -24,7 +24,7 @@ export async function requireSession() {
 // Guard de la sección MERCADO: como requireSession pero además, en mantenimiento,
 // manda a /maintenance a quien no sea admin. Es el punto único de intercepción
 // para el mercado; los `throw` de las acciones de escritura siguen como red de
-// seguridad. /bis y /db (solo lectura, ajenos al mercado) NO se bloquean. (No va
+// seguridad. /builds y /db (solo lectura, ajenos al mercado) NO se bloquean. (No va
 // en el middleware porque el flag está en la BD y Prisma no corre bien en el
 // runtime de middleware de Workers.)
 export async function requireMarketSession() {

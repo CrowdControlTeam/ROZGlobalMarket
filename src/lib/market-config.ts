@@ -4,8 +4,9 @@
 // navegador — devuelve valores en crudo (incluida la URL real del webhook),
 // así que solo lo importan otros módulos server-only (discord-webhook.ts,
 // listings.ts, item-recognition.ts, páginas server component).
-import { cache } from "react";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { marketConfig } from "@/db/schema";
 import { DEFAULT_MAX_REFINE_LEVEL } from "@/lib/refine-constants";
 import { DEFAULT_GEMINI_MODEL, isGeminiModel, type GeminiModel } from "@/lib/gemini-model-constants";
 
@@ -15,8 +16,17 @@ import { DEFAULT_GEMINI_MODEL, isGeminiModel, type GeminiModel } from "@/lib/gem
 // literalmente a este valor".
 export const DEFAULT_SITE_NAME = "ROZ Global Market";
 
+// Días por defecto que una publicación permanece activa (mismo valor que el
+// default de la columna; en código para el fallback "sin fila de config").
+export const DEFAULT_LISTING_EXPIRATION_DAYS = 7;
+
+// Máximo de builds por usuario por defecto (fallback "sin fila de config").
+export const DEFAULT_MAX_BUILDS_PER_USER = 5;
+
 export type MarketConfigValues = {
   maxRefineLevel: number;
+  listingExpirationDays: number;
+  maxBuildsPerUser: number;
   webhookUrl: string | null;
   webhookEnabled: boolean;
   imageRecognitionEnabled: boolean;
@@ -26,41 +36,77 @@ export type MarketConfigValues = {
   optionsEnabled: boolean;
   adminRoleIds: string[];
   accessRoleId: string | null;
-  bisEditorRoleId: string | null;
   siteName: string;
 };
 
-// Si la fila (id=1) todavía no existe, se cae a los valores conservadores
-// por defecto en vez de romper — mismo patrón que loadMaxRefineLevel.
-// cache() de React deduplica por request: varias páginas (SiteHeader +
-// la propia página + isDmFeatureAvailable, que también la llama) piden
-// esta misma fila varias veces en el mismo render — sin esto, cada
-// llamada era una query nueva a Postgres.
-export const loadMarketConfig = cache(async (): Promise<MarketConfigValues> => {
+// Cache en memoria POR ISOLATE. En Cloudflare Workers el scope del módulo
+// sobrevive entre requests del mismo isolate, así que memoizamos las lecturas de
+// config con un TTL corto: la fila cambia rarísimo (edición admin) pero se lee en
+// casi cada request → la mayoría ya no tocan la DB. Recorta el egress de Neon y
+// deja dormir más al compute. Dedup por request incluido (una lectura en vuelo se
+// comparte), así que sustituye al cache() de React. TTL corto para que los
+// cambios de admin (mantenimiento, roles) se propaguen pronto; además se invalida
+// al guardar (bustConfigCache).
+const CONFIG_TTL_MS = 30_000;
+
+type Memoized<T> = (() => Promise<T>) & { bust: () => void };
+
+function ttlMemo<T>(fn: () => Promise<T>, ttlMs: number): Memoized<T> {
+  let cell: { value: T; expires: number } | null = null;
+  let inflight: Promise<T> | null = null;
+  async function get(): Promise<T> {
+    if (cell && cell.expires > Date.now()) return cell.value;
+    if (inflight) return inflight;
+    inflight = (async () => {
+      try {
+        const value = await fn();
+        cell = { value, expires: Date.now() + ttlMs };
+        return value;
+      } finally {
+        inflight = null;
+      }
+    })();
+    return inflight;
+  }
+  const memoized = get as Memoized<T>;
+  memoized.bust = () => {
+    cell = null;
+  };
+  return memoized;
+}
+
+// Si la fila (id=1) todavía no existe, se cae a los valores conservadores por
+// defecto en vez de romper. Solo campos escalares (logoUrl/homeImageUrl van
+// aparte, ver más abajo).
+export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> => {
   // Se seleccionan SOLO los campos escalares. logoUrl/homeImageUrl NO se leen
   // aquí: son data-URI base64 (cientos de KB) y esta función se llama en casi
   // todos los requests (layout, cabecera, guard de /market, acciones…), así que
   // arrastrarlos desangraba la transferencia de datos de Neon. Se leen aparte y
   // solo donde se pintan (ver loadBrandingLogo / loadHomeImage).
-  const config = await prisma.marketConfig.findUnique({
-    where: { id: 1 },
-    select: {
-      maxRefineLevel: true,
-      webhookUrl: true,
-      webhookEnabled: true,
-      imageRecognitionEnabled: true,
-      geminiModel: true,
-      dmNotificationsEnabled: true,
-      maintenanceModeEnabled: true,
-      optionsEnabled: true,
-      adminRoleIds: true,
-      accessRoleId: true,
-      bisEditorRoleId: true,
-      siteName: true,
-    },
-  });
+  const [config] = await db
+    .select({
+      maxRefineLevel: marketConfig.maxRefineLevel,
+      listingExpirationDays: marketConfig.listingExpirationDays,
+      maxBuildsPerUser: marketConfig.maxBuildsPerUser,
+      webhookUrl: marketConfig.webhookUrl,
+      webhookEnabled: marketConfig.webhookEnabled,
+      imageRecognitionEnabled: marketConfig.imageRecognitionEnabled,
+      geminiModel: marketConfig.geminiModel,
+      dmNotificationsEnabled: marketConfig.dmNotificationsEnabled,
+      maintenanceModeEnabled: marketConfig.maintenanceModeEnabled,
+      optionsEnabled: marketConfig.optionsEnabled,
+      adminRoleIds: marketConfig.adminRoleIds,
+      accessRoleId: marketConfig.accessRoleId,
+      siteName: marketConfig.siteName,
+    })
+    .from(marketConfig)
+    .where(eq(marketConfig.id, 1))
+    .limit(1);
   return {
     maxRefineLevel: config?.maxRefineLevel ?? DEFAULT_MAX_REFINE_LEVEL,
+    listingExpirationDays: config?.listingExpirationDays ?? DEFAULT_LISTING_EXPIRATION_DAYS,
+    maxBuildsPerUser: config?.maxBuildsPerUser ?? DEFAULT_MAX_BUILDS_PER_USER,
     webhookUrl: config?.webhookUrl ?? null,
     webhookEnabled: config?.webhookEnabled ?? false,
     imageRecognitionEnabled: config?.imageRecognitionEnabled ?? false,
@@ -73,28 +119,36 @@ export const loadMarketConfig = cache(async (): Promise<MarketConfigValues> => {
     optionsEnabled: config?.optionsEnabled ?? true,
     adminRoleIds: config?.adminRoleIds ?? [],
     accessRoleId: config?.accessRoleId ?? null,
-    bisEditorRoleId: config?.bisEditorRoleId ?? null,
     siteName: config?.siteName?.trim() || DEFAULT_SITE_NAME,
   };
-});
+}, CONFIG_TTL_MS);
 
 // Imágenes de marca (data-URI base64, cientos de KB). Se leen APARTE de
 // loadMarketConfig y SOLO donde se renderizan: el logo en la cabecera (todas
-// las páginas) y la imagen del home en el hub (solo `/`). Así no viajan en cada
-// request/prefetch que solo necesita la config escalar. cache() las deduplica
-// por request igual que loadMarketConfig.
-export const loadBrandingLogo = cache(async (): Promise<string | null> => {
-  const config = await prisma.marketConfig.findUnique({
-    where: { id: 1 },
-    select: { logoUrl: true },
-  });
+// las páginas) y la imagen del home en el hub (solo `/`). Mismo cache en memoria
+// con TTL para no re-leerlas de la DB en cada render.
+export const loadBrandingLogo = ttlMemo(async (): Promise<string | null> => {
+  const [config] = await db
+    .select({ logoUrl: marketConfig.logoUrl })
+    .from(marketConfig)
+    .where(eq(marketConfig.id, 1))
+    .limit(1);
   return config?.logoUrl ?? null;
-});
+}, CONFIG_TTL_MS);
 
-export const loadHomeImage = cache(async (): Promise<string | null> => {
-  const config = await prisma.marketConfig.findUnique({
-    where: { id: 1 },
-    select: { homeImageUrl: true },
-  });
+export const loadHomeImage = ttlMemo(async (): Promise<string | null> => {
+  const [config] = await db
+    .select({ homeImageUrl: marketConfig.homeImageUrl })
+    .from(marketConfig)
+    .where(eq(marketConfig.id, 1))
+    .limit(1);
   return config?.homeImageUrl ?? null;
-});
+}, CONFIG_TTL_MS);
+
+// Invalida el cache en memoria tras un cambio en /admin (ver setMarketConfigField).
+// Solo afecta al isolate que atiende el guardado; el resto se pone al día en <=TTL.
+export function bustConfigCache() {
+  loadMarketConfig.bust();
+  loadBrandingLogo.bust();
+  loadHomeImage.bust();
+}

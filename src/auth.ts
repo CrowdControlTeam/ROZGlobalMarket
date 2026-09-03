@@ -1,6 +1,8 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { user } from "@/db/schema";
 import { loadMarketConfig } from "@/lib/market-config";
 
 // Se lee de forma perezosa (no a nivel de módulo) para que `next build` no
@@ -128,16 +130,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // usuario serían indistinguibles). Se registra el fallo y se
       // reintentará solo el guardado en el siguiente login.
       try {
-        await prisma.user.upsert({
-          where: { id: discordId },
-          create: {
-            id: discordId,
-            username,
-            avatarUrl,
-            guildRoles: member.roles ?? [],
-          },
-          update: { username, avatarUrl, guildRoles: member.roles ?? [] },
-        });
+        await db
+          .insert(user)
+          .values({ id: discordId, username, avatarUrl, guildRoles: member.roles ?? [] })
+          .onConflictDoUpdate({
+            target: user.id,
+            set: { username, avatarUrl, guildRoles: member.roles ?? [] },
+          });
       } catch (err) {
         console.error("No se pudo guardar el perfil de usuario tras el login:", err);
       }
@@ -158,10 +157,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // vez de recalcularlos aquí, que exigiría otra llamada a Discord.
         let guildRoles: string[] = [];
         try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: discordId },
-            select: { username: true, guildRoles: true },
-          });
+          const [dbUser] = await db
+            .select({ username: user.username, guildRoles: user.guildRoles })
+            .from(user)
+            .where(eq(user.id, discordId))
+            .limit(1);
           token.username =
             dbUser?.username ??
             ((profile.global_name ?? profile.username) as string);

@@ -1,8 +1,8 @@
 import { ItemIcon } from "@/components/ItemIcon";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
+import { getListingDetail } from "@/lib/listing-detail";
 import { formatPrice, priceColorClass } from "@/lib/price";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import {
@@ -15,6 +15,7 @@ import {
 import { labelClass } from "@/lib/ui";
 import { availableFrom } from "@/lib/deals";
 import { UserMention } from "@/components/UserMention";
+import { ExpiryIndicator } from "@/components/ExpiryIndicator";
 import { isDmFeatureAvailable } from "@/lib/discord-bot";
 import { CancelListingButton } from "./[id]/CancelListingButton";
 import { EditListingButton } from "./[id]/EditListingButton";
@@ -63,21 +64,11 @@ export async function ListingDetailContent({ id }: { id: string }) {
   const t = await getTranslations("market");
 
   // dmAvailable no depende del listing (ni viceversa) — en paralelo en vez
-  // de en serie.
+  // de en serie. getListingDetail va con cache(): comparte la query con las
+  // acciones de cabecera (DetailHeaderActions) en el mismo request.
   const [dmAvailable, listing] = await Promise.all([
     isDmFeatureAvailable(),
-    prisma.listing.findUnique({
-      where: { id },
-      include: {
-        item: true,
-        poster: true,
-        options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
-        deals: {
-          include: { user: true, offeredItem: true },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    }),
+    getListingDetail(id),
   ]);
   if (!listing) notFound();
 
@@ -120,10 +111,18 @@ export async function ListingDetailContent({ id }: { id: string }) {
   // Precio sugerido al pujar/ofertar en competitivo = la mejor oferta actual (la
   // primera ya ordenada); null si aún no hay ninguna (el form arranca en 1).
   const bestOfferPrice = isCompetitive ? (pendingByBestPrice[0]?.unitPrice ?? null) : null;
+  // Lo que ve el POSTER en la lista de ofertas: pendientes (accionables) +
+  // aceptadas (ya cerradas, en lectura) — para que se vea el estado real del
+  // listing (RECHAZADAS/CANCELADAS se omiten). Pendientes primero (ya ordenadas
+  // por mejor precio en competitivo), luego las aceptadas.
+  const acceptedDeals = listing.deals.filter((d) => d.status === "ACCEPTED");
+  const posterDeals = [...pendingByBestPrice, ...acceptedDeals];
 
   return (
     <>
-      {/* Hero: icono grande + nombre + badge · vendedor. */}
+      {/* Hero: icono grande + nombre + badge · vendedor. Las acciones de
+          utilidad (Compartir/Contactar) van en la cabecera (DetailHeaderActions),
+          no aquí. */}
       <div className="flex items-center gap-3">
         <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl border border-ro-panel-border bg-ro-panel-alt">
           <ItemIcon
@@ -189,15 +188,24 @@ export async function ListingDetailContent({ id }: { id: string }) {
         />
         {/* Refino y slots no se listan aquí: ya salen en el nombre del item
             (formatItemDisplayName → "+9 Nombre [2]"), sería redundante. */}
-        {/* Con 1 sola unidad, "Vendidos: 0 de 1" no aporta nada. No aplica a BUY. */}
-        {!isBuy && (listing.quantity === null || listing.quantity > 1) && (
+        {/* Contador "X de Y" para ver el estado de un vistazo: vendido (SALE),
+            cumplido (BUY) o entregado (GIFT). En TRADE no aplica (resolución
+            única, se muestra "Intercambiado con…"). Con 1 sola unidad no aporta. */}
+        {!isTrade && (listing.quantity === null || listing.quantity > 1) && (
           <KvRow
-            label={isGift ? t("detail.given") : t("detail.sold")}
+            label={isGift ? t("detail.given") : isBuy ? t("detail.fulfilled") : t("detail.sold")}
             value={listing.quantity === null ? String(sold) : `${sold} ${t("detail.of")} ${listing.quantity}`}
           />
         )}
         {isSale && reserved > 0 && <KvRow label={t("detail.reserved")} value={String(reserved)} />}
-        <KvRow label={t("detail.posted")} value={listing.createdAt.toLocaleString()} last />
+        <KvRow
+          label={t("detail.posted")}
+          value={listing.createdAt.toLocaleString()}
+          last={!(listing.status === "ACTIVE" && listing.expiresAt)}
+        />
+        {listing.status === "ACTIVE" && listing.expiresAt && (
+          <KvRow label={t("detail.expires")} value={<ExpiryIndicator expiresAt={listing.expiresAt} />} last />
+        )}
       </dl>
 
       {listing.options.length > 0 && (
@@ -210,6 +218,23 @@ export async function ListingDetailContent({ id }: { id: string }) {
                 className="rounded border border-ro-accent/30 bg-ro-accent/10 px-1.5 py-0.5 text-xs text-ro-accent"
               >
                 {o.def.label} {formatOptionAmount(o.value, isBuy)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {listing.cards.length > 0 && (
+        <div className="mt-3">
+          <p className={labelClass}>{t("field.cards")}</p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {listing.cards.map((c) => (
+              <span
+                key={c.slotIndex}
+                className="inline-flex items-center gap-1 rounded border border-ro-panel-border bg-ro-panel-alt px-1.5 py-0.5 text-xs text-ro-text-muted"
+              >
+                <ItemIcon item={c.card} width={16} height={16} alt="" />
+                {c.card.name}
               </span>
             ))}
           </div>
@@ -360,7 +385,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
-      {isSale && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
+      {isSale && (isPoster ? posterDeals.length > 0 : myOffers.length > 0) && (
         <div className="mt-3">
           <p className={labelClass}>
             {isCompetitive
@@ -372,7 +397,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                 : t("detail.yourReservations")}
           </p>
           <ul className="mt-2 flex flex-col gap-3">
-            {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
+            {(isPoster ? posterDeals : myOffers).map((deal) => (
               <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
@@ -392,7 +417,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                       )}
                     </span>
                   </span>
-                  {!isPoster && (
+                  {(!isPoster || deal.status !== "PENDING") && (
                     <span className="text-xs text-ro-text-muted">{offerStatusLabel(t, deal.status)}</span>
                   )}
                 </div>
@@ -420,7 +445,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
-      {isBuy && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
+      {isBuy && (isPoster ? posterDeals.length > 0 : myOffers.length > 0) && (
         <div className="mt-3">
           <p className={labelClass}>
             {isCompetitive
@@ -432,7 +457,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                 : t("detail.yourFulfillOffers")}
           </p>
           <ul className="mt-2 flex flex-col gap-3">
-            {(isPoster ? pendingByBestPrice : myOffers).map((deal) => (
+            {(isPoster ? posterDeals : myOffers).map((deal) => (
               <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">
@@ -452,7 +477,7 @@ export async function ListingDetailContent({ id }: { id: string }) {
                       )}
                     </span>
                   </span>
-                  {!isPoster && (
+                  {(!isPoster || deal.status !== "PENDING") && (
                     <span className="text-xs text-ro-text-muted">{offerStatusLabel(t, deal.status)}</span>
                   )}
                 </div>
@@ -480,17 +505,17 @@ export async function ListingDetailContent({ id }: { id: string }) {
         </div>
       )}
 
-      {isGift && (isPoster ? pendingOffers.length > 0 : myOffers.length > 0) && (
+      {isGift && (isPoster ? posterDeals.length > 0 : myOffers.length > 0) && (
         <div className="mt-3">
           <p className={labelClass}>
             {isPoster ? t("detail.claimsReceived") : t("detail.yourClaims")}
           </p>
           <ul className="mt-2 flex flex-col gap-3">
-            {(isPoster ? pendingOffers : myOffers).map((deal) => (
+            {(isPoster ? posterDeals : myOffers).map((deal) => (
               <li key={deal.id} className="rounded-lg border border-ro-panel-border bg-ro-panel-alt p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">x{deal.quantity}</span>
-                  {!isPoster && (
+                  {(!isPoster || deal.status !== "PENDING") && (
                     <span className="text-xs text-ro-text-muted">{offerStatusLabel(t, deal.status)}</span>
                   )}
                 </div>

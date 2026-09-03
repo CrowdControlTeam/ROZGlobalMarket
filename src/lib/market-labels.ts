@@ -5,7 +5,7 @@ import {
   WeaponType,
   ListingType,
   DealStatus,
-} from "@prisma/client";
+} from "@/db/enums";
 import type { MarketSort } from "@/lib/market-sort";
 
 // Traductor ya escopado al namespace "market" (useTranslations("market") en

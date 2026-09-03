@@ -10,7 +10,7 @@ import { buttonClass } from "@/lib/ui";
 // Página de mantenimiento. Pública a propósito (NO pasa por requireMarketSession,
 // que mandaría aquí en bucle a los no-admin). A ella llega quien no es admin al
 // entrar al MERCADO con el mantenimiento activo (ver requireMarketSession en
-// guard.ts); /bis y /db siguen abiertos. Si el mantenimiento ya no está activo,
+// guard.ts); /builds y /db siguen abiertos. Si el mantenimiento ya no está activo,
 // no tiene sentido mostrarla: al mercado.
 export default async function MaintenancePage() {
   const { maintenanceModeEnabled } = await loadMarketConfig();
@@ -30,7 +30,7 @@ export default async function MaintenancePage() {
           <p>{t("message")}</p>
           {isAdmin && <p className="text-sm text-ro-text-muted">{t("adminNote")}</p>}
           <div className="flex flex-wrap justify-center gap-2">
-            {/* Inicio: para que un no-admin pueda seguir a BiS/DB (siguen abiertos).
+            {/* Inicio: para que un no-admin pueda seguir a Builds/DB (siguen abiertos).
                 El botón al mercado, solo para admin (a un no-admin le haría bucle
                 de vuelta aquí). */}
             <Link href="/" className={buttonClass(isAdmin ? "secondary" : "primary")}>

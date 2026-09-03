@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { RoDescription } from "@/components/RoDescription";
 import {
@@ -76,6 +76,31 @@ export function SkillTree({
   }, []);
 
   const [hover, setHover] = useState<{ id: number; x: number; y: number } | null>(null);
+
+  // Posición del tooltip acotada al viewport: por defecto junto al cursor
+  // (x+14, y+14) y, si se saliera por la derecha/abajo, se voltea al otro lado
+  // (y se fija a un margen mínimo si aun así no cupiera, para que se vea el
+  // inicio de la descripción). Mismo criterio que PreviewShell. Se mide en un
+  // layout effect (antes de pintar) para no ver un salto de posición.
+  const tipRef = useRef<HTMLDivElement>(null);
+  const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    // setState va dentro de una función (no directo en el cuerpo del efecto),
+    // mismo patrón que PreviewShell. Al cambiar hover a null el tooltip se
+    // desmonta, así que no hace falta resetear tipPos.
+    function reposition() {
+      const node = tipRef.current;
+      if (!hover || !node) return;
+      const r = node.getBoundingClientRect();
+      const pad = 8;
+      let left = hover.x + 14;
+      let top = hover.y + 14;
+      if (left + r.width > window.innerWidth - pad) left = Math.max(pad, hover.x - r.width - 14);
+      if (top + r.height > window.innerHeight - pad) top = Math.max(pad, hover.y - r.height - 14);
+      setTipPos({ left, top });
+    }
+    reposition();
+  }, [hover]);
 
   const maxPos = Math.max(0, ...tree.cells.map((c) => c.pos));
   const rows = Math.floor(maxPos / GRID_COLS) + 1;
@@ -173,8 +198,9 @@ export function SkillTree({
 
       {showTooltip && hover && hoverSkill && hoverSkill.desc.length > 0 && (
         <div
-          className="pointer-events-none fixed z-50 w-72 max-w-[80vw] rounded-md border-2 border-ro-panel-border bg-ro-panel p-3 shadow-xl"
-          style={{ left: hover.x + 14, top: hover.y + 14 }}
+          ref={tipRef}
+          className="pointer-events-none fixed z-50 max-h-[calc(100vh-1rem)] w-72 max-w-[80vw] overflow-y-auto rounded-md border-2 border-ro-panel-border bg-ro-panel p-3 shadow-xl"
+          style={{ left: (tipPos ?? { left: hover.x + 14 }).left, top: (tipPos ?? { top: hover.y + 14 }).top }}
         >
           <RoDescription lines={hoverSkill.desc} />
         </div>

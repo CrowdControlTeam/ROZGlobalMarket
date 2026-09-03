@@ -1,4 +1,4 @@
-import type { DealStatus } from "@prisma/client";
+import type { DealStatus } from "@/db/schema";
 
 // Núcleo del rediseño de listings: la contabilidad de un listing (cuánto se ha
 // vendido/reservado, cuánto queda) se DERIVA de sus filas Deal — no hay

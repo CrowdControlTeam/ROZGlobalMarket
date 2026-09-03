@@ -2,9 +2,12 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { item as itemTable, user } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { sendDirectMessage, isDmFeatureAvailable } from "@/lib/discord-bot";
+import { listingItemDetailFields } from "@/lib/discord-item-fields";
 import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
 
@@ -47,10 +50,12 @@ export async function sendContactMessage(formData: FormData) {
     throw new Error(t("cannotMessageSelf"));
   }
 
-  const [recipient, item] = await Promise.all([
-    prisma.user.findUnique({ where: { id: parsed.data.recipientId } }),
-    prisma.item.findUnique({ where: { id: parsed.data.itemId } }),
+  const [recipientRows, itemRows] = await Promise.all([
+    db.select().from(user).where(eq(user.id, parsed.data.recipientId)).limit(1),
+    db.select().from(itemTable).where(eq(itemTable.id, parsed.data.itemId)).limit(1),
   ]);
+  const recipient = recipientRows[0] ?? null;
+  const item = itemRows[0] ?? null;
   if (!recipient) throw new Error(t("userNotFound"));
   if (!item) throw new Error(t("itemNotFound"));
 
@@ -62,6 +67,10 @@ export async function sendContactMessage(formData: FormData) {
     itemIconUrl: `${appUrl}${item.iconUrl}`,
     fields: [
       { name: tField("message"), value: parsed.data.message, inline: false },
+      // Detalle del item (options + cartas) cuando el mensaje viene de un listing.
+      ...(parsed.data.listingId
+        ? await listingItemDetailFields(tField, parsed.data.listingId, false)
+        : []),
       // Mención nativa de Discord: dentro del canal privado bot<->destinatario
       // no le hace ping a nadie (el remitente no está en ese canal), solo
       // renderiza un chip clicable que abre su perfil — desde ahí se puede

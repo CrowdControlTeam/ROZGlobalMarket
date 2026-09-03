@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { asc, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { listing as listingTable } from "@/db/schema";
 import { requireSession } from "@/lib/guard";
 import { getItemOptionGroup, loadMagicalWeaponTypes, isOptionsFeatureAvailable } from "@/lib/item-options";
 import { buildOptionSelectionsFromDetected } from "@/lib/item-options-constants";
@@ -23,9 +25,16 @@ export async function RepostSlot({
 
   const session = await requireSession();
 
-  const listing = await prisma.listing.findUnique({
-    where: { id: listingId },
-    include: { item: true, options: { orderBy: { slotIndex: "asc" } } },
+  const listing = await db.query.listing.findFirst({
+    where: eq(listingTable.id, listingId),
+    with: {
+      item: true,
+      options: { orderBy: (o) => asc(o.slotIndex) },
+      cards: {
+        with: { card: { columns: { id: true, name: true, iconUrl: true } } },
+        orderBy: (c) => asc(c.slotIndex),
+      },
+    },
   });
 
   if (!listing || listing.posterId !== session.user.discordId) return null;
@@ -61,6 +70,7 @@ export async function RepostSlot({
     optionSelections: buildOptionSelectionsFromDetected(
       listing.options.map((o) => ({ slotIndex: o.slotIndex, defId: o.defId, value: o.value })),
     ),
+    cards: listing.cards.map((c) => ({ slotIndex: c.slotIndex, card: c.card })),
   };
 
   // Sin escáner: los datos ya vienen precargados (modal de una columna, como @edit).

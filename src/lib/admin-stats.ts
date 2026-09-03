@@ -1,7 +1,8 @@
 "use server";
 
-import { ListingType, ListingStatus, DealStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { count, gte } from "drizzle-orm";
+import { db } from "@/db";
+import { deal, listing, user, type ListingType, type ListingStatus, type DealStatus } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
 import type { StatsPeriod } from "@/lib/admin-stats-constants";
 
@@ -49,40 +50,31 @@ export async function getMarketStats(period: StatsPeriod = "7d") {
   const since = windowStartFor(period);
 
   const [listings, deals, totalUsers] = await Promise.all([
-    prisma.listing.findMany({
-      where: { createdAt: { gte: since } },
-      select: {
-        type: true,
-        status: true,
-        posterId: true,
-        itemId: true,
-        poster: { select: { username: true } },
-        item: { select: { name: true } },
+    db.query.listing.findMany({
+      where: gte(listing.createdAt, since),
+      columns: { type: true, status: true, posterId: true, itemId: true },
+      with: {
+        poster: { columns: { username: true } },
+        item: { columns: { name: true } },
       },
     }),
     // updatedAt (no createdAt): lo que interesa de un trato es cuándo se resolvió
     // (aceptado/rechazado/cancelado), no solo cuándo se creó.
-    prisma.deal.findMany({
-      where: { updatedAt: { gte: since } },
-      select: {
-        status: true,
-        quantity: true,
-        unitPrice: true,
-        zenyOffered: true,
-        userId: true,
-        user: { select: { username: true } },
+    db.query.deal.findMany({
+      where: gte(deal.updatedAt, since),
+      columns: { status: true, quantity: true, unitPrice: true, zenyOffered: true, userId: true },
+      with: {
+        user: { columns: { username: true } },
         listing: {
-          select: {
-            type: true,
-            posterId: true,
-            itemId: true,
-            poster: { select: { username: true } },
-            item: { select: { name: true } },
+          columns: { type: true, posterId: true, itemId: true },
+          with: {
+            poster: { columns: { username: true } },
+            item: { columns: { name: true } },
           },
         },
       },
     }),
-    prisma.user.count(),
+    db.select({ value: count() }).from(user).then((r) => r[0]?.value ?? 0),
   ]);
 
   // --- Totales ---

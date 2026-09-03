@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ItemIcon } from "@/components/ItemIcon";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ItemCategory } from "@prisma/client";
+import { ItemCategory } from "@/db/enums";
 import { X } from "lucide-react";
 import { categoryLabel } from "@/lib/market-labels";
 import { inputClass, selectClass } from "@/lib/ui";
@@ -37,13 +37,22 @@ export function ItemsBrowser({
   const [selected, setSelected] = useState<DbItemDetail | null>(null);
   const [isLoadingDetail, startDetail] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Último `q` que empujamos NOSOTROS a la URL (ver pushParams). Distingue un
+  // cambio de URL propio (nuestra búsqueda con debounce) de uno externo. Es
+  // state (no ref) para poder leerlo en render sin romper react-hooks/refs.
+  const [lastPushedQuery, setLastPushedQuery] = useState(query);
 
   // Si la URL cambia por fuera (atrás/adelante), re-sincroniza el input. Ajuste
   // de estado EN RENDER (patrón recomendado por React) en vez de un effect.
   const [syncedQuery, setSyncedQuery] = useState(query);
   if (query !== syncedQuery) {
     setSyncedQuery(query);
-    setQ(query);
+    // Solo re-sincronizar el input ante un cambio EXTERNO. Si la URL cambió por
+    // nuestra propia búsqueda con debounce, NO pisamos `q`: el usuario puede
+    // haber seguido tecleando mientras la navegación estaba en vuelo y
+    // perderíamos esas últimas letras (bug de "solo coge la primera parte").
+    if (query !== lastPushedQuery) setQ(query);
   }
 
   useEffect(() => () => {
@@ -52,9 +61,17 @@ export function ItemsBrowser({
 
   function pushParams(next: { q?: string; category?: string; page?: number }) {
     const params = new URLSearchParams(searchParams.toString());
-    if (next.q !== undefined) next.q ? params.set("q", next.q) : params.delete("q");
-    if (next.category !== undefined)
-      next.category ? params.set("category", next.category) : params.delete("category");
+    if (next.q !== undefined) {
+      // Recordar lo que empujamos para no re-sincronizar el input con nuestro
+      // propio cambio de URL (ver el bloque de sync arriba).
+      setLastPushedQuery(next.q);
+      if (next.q) params.set("q", next.q);
+      else params.delete("q");
+    }
+    if (next.category !== undefined) {
+      if (next.category) params.set("category", next.category);
+      else params.delete("category");
+    }
     // Cambiar búsqueda o filtro vuelve a la página 1 (se borra el param); solo
     // la paginación fija una página explícita.
     if (next.page !== undefined) params.set("page", String(next.page));
@@ -68,6 +85,15 @@ export function ItemsBrowser({
     debounceRef.current = setTimeout(() => pushParams({ q: value }), 300);
   }
 
+  // Reset inmediato del buscador (sin esperar al debounce): cancela la búsqueda
+  // pendiente, limpia el input, quita `q` de la URL y devuelve el foco.
+  function clearSearch() {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setQ("");
+    pushParams({ q: "" });
+    inputRef.current?.focus();
+  }
+
   function openDetail(id: string) {
     startDetail(async () => {
       const detail = await fetchDbItemDetail(id);
@@ -78,13 +104,26 @@ export function ItemsBrowser({
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder={t("searchPlaceholder")}
-          className={`${inputClass} h-10 min-w-[12rem] flex-1`}
-        />
+        <div className="relative min-w-[12rem] flex-1">
+          <input
+            ref={inputRef}
+            type="text"
+            value={q}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className={`${inputClass} h-10 ${q ? "pr-9" : ""}`}
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label={t("clearSearch")}
+              className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-ro-text-muted transition-colors hover:text-ro-text"
+            >
+              <X size={16} aria-hidden />
+            </button>
+          )}
+        </div>
         <select
           value={category}
           onChange={(e) => pushParams({ category: e.target.value })}

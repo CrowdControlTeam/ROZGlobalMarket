@@ -1,4 +1,5 @@
 import { requireMarketSession } from "@/lib/guard";
+import { countMyPendingDeals } from "@/lib/pending-deals";
 import { MarketNav } from "./MarketNav";
 
 // Layout de la sección Mercado. Hace dos cosas:
@@ -11,7 +12,7 @@ import { MarketNav } from "./MarketNav";
 //     sin duplicarlo: cada página se monta como children.
 // requireMarketSession protege toda la sección (logueado-only) y, en
 // mantenimiento, manda a /maintenance a los no-admin — es el único sitio donde
-// se cierra el mercado (/bis y /db quedan abiertos). Aporta isAdmin al hub; las
+// se cierra el mercado (/builds y /db quedan abiertos). Aporta isAdmin al hub; las
 // páginas mantienen sus guards propios (p. ej. requireAdmin en statistics).
 export default async function MarketLayout({
   children,
@@ -27,10 +28,13 @@ export default async function MarketLayout({
   repost: React.ReactNode;
 }) {
   const session = await requireMarketSession();
+  // Contador de ofertas entrantes pendientes para el badge de "Mi actividad"
+  // (cache() dedup por request; el layout de actividad lo reusa).
+  const pendingCount = await countMyPendingDeals();
   return (
     <>
       <main className="mx-auto max-w-5xl px-6 py-8">
-        <MarketNav isAdmin={session.user.isAdmin} />
+        <MarketNav isAdmin={session.user.isAdmin} pendingCount={pendingCount} />
         {children}
       </main>
       {detail}

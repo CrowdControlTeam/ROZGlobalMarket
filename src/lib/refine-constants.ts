@@ -1,6 +1,6 @@
 // Pura y sin dependencias de servidor (a diferencia de refine.ts, que sí
 // toca @/lib/prisma) para poder usarse también desde componentes cliente.
-import { ItemCategory, EquipSlot } from "@prisma/client";
+import { ItemCategory, EquipSlot } from "@/db/enums";
 
 export const DEFAULT_MAX_REFINE_LEVEL = 10;
 

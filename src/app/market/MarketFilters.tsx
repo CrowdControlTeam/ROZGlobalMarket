@@ -15,9 +15,11 @@ import {
   SquareStack,
   SlidersHorizontal,
   User,
+  Package,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { ItemCategory, EquipSlot, WeaponType, type ItemOptionDef } from "@prisma/client";
+import { ItemCategory, EquipSlot, WeaponType } from "@/db/enums";
+import type { ItemOptionDef } from "@/db/schema";
 import { categoryLabel, slotLabel, weaponTypeLabel } from "@/lib/market-labels";
 import { formatPrice } from "@/lib/price";
 import { MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
@@ -205,6 +207,7 @@ export function MarketFilters() {
     const patch: Record<string, string> = {
       posterId: "",
       posterName: "",
+      itemIds: "",
       category: "",
       slot: "",
       weaponType: "",
@@ -251,8 +254,24 @@ export function MarketFilters() {
     .filter(Boolean)
     .join(", ");
   const posterSummary = poster ? `@${poster.username}` : "";
+  const buildItemIds = parseCsv(filters.itemIds);
 
   const sections: Section[] = [
+    // Solo aparece cuando llega por deep-link (buscar todas las piezas de una
+    // build); no es editable a mano, solo informativo + limpiar.
+    ...(buildItemIds.length > 0
+      ? [
+          {
+            id: "buildItems",
+            Icon: Package,
+            label: t("filters.buildItems"),
+            count: buildItemIds.length,
+            summary: t("filters.buildItemsCount", { n: buildItemIds.length }),
+            clear: () => setFilters({ itemIds: "" }),
+            content: <p className="text-xs text-ro-text-muted">{t("filters.buildItemsHint", { n: buildItemIds.length })}</p>,
+          } as Section,
+        ]
+      : []),
     {
       id: "price",
       Icon: Coins,

@@ -2,12 +2,26 @@
 
 import { z } from "zod";
 import { getTranslations } from "next-intl/server";
-import { ItemOptionGroup, type EquipSlot, type Item } from "@prisma/client";
-import { itemFitsSlot } from "@/lib/bis-constants";
+import { and, asc, count, desc, eq, inArray, sql, sum } from "drizzle-orm";
+import { db } from "@/db";
+import {
+  deal,
+  item as itemTable,
+  itemOptionDef,
+  listing,
+  listingOption,
+  listingCard,
+  user,
+  ItemOptionGroup,
+  type EquipSlot,
+  type Item,
+} from "@/db/schema";
+import { itemFitsSlot, cardFitsEquipSlot } from "@/lib/item-slots";
+import { positionAllows, type HeadgearPosition } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/guard";
 import { sendListingCreatedWebhook } from "@/lib/discord-webhook";
+import { itemDetailFields, listingItemDetailFields } from "@/lib/discord-item-fields";
 import { sendDirectMessage } from "@/lib/discord-bot";
 import { getAppUrl } from "@/lib/app-url";
 import { DISCORD_EMBED_COLOR } from "@/lib/discord-colors";
@@ -21,20 +35,26 @@ import {
 } from "@/lib/item-options";
 import { isRefineEligible, loadMaxRefineLevel } from "@/lib/refine";
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
-import { formatOptionAmount } from "@/lib/market-labels";
 import { MAX_LISTING_NOTES_LENGTH, parseListingNotes } from "@/lib/listing-notes-constants";
 import { loadMarketConfig } from "@/lib/market-config";
 import { searchCatalog } from "@/lib/item-catalog";
 import { listingStatusOnClose, availableFrom, isSoldOut } from "@/lib/deals";
 import { listingCardState } from "@/lib/listing-card";
 
-export async function searchItems(query: string, slot?: EquipSlot) {
+export async function searchItems(query: string, slot?: EquipSlot, position?: HeadgearPosition) {
   await requireSession();
   // Búsqueda en memoria (catálogo empaquetado, ver src/lib/item-catalog.ts) en
-  // vez de pegar a la BD en cada tecla. `slot` (lo usa el picker de BiS) acota a
-  // los items que encajan en ese slot de equipo, para no dejar elegir uno que
+  // vez de pegar a la BD en cada tecla. `slot` acota a los items que encajan en
+  // ese slot de equipo; `position` (Upper/Middle/Lower) acota además los tocados
+  // al slot correcto del editor de builds. Así el picker no ofrece un item que
   // luego el servidor rechazaría.
-  const items = searchCatalog(query, 20, slot ? (item) => itemFitsSlot(item, slot) : undefined);
+  const items = searchCatalog(
+    query,
+    20,
+    slot || position
+      ? (item) => (!slot || itemFitsSlot(item, slot)) && positionAllows(item.position, position)
+      : undefined,
+  );
   if (items.length === 0) return [];
 
   const [magicalTypes, optionsAvailable] = await Promise.all([
@@ -45,6 +65,21 @@ export async function searchItems(query: string, slot?: EquipSlot) {
     ...item,
     optionGroup: optionsAvailable ? getItemOptionGroup(item, magicalTypes) : null,
   }));
+}
+
+// Búsqueda de CARTAS (categoría CARD) por nombre — para el editor de builds y el
+// modal de publicar, que asignan cartas a las ranuras de cada pieza. Mismo
+// catálogo en memoria. Si se pasa `equipSlot`, solo devuelve cartas que encajan
+// en ese slot de equipo (cardFitsEquipSlot); sin él, cualquier carta.
+export async function searchCards(query: string, equipSlot?: EquipSlot) {
+  await requireSession();
+  return searchCatalog(
+    query,
+    20,
+    (item) =>
+      item.category === "CARD" &&
+      (equipSlot ? cardFitsEquipSlot(item.cardSlot, equipSlot) : true),
+  );
 }
 
 // Para que el filtro de mercado (client component, sin acceso directo a
@@ -69,6 +104,14 @@ export async function getMaxRefineLevel() {
   return loadMaxRefineLevel();
 }
 
+// Días de caducidad configurados (para la vista previa de publicar, que muestra
+// el indicador de caducidad tal cual saldrá en el mercado).
+export async function getListingExpirationDays() {
+  await requireSession();
+  const { listingExpirationDays } = await loadMarketConfig();
+  return listingExpirationDays;
+}
+
 // Todas mis publicaciones (los 3 tipos, cualquier estado) para la pantalla
 // "Mi actividad" — a diferencia de getListings (mercado general), no
 // filtra por status: "ACTIVE" ni por búsqueda/orden, es mi historial
@@ -77,29 +120,45 @@ export async function getMaxRefineLevel() {
 export async function getMyListings() {
   const session = await requireSession();
 
-  const listings = await prisma.listing.findMany({
-    where: { posterId: session.user.discordId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      item: true,
-      options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
-      // Deals vivos (PENDING/ACCEPTED): >0 ⇒ no editable, gate del kebab "Editar"
-      // (misma regla que la card del mercado y updateListing).
-      _count: { select: { deals: { where: { status: { in: ["PENDING", "ACCEPTED"] } } } } },
+  const listings = await db.query.listing.findMany({
+    where: eq(listing.posterId, session.user.discordId),
+    orderBy: desc(listing.createdAt),
+    with: {
+      // select en item (no fila completa): la card solo usa nombre/icono/slots.
+      item: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
+      options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+      cards: {
+        with: { card: { columns: { id: true, name: true, iconUrl: true, slotCount: true } } },
+        orderBy: (c) => asc(c.slotIndex),
+      },
     },
   });
 
-  // Vendido por listing derivado de los Deal ACCEPTED (ya no hay quantitySold).
-  const soldByListing = await prisma.deal.groupBy({
-    by: ["listingId"],
-    where: { listingId: { in: listings.map((l) => l.id) }, status: "ACCEPTED" },
-    _sum: { quantity: true },
-  });
-  const soldMap = new Map(soldByListing.map((g) => [g.listingId, g._sum.quantity ?? 0]));
+  const ids = listings.map((l) => l.id);
+  // Vendido por listing derivado de los Deal ACCEPTED (ya no hay quantitySold), y
+  // qué listings tienen deals vivos (PENDING/ACCEPTED): >0 ⇒ no editable, gate del
+  // kebab "Editar" (misma regla que la card del mercado y updateListing). Prisma
+  // lo resolvía con `_count` sobre la relación filtrada; aquí van dos agregados.
+  const [soldByListing, liveByListing] =
+    ids.length > 0
+      ? await Promise.all([
+          db
+            .select({ listingId: deal.listingId, sold: sum(deal.quantity) })
+            .from(deal)
+            .where(and(inArray(deal.listingId, ids), eq(deal.status, "ACCEPTED")))
+            .groupBy(deal.listingId),
+          db
+            .selectDistinct({ listingId: deal.listingId })
+            .from(deal)
+            .where(and(inArray(deal.listingId, ids), inArray(deal.status, ["PENDING", "ACCEPTED"]))),
+        ])
+      : [[], []];
+  const soldMap = new Map(soldByListing.map((g) => [g.listingId, Number(g.sold ?? 0)]));
+  const liveSet = new Set(liveByListing.map((g) => g.listingId));
   return listings.map((l) => ({
     ...l,
     sold: soldMap.get(l.id) ?? 0,
-    hasLiveDeals: l._count.deals > 0,
+    hasLiveDeals: liveSet.has(l.id),
   }));
 }
 
@@ -112,16 +171,29 @@ export async function getMyPendingDeals() {
   const session = await requireSession();
   const me = session.user.discordId;
 
+  const itemCols = { id: true, name: true, iconUrl: true, slotCount: true } as const;
   const [incoming, outgoing] = await Promise.all([
-    prisma.deal.findMany({
-      where: { status: "PENDING", listing: { posterId: me } },
-      orderBy: { createdAt: "asc" },
-      include: { listing: { include: { item: true } }, user: true, offeredItem: true },
+    // Entrantes: Deal PENDING sobre MIS listings. El filtro por `listing.posterId`
+    // (relación) se hace con subconsulta de ids (Prisma lo hacía con `listing: { … }`).
+    db.query.deal.findMany({
+      where: and(
+        eq(deal.status, "PENDING"),
+        inArray(deal.listingId, db.select({ id: listing.id }).from(listing).where(eq(listing.posterId, me))),
+      ),
+      orderBy: asc(deal.createdAt),
+      with: {
+        listing: { with: { item: { columns: itemCols } } },
+        user: true,
+        offeredItem: { columns: itemCols },
+      },
     }),
-    prisma.deal.findMany({
-      where: { status: "PENDING", userId: me },
-      orderBy: { createdAt: "desc" },
-      include: { listing: { include: { item: true, poster: true } }, offeredItem: true },
+    db.query.deal.findMany({
+      where: and(eq(deal.status, "PENDING"), eq(deal.userId, me)),
+      orderBy: desc(deal.createdAt),
+      with: {
+        listing: { with: { item: { columns: itemCols }, poster: true } },
+        offeredItem: { columns: itemCols },
+      },
     }),
   ]);
 
@@ -134,10 +206,11 @@ export async function getMyPendingDeals() {
 // concreta de ese grupo).
 export async function getOptionChoices(group: ItemOptionGroup) {
   await requireSession();
-  return prisma.itemOptionDef.findMany({
-    where: { group },
-    orderBy: [{ slotIndex: "asc" }, { label: "asc" }],
-  });
+  return db
+    .select()
+    .from(itemOptionDef)
+    .where(eq(itemOptionDef.group, group))
+    .orderBy(asc(itemOptionDef.slotIndex), asc(itemOptionDef.label));
 }
 
 // El filtro de mercado, a diferencia del formulario, no fija categoría/
@@ -149,9 +222,10 @@ export async function getOptionChoices(group: ItemOptionGroup) {
 // statCode en vez de por defId por el mismo motivo.
 export async function getAllOptionChoices() {
   await requireSession();
-  return prisma.itemOptionDef.findMany({
-    orderBy: [{ slotIndex: "asc" }, { label: "asc" }],
-  });
+  return db
+    .select()
+    .from(itemOptionDef)
+    .orderBy(asc(itemOptionDef.slotIndex), asc(itemOptionDef.label));
 }
 
 // Parseo + validación de los campos COMUNES de un listing (precio, cantidad,
@@ -226,22 +300,53 @@ async function parseListingFields(
     }
   }
 
-  // Las ranuras de carta ya no las indica quien publica: son fijas por item
-  // (Item.slotCount, extraído del cliente).
+  // Cartas: una por ranura (form: card1..cardN, hasta Item.slotCount). Cada carta
+  // debe ser de categoría CARD y encajar en el slot de equipo del item.
+  const cards = await parseCardsFromFormData(formData, item, t);
 
   const notes = parseListingNotes(formData.get("notes"));
   if (notes && notes.length > MAX_LISTING_NOTES_LENGTH) {
     throw new Error(t("notesTooLong", { max: MAX_LISTING_NOTES_LENGTH }));
   }
 
-  return { price, quantity, refineLevel, notes, rawOptions, defsById };
+  return { price, quantity, refineLevel, notes, rawOptions, defsById, cards };
+}
+
+// Lee y valida las cartas del form (card1..cardN, 1-based en el form → slotIndex
+// 0-based). Solo hasta Item.slotCount ranuras; cada carta debe existir, ser
+// categoría CARD y encajar en el slot de equipo del item (cardFitsEquipSlot).
+async function parseCardsFromFormData(
+  formData: FormData,
+  item: Item,
+  t: Awaited<ReturnType<typeof getTranslations>>,
+): Promise<{ slotIndex: number; cardItemId: string; name: string }[]> {
+  if (item.slotCount <= 0) return [];
+  const picked: { slotIndex: number; cardItemId: string }[] = [];
+  for (let i = 0; i < item.slotCount; i++) {
+    const v = formData.get(`card${i + 1}`);
+    if (typeof v === "string" && v) picked.push({ slotIndex: i, cardItemId: v });
+  }
+  if (picked.length === 0) return [];
+
+  const ids = [...new Set(picked.map((p) => p.cardItemId))];
+  const rows = await db
+    .select({ id: itemTable.id, name: itemTable.name, category: itemTable.category, cardSlot: itemTable.cardSlot })
+    .from(itemTable)
+    .where(inArray(itemTable.id, ids));
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return picked.map((p) => {
+    const card = byId.get(p.cardItemId);
+    if (!card || card.category !== "CARD") throw new Error(t("itemNotFound"));
+    if (!cardFitsEquipSlot(card.cardSlot, item.slot)) throw new Error(t("cardSlotMismatch"));
+    return { slotIndex: p.slotIndex, cardItemId: p.cardItemId, name: card.name };
+  });
 }
 
 export async function createListing(formData: FormData) {
   const session = await requireSession();
   const t = await getTranslations("errors");
 
-  const { maintenanceModeEnabled } = await loadMarketConfig();
+  const { maintenanceModeEnabled, listingExpirationDays } = await loadMarketConfig();
   if (maintenanceModeEnabled && !session.user.isAdmin) {
     throw new Error(t("maintenanceMode"));
   }
@@ -265,9 +370,7 @@ export async function createListing(formData: FormData) {
     throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
   }
 
-  const item = await prisma.item.findUnique({
-    where: { id: parsed.data.itemId },
-  });
+  const [item] = await db.select().from(itemTable).where(eq(itemTable.id, parsed.data.itemId)).limit(1);
   if (!item) throw new Error(t("itemNotFound"));
 
   // Regalo CON destinatario = entrega directa (ver más abajo). Sin destinatario,
@@ -279,17 +382,18 @@ export async function createListing(formData: FormData) {
       : undefined;
   if (recipientId) {
     if (recipientId === session.user.discordId) throw new Error(t("cannotGiftSelf"));
-    const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
+    const [recipient] = await db.select().from(user).where(eq(user.id, recipientId)).limit(1);
     if (!recipient) throw new Error(t("recipientNotFound"));
   }
   const isDirectGift = parsed.data.type === "GIFT" && !!recipientId;
 
-  const { price, quantity, refineLevel, notes, rawOptions, defsById } =
+  const { price, quantity, refineLevel, notes, rawOptions, defsById, cards } =
     await parseListingFields(formData, parsed.data.type, item, t);
 
-  const listing = await prisma.$transaction(async (tx) => {
-    const created = await tx.listing.create({
-      data: {
+  const createdListing = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(listing)
+      .values({
         posterId: session.user.discordId,
         itemId: parsed.data.itemId,
         type: parsed.data.type,
@@ -297,31 +401,37 @@ export async function createListing(formData: FormData) {
         price,
         // Regalo directo: nace ya cerrado (la entrega es instantánea).
         status: isDirectGift ? "COMPLETED" : "ACTIVE",
+        // Caduca a listingExpirationDays vista (config). No caducan: el regalo
+        // directo (ya nace COMPLETED) ni las publicaciones de cantidad ILIMITADA
+        // (quantity null = oferta permanente) → expiresAt null. Cubre también los
+        // reposts: van por createListing, así que reciben caducidad nueva.
+        expiresAt:
+          isDirectGift || quantity === null
+            ? null
+            : new Date(Date.now() + listingExpirationDays * 24 * 60 * 60 * 1000),
         refineLevel,
         notes,
-        options:
-          rawOptions.length > 0
-            ? {
-                create: rawOptions.map((o) => ({
-                  slotIndex: o.slotIndex,
-                  defId: o.defId,
-                  value: o.value,
-                })),
-              }
-            : undefined,
-      },
-    });
+      })
+      .returning();
+    if (rawOptions.length > 0) {
+      await tx.insert(listingOption).values(
+        rawOptions.map((o) => ({ listingId: created.id, slotIndex: o.slotIndex, defId: o.defId, value: o.value })),
+      );
+    }
+    if (cards.length > 0) {
+      await tx.insert(listingCard).values(
+        cards.map((c) => ({ listingId: created.id, slotIndex: c.slotIndex, cardItemId: c.cardItemId })),
+      );
+    }
     // Regalo directo: además del listing, un Deal ACCEPTED para el destinatario
     // (la transferencia ya hecha). Sin destinatario no hay Deal (reclamable).
     if (isDirectGift) {
-      await tx.deal.create({
-        data: {
-          listingId: created.id,
-          userId: recipientId!,
-          quantity: quantity ?? 1,
-          status: "ACCEPTED",
-          unitPrice: null,
-        },
+      await tx.insert(deal).values({
+        listingId: created.id,
+        userId: recipientId!,
+        quantity: quantity ?? 1,
+        status: "ACCEPTED",
+        unitPrice: null,
       });
     }
     return created;
@@ -342,23 +452,18 @@ export async function createListing(formData: FormData) {
       itemIconUrl: `${appUrl}${item.iconUrl}`,
       fields: [
         { name: tField("quantity"), value: String(quantity), inline: true },
-        ...(rawOptions.length > 0
-          ? [
-              {
-                name: tField("options"),
-                value: rawOptions
-                  .map((o) => `${defsById.get(o.defId)!.label}: ${formatOptionAmount(o.value, false)}`)
-                  .join("\n"),
-                inline: false,
-              },
-            ]
-          : []),
+        ...itemDetailFields(
+          tField,
+          rawOptions.map((o) => ({ label: defsById.get(o.defId)!.label, value: o.value })),
+          cards.map((c) => ({ name: c.name })),
+          false,
+        ),
         { name: tDiscord("fields.from"), value: `<@${session.user.discordId}>`, inline: false },
       ],
     });
     revalidatePath("/market/activity/gifts");
     revalidatePath("/market");
-    return { id: listing.id, directGift: true };
+    return { id: createdListing.id, directGift: true };
   }
 
   // Anuncio en el webhook de "publicación creada" para TODOS los tipos, incluido
@@ -368,85 +473,97 @@ export async function createListing(formData: FormData) {
     itemName: formatItemDisplayName(item.name, refineLevel, item.slotCount),
     itemIconUrl: `${appUrl}${item.iconUrl}`,
     type: parsed.data.type,
-    price: listing.price,
-    quantity: listing.quantity,
+    price: createdListing.price,
+    quantity: createdListing.quantity,
     posterUsername: session.user.username,
     posterAvatarUrl: session.user.avatarUrl,
     posterId: session.user.discordId,
-    listingUrl: `${appUrl}/market/${listing.id}`,
+    listingUrl: `${appUrl}/market/${createdListing.id}`,
     options: rawOptions.map((o) => ({
       label: defsById.get(o.defId)!.label,
       value: o.value,
     })),
+    cards: cards.map((c) => ({ name: c.name })),
   });
 
   revalidatePath("/market");
-  return { id: listing.id, directGift: false };
+  return { id: createdListing.id, directGift: false };
 }
 
 // Editar una publicación propia. Reutiliza el mismo parseo de campos que
-// createListing (parseListingFields). El TIPO y el ITEM no se editan: se toman
-// del listing existente, no se confía en lo que mande el form. Solo se permite
-// si el listing es del usuario, está ACTIVE y NO tiene deals vivos.
+// createListing (parseListingFields). El ITEM y el TIPO se pueden cambiar
+// (editar = como crear): ambos se leen del form y se validan. Solo se permite si
+// el listing es del usuario, está ACTIVE y NO tiene deals vivos — por eso cambiar
+// el tipo es seguro: no hay ofertas/contabilidad que puedan quedar inconsistentes.
+// El regalo CON destinatario (directo) no se puede crear editando: el form de
+// edición no ofrece destinatario, así que pasar a GIFT crea un regalo reclamable
+// (ACTIVE, sin Deal), no uno directo.
 export async function updateListing(listingId: string, formData: FormData) {
   const session = await requireSession();
   const t = await getTranslations("errors");
 
-  const { maintenanceModeEnabled } = await loadMarketConfig();
+  const { maintenanceModeEnabled, listingExpirationDays } = await loadMarketConfig();
   if (maintenanceModeEnabled && !session.user.isAdmin) {
     throw new Error(t("maintenanceMode"));
   }
 
-  const listing = await prisma.listing.findUnique({
-    where: { id: listingId },
-  });
-  if (!listing) throw new Error(t("listingNotFound"));
-  if (listing.posterId !== session.user.discordId) throw new Error(t("notYourListing"));
-  if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+  const [existing] = await db.select().from(listing).where(eq(listing.id, listingId)).limit(1);
+  if (!existing) throw new Error(t("listingNotFound"));
+  if (existing.posterId !== session.user.discordId) throw new Error(t("notYourListing"));
+  if (existing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
 
-  // El TIPO se mantiene fijo (bloqueado en edición). El ITEM sí puede cambiar
-  // (editar = como crear, con escáner): se lee del form y se valida. El parseo
-  // usa el tipo original y el item nuevo (options/refine se validan contra él).
+  // Tipo nuevo (validado): si no llega o es inválido, se conserva el actual. El
+  // parseo de campos (precio/cantidad/options) se hace contra ESTE tipo, así que
+  // al pasar a TRADE/GIFT el precio queda null, etc. (lo resuelve parseListingFields).
+  const typeParsed = z.enum(["SALE", "BUY", "TRADE", "GIFT"]).safeParse(formData.get("type"));
+  const type = typeParsed.success ? typeParsed.data : existing.type;
+
+  // El ITEM también puede cambiar: se lee del form y se valida (options/refine se
+  // validan contra el item nuevo y el tipo nuevo).
   const itemId = ((formData.get("itemId") as string) || "").trim();
   if (!itemId) throw new Error(t("selectItem"));
-  const item = await prisma.item.findUnique({ where: { id: itemId } });
+  const [item] = await db.select().from(itemTable).where(eq(itemTable.id, itemId)).limit(1);
   if (!item) throw new Error(t("itemNotFound"));
 
-  const { price, quantity, refineLevel, notes, rawOptions } =
-    await parseListingFields(formData, listing.type, item, t);
+  const { price, quantity, refineLevel, notes, rawOptions, cards } =
+    await parseListingFields(formData, type, item, t);
+
+  // Caducidad al editar: las ILIMITADAS (quantity null) no caducan (expiresAt
+  // null). Al pasar a limitada una que estaba exenta se le da caducidad nueva;
+  // si ya tenía una, se conserva (editar no reinicia el reloj).
+  const expiresAt =
+    quantity === null
+      ? null
+      : (existing.expiresAt ?? new Date(Date.now() + listingExpirationDays * 24 * 60 * 60 * 1000));
 
   // Editable solo SIN deals vivos (PENDING o ACCEPTED); CANCELLED/REJECTED no
   // cuentan. Se comprueba DENTRO de la transacción para cerrar la ventana con
   // una oferta que entre justo ahora. Esto excluye de suyo el regalo directo
   // (nace con Deal ACCEPTED). Opciones: se borran y se recrean (más simple y
   // seguro que un diff, y el volumen es mínimo: hasta MAX_OPTION_SLOTS filas).
-  await prisma.$transaction(async (tx) => {
-    const liveDeals = await tx.deal.count({
-      where: { listingId, status: { in: ["PENDING", "ACCEPTED"] } },
-    });
-    if (liveDeals > 0) throw new Error(t("listingHasDeals"));
+  await db.transaction(async (tx) => {
+    const [{ live } = { live: 0 }] = await tx
+      .select({ live: count() })
+      .from(deal)
+      .where(and(eq(deal.listingId, listingId), inArray(deal.status, ["PENDING", "ACCEPTED"])));
+    if (live > 0) throw new Error(t("listingHasDeals"));
 
-    await tx.listingOption.deleteMany({ where: { listingId } });
-    await tx.listing.update({
-      where: { id: listingId },
-      data: {
-        itemId: item.id,
-        quantity,
-        price,
-        refineLevel,
-        notes,
-        options:
-          rawOptions.length > 0
-            ? {
-                create: rawOptions.map((o) => ({
-                  slotIndex: o.slotIndex,
-                  defId: o.defId,
-                  value: o.value,
-                })),
-              }
-            : undefined,
-      },
-    });
+    await tx.delete(listingOption).where(eq(listingOption.listingId, listingId));
+    await tx.delete(listingCard).where(eq(listingCard.listingId, listingId));
+    await tx
+      .update(listing)
+      .set({ type, itemId: item.id, quantity, price, refineLevel, notes, expiresAt })
+      .where(eq(listing.id, listingId));
+    if (rawOptions.length > 0) {
+      await tx.insert(listingOption).values(
+        rawOptions.map((o) => ({ listingId, slotIndex: o.slotIndex, defId: o.defId, value: o.value })),
+      );
+    }
+    if (cards.length > 0) {
+      await tx.insert(listingCard).values(
+        cards.map((c) => ({ listingId, slotIndex: c.slotIndex, cardItemId: c.cardItemId })),
+      );
+    }
   });
 
   revalidatePath("/market");
@@ -464,15 +581,15 @@ export async function cancelListing(listingId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
 
-  const listing = await prisma.listing.findUnique({
-    where: { id: listingId },
-    include: { deals: { select: { status: true } } },
+  const listingRow = await db.query.listing.findFirst({
+    where: eq(listing.id, listingId),
+    with: { deals: { columns: { status: true } } },
   });
-  if (!listing) throw new Error(t("listingNotFound"));
-  if (listing.posterId !== session.user.discordId) {
+  if (!listingRow) throw new Error(t("listingNotFound"));
+  if (listingRow.posterId !== session.user.discordId) {
     throw new Error(t("onlyPosterCancel"));
   }
-  if (listing.status !== "ACTIVE") {
+  if (listingRow.status !== "ACTIVE") {
     throw new Error(t("listingNotActive"));
   }
 
@@ -482,14 +599,17 @@ export async function cancelListing(listingId: string) {
   // (≥1 Deal ACCEPTED) y CANCELLED si no (ver deals.ts). Las ventas parciales
   // siguen contando en estadísticas porque se derivan de los Deal.
   const status =
-    listing.quantity === null ? listingStatusOnClose(listing.deals) : "CANCELLED";
-  await prisma.$transaction(async (tx) => {
+    listingRow.quantity === null ? listingStatusOnClose(listingRow.deals) : "CANCELLED";
+  await db.transaction(async (tx) => {
     // Bloqueo con ofertas/reservas PENDING sin resolver. Dentro de la tx para
     // cerrar la ventana con una oferta que entre justo ahora, igual que
     // updateListing.
-    const pending = await tx.deal.count({ where: { listingId, status: "PENDING" } });
+    const [{ pending } = { pending: 0 }] = await tx
+      .select({ pending: count() })
+      .from(deal)
+      .where(and(eq(deal.listingId, listingId), eq(deal.status, "PENDING")));
     if (pending > 0) throw new Error(t("listingHasPendingOffers"));
-    await tx.listing.update({ where: { id: listingId }, data: { status } });
+    await tx.update(listing).set({ status }).where(eq(listing.id, listingId));
   });
 
   revalidatePath("/market");
@@ -520,20 +640,20 @@ export async function reserveListing(listingId: string, formData: FormData) {
   }
   const { quantity } = parsed.data;
 
-  const { listing, unitPrice } = await prisma.$transaction(async (tx) => {
+  const { listing: listingRow, unitPrice } = await db.transaction(async (tx) => {
     // Bloqueo de la fila: serializa reservas concurrentes para no reservar más
     // stock del disponible. Ver el núcleo del rediseño en deals.ts.
-    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`;
+    await tx.execute(sql`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`);
 
-    const listing = await tx.listing.findUnique({ where: { id: listingId }, include: { item: true } });
-    if (!listing) throw new Error(t("listingNotFound"));
-    if (listing.posterId === session.user.discordId) {
+    const row = await tx.query.listing.findFirst({ where: eq(listing.id, listingId), with: { item: true } });
+    if (!row) throw new Error(t("listingNotFound"));
+    if (row.posterId === session.user.discordId) {
       throw new Error(t("cannotBuyOwn"));
     }
-    if (listing.status !== "ACTIVE") {
+    if (row.status !== "ACTIVE") {
       throw new Error(t("listingNotActive"));
     }
-    if (listing.type !== "SALE") {
+    if (row.type !== "SALE") {
       throw new Error(t("notDirectSale"));
     }
 
@@ -544,9 +664,9 @@ export async function reserveListing(listingId: string, formData: FormData) {
     //    y las pujas PENDING NO retienen stock —varias personas compiten por las
     //    mismas unidades y el vendedor elige— (ver deals.ts). El tope anti-
     //    sobreventa se aplica al ACEPTAR (acceptSaleReservation).
-    const competitive = listing.price === null;
+    const competitive = row.price === null;
     let unitPrice: number;
-    if (listing.price === null) {
+    if (row.price === null) {
       const bidParsed = z.coerce
         .number()
         .int()
@@ -557,53 +677,52 @@ export async function reserveListing(listingId: string, formData: FormData) {
       }
       unitPrice = bidParsed.data;
     } else {
-      unitPrice = listing.price;
+      unitPrice = row.price;
     }
 
-    const agg = await tx.deal.groupBy({
-      by: ["status"],
-      where: { listingId, status: { in: ["ACCEPTED", "PENDING"] } },
-      _sum: { quantity: true },
-    });
-    const sold = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
-    const reserved = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
+    const agg = await tx
+      .select({ status: deal.status, quantity: sum(deal.quantity) })
+      .from(deal)
+      .where(and(eq(deal.listingId, listingId), inArray(deal.status, ["ACCEPTED", "PENDING"])))
+      .groupBy(deal.status);
+    const sold = Number(agg.find((a) => a.status === "ACCEPTED")?.quantity ?? 0);
+    const reserved = Number(agg.find((a) => a.status === "PENDING")?.quantity ?? 0);
     // available null = ilimitado ("los que tengas"): no hay tope que comprobar.
     // En competitivo no se resta lo reservado (las pujas no bloquean stock).
-    const available = availableFrom(listing.quantity, sold, competitive ? 0 : reserved);
+    const available = availableFrom(row.quantity, sold, competitive ? 0 : reserved);
     if (available !== null && quantity > available) {
       throw new Error(t("notEnoughStock", { remaining: available }));
     }
 
     // Deal PENDING: en precio fijo es una reserva que retiene stock hasta que el
     // vendedor confirma/rechaza; en competitivo es una puja a `unitPrice`.
-    await tx.deal.create({
-      data: {
-        listingId,
-        userId: session.user.discordId,
-        quantity,
-        status: "PENDING",
-        unitPrice,
-      },
+    await tx.insert(deal).values({
+      listingId,
+      userId: session.user.discordId,
+      quantity,
+      status: "PENDING",
+      unitPrice,
     });
 
-    return { listing, unitPrice };
+    return { listing: row, unitPrice };
   });
 
   // Aviso al vendedor de que hay una reserva por confirmar (best-effort; el
   // canal real es la ficha y la futura página de gestión). Fuera de la
   // transacción: una llamada de red no debe alargar el bloqueo de DB.
   const appUrl = getAppUrl();
-  await sendDirectMessage(listing.posterId, {
+  await sendDirectMessage(listingRow.posterId, {
     title: tDiscord("dm.reserveRequested", {
       username: session.user.username,
-      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount),
+      item: formatItemDisplayName(listingRow.item.name, listingRow.refineLevel, listingRow.item.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
-    itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
+    itemIconUrl: `${appUrl}${listingRow.item.iconUrl}`,
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
+      ...(await listingItemDetailFields(tField, listingId, false)),
       { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -621,16 +740,16 @@ async function loadOwnedPendingSaleDeal(
   discordId: string,
   t: Awaited<ReturnType<typeof getTranslations>>,
 ) {
-  const deal = await prisma.deal.findUnique({
-    where: { id: dealId },
-    include: { listing: { include: { item: true } }, user: true },
+  const dealRow = await db.query.deal.findFirst({
+    where: eq(deal.id, dealId),
+    with: { listing: { with: { item: true } }, user: true },
   });
-  if (!deal) throw new Error(t("offerNotFound"));
-  if (deal.status !== "PENDING") throw new Error(t("offerNotPending"));
-  if (deal.listing.type !== "SALE") throw new Error(t("notDirectSale"));
-  const ownerId = expectedOwner === "poster" ? deal.listing.posterId : deal.userId;
+  if (!dealRow) throw new Error(t("offerNotFound"));
+  if (dealRow.status !== "PENDING") throw new Error(t("offerNotPending"));
+  if (dealRow.listing.type !== "SALE") throw new Error(t("notDirectSale"));
+  const ownerId = expectedOwner === "poster" ? dealRow.listing.posterId : dealRow.userId;
   if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
-  return deal;
+  return dealRow;
 }
 
 // El vendedor CONFIRMA una reserva: pasa a vendida (ACCEPTED); si con eso se
@@ -641,71 +760,77 @@ export async function acceptSaleReservation(dealId: string) {
   const tDiscord = await getTranslations("discord");
   const tField = await getTranslations("market.field");
 
-  const deal = await loadOwnedPendingSaleDeal(dealId, "poster", session.user.discordId, t);
+  const dealRow = await loadOwnedPendingSaleDeal(dealId, "poster", session.user.discordId, t);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${deal.listingId} FOR UPDATE`;
-    const cur = await tx.deal.findUnique({ where: { id: dealId }, select: { status: true, quantity: true } });
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM "Listing" WHERE id = ${dealRow.listingId} FOR UPDATE`);
+    const [cur] = await tx
+      .select({ status: deal.status, quantity: deal.quantity })
+      .from(deal)
+      .where(eq(deal.id, dealId))
+      .limit(1);
     if (!cur || cur.status !== "PENDING") throw new Error(t("offerNotPending"));
-    const listing = await tx.listing.findUnique({
-      where: { id: deal.listingId },
-      select: { quantity: true, status: true },
-    });
-    if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+    const [curListing] = await tx
+      .select({ quantity: listing.quantity, status: listing.status })
+      .from(listing)
+      .where(eq(listing.id, dealRow.listingId))
+      .limit(1);
+    if (!curListing || curListing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
 
     // Guard anti-sobreventa: en "sin precio" (competitivo) las pujas PENDING no
     // retienen stock, así que la suma de las aceptadas podría pasarse del tope.
     // Se comprueba aquí, al aceptar. En precio fijo siempre pasa (la reserva ya
     // reservó el stock), así que es inocuo.
-    if (listing.quantity !== null) {
-      const acceptedAgg = await tx.deal.aggregate({
-        where: { listingId: deal.listingId, status: "ACCEPTED" },
-        _sum: { quantity: true },
-      });
-      const alreadySold = acceptedAgg._sum.quantity ?? 0;
-      if (alreadySold + cur.quantity > listing.quantity) {
-        throw new Error(t("notEnoughStock", { remaining: listing.quantity - alreadySold }));
+    if (curListing.quantity !== null) {
+      const [acceptedAgg] = await tx
+        .select({ quantity: sum(deal.quantity) })
+        .from(deal)
+        .where(and(eq(deal.listingId, dealRow.listingId), eq(deal.status, "ACCEPTED")));
+      const alreadySold = Number(acceptedAgg?.quantity ?? 0);
+      if (alreadySold + cur.quantity > curListing.quantity) {
+        throw new Error(t("notEnoughStock", { remaining: curListing.quantity - alreadySold }));
       }
     }
 
-    await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
+    await tx.update(deal).set({ status: "ACCEPTED" }).where(eq(deal.id, dealId));
     // Vendido = Σ cantidad de los Deal ACCEPTED (incluido el recién aceptado).
-    const soldAgg = await tx.deal.aggregate({
-      where: { listingId: deal.listingId, status: "ACCEPTED" },
-      _sum: { quantity: true },
-    });
-    const sold = soldAgg._sum.quantity ?? 0;
+    const [soldAgg] = await tx
+      .select({ quantity: sum(deal.quantity) })
+      .from(deal)
+      .where(and(eq(deal.listingId, dealRow.listingId), eq(deal.status, "ACCEPTED")));
+    const sold = Number(soldAgg?.quantity ?? 0);
     // Un listing ilimitado (quantity null) nunca se agota solo: lo cierra el
     // poster a mano (isSoldOut devuelve false ahí).
-    await tx.listing.update({
-      where: { id: deal.listingId },
-      data: { status: isSoldOut(listing.quantity, sold) ? "COMPLETED" : "ACTIVE" },
-    });
+    await tx
+      .update(listing)
+      .set({ status: isSoldOut(curListing.quantity, sold) ? "COMPLETED" : "ACTIVE" })
+      .where(eq(listing.id, dealRow.listingId));
   });
 
   const appUrl = getAppUrl();
-  await sendDirectMessage(deal.userId, {
+  await sendDirectMessage(dealRow.userId, {
     title: tDiscord("dm.reserveAccepted", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
+      item: formatItemDisplayName(dealRow.listing.item.name, dealRow.listing.refineLevel, dealRow.listing.item.slotCount),
     }),
-    url: `${appUrl}/market/${deal.listingId}`,
+    url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
-    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
+    itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
     fields: [
-      { name: tField("quantity"), value: String(deal.quantity), inline: true },
+      { name: tField("quantity"), value: String(dealRow.quantity), inline: true },
       {
         name: tDiscord("fields.totalPrice"),
-        value: formatPrice(deal.quantity * (deal.unitPrice ?? 0)),
+        value: formatPrice(dealRow.quantity * (dealRow.unitPrice ?? 0)),
         inline: true,
       },
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
       { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
 
   revalidatePath("/market");
-  revalidatePath(`/market/${deal.listingId}`);
-  return listingCardState(deal.listingId);
+  revalidatePath(`/market/${dealRow.listingId}`);
+  return listingCardState(dealRow.listingId);
 }
 
 // El vendedor RECHAZA una reserva: libera el stock retenido.
@@ -713,34 +838,38 @@ export async function rejectSaleReservation(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
 
-  const deal = await loadOwnedPendingSaleDeal(dealId, "poster", session.user.discordId, t);
-  await prisma.deal.update({ where: { id: dealId }, data: { status: "REJECTED" } });
+  const dealRow = await loadOwnedPendingSaleDeal(dealId, "poster", session.user.discordId, t);
+  await db.update(deal).set({ status: "REJECTED" }).where(eq(deal.id, dealId));
 
   const appUrl = getAppUrl();
-  await sendDirectMessage(deal.userId, {
+  await sendDirectMessage(dealRow.userId, {
     title: tDiscord("dm.reserveRejected", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
+      item: formatItemDisplayName(dealRow.listing.item.name, dealRow.listing.refineLevel, dealRow.listing.item.slotCount),
     }),
-    url: `${appUrl}/market/${deal.listingId}`,
+    url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.SALE,
-    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false }],
+    itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
+    fields: [
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
+      { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
-  revalidatePath(`/market/${deal.listingId}`);
-  return listingCardState(deal.listingId);
+  revalidatePath(`/market/${dealRow.listingId}`);
+  return listingCardState(dealRow.listingId);
 }
 
 // El comprador CANCELA su propia reserva pendiente.
 export async function cancelSaleReservation(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
-  const deal = await loadOwnedPendingSaleDeal(dealId, "buyer", session.user.discordId, t);
-  await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
-  revalidatePath(`/market/${deal.listingId}`);
-  return listingCardState(deal.listingId);
+  const dealRow = await loadOwnedPendingSaleDeal(dealId, "buyer", session.user.discordId, t);
+  await db.update(deal).set({ status: "CANCELLED" }).where(eq(deal.id, dealId));
+  revalidatePath(`/market/${dealRow.listingId}`);
+  return listingCardState(dealRow.listingId);
 }
 
 // ── Compras (BUY): el vendedor OFRECE suministrar, el comprador CONFIRMA ──
@@ -769,21 +898,21 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
   }
   const { quantity } = parsed.data;
 
-  const { listing, unitPrice } = await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`;
-    const listing = await tx.listing.findUnique({ where: { id: listingId }, include: { item: true } });
-    if (!listing) throw new Error(t("listingNotFound"));
-    if (listing.posterId === session.user.discordId) throw new Error(t("cannotOfferOwn"));
-    if (listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
-    if (listing.type !== "BUY") throw new Error(t("notBuyListing"));
+  const { listing: listingRow, unitPrice } = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`);
+    const row = await tx.query.listing.findFirst({ where: eq(listing.id, listingId), with: { item: true } });
+    if (!row) throw new Error(t("listingNotFound"));
+    if (row.posterId === session.user.discordId) throw new Error(t("cannotOfferOwn"));
+    if (row.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+    if (row.type !== "BUY") throw new Error(t("notBuyListing"));
 
     // Igual que en la venta: precio fijo (el vendedor se ofrece al precio del
     // comprador, la oferta PENDING retiene cupo) vs "sin precio" (competitivo: el
     // vendedor pide su unitPrice y las ofertas no bloquean cupo; el comprador
     // elige la más barata). El tope se aplica al ACEPTAR (acceptFulfillOffer).
-    const competitive = listing.price === null;
+    const competitive = row.price === null;
     let unitPrice: number;
-    if (listing.price === null) {
+    if (row.price === null) {
       const askParsed = z.coerce
         .number()
         .int()
@@ -794,49 +923,48 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
       }
       unitPrice = askParsed.data;
     } else {
-      unitPrice = listing.price;
+      unitPrice = row.price;
     }
 
     // Cupo restante = cantidad pedida − ya cumplido − ya ofrecido (pendiente).
-    const agg = await tx.deal.groupBy({
-      by: ["status"],
-      where: { listingId, status: { in: ["ACCEPTED", "PENDING"] } },
-      _sum: { quantity: true },
-    });
-    const fulfilled = agg.find((a) => a.status === "ACCEPTED")?._sum.quantity ?? 0;
-    const offered = agg.find((a) => a.status === "PENDING")?._sum.quantity ?? 0;
+    const agg = await tx
+      .select({ status: deal.status, quantity: sum(deal.quantity) })
+      .from(deal)
+      .where(and(eq(deal.listingId, listingId), inArray(deal.status, ["ACCEPTED", "PENDING"])))
+      .groupBy(deal.status);
+    const fulfilled = Number(agg.find((a) => a.status === "ACCEPTED")?.quantity ?? 0);
+    const offered = Number(agg.find((a) => a.status === "PENDING")?.quantity ?? 0);
     // available null = compra ilimitada ("los que tengas"): sin cupo que topar.
     // En competitivo no se resta lo ofrecido (las ofertas no bloquean cupo).
-    const available = availableFrom(listing.quantity, fulfilled, competitive ? 0 : offered);
+    const available = availableFrom(row.quantity, fulfilled, competitive ? 0 : offered);
     if (available !== null && quantity > available) {
       throw new Error(t("notEnoughStock", { remaining: available }));
     }
 
-    await tx.deal.create({
-      data: {
-        listingId,
-        userId: session.user.discordId,
-        quantity,
-        status: "PENDING",
-        unitPrice,
-      },
+    await tx.insert(deal).values({
+      listingId,
+      userId: session.user.discordId,
+      quantity,
+      status: "PENDING",
+      unitPrice,
     });
-    return { listing, unitPrice };
+    return { listing: row, unitPrice };
   });
 
   // Aviso al comprador (poster) de que hay una oferta de venta por confirmar.
   const appUrl = getAppUrl();
-  await sendDirectMessage(listing.posterId, {
+  await sendDirectMessage(listingRow.posterId, {
     title: tDiscord("dm.fulfillOffered", {
       username: session.user.username,
-      item: formatItemDisplayName(listing.item.name, listing.refineLevel, listing.item.slotCount),
+      item: formatItemDisplayName(listingRow.item.name, listingRow.refineLevel, listingRow.item.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
-    itemIconUrl: `${appUrl}${listing.item.iconUrl}`,
+    itemIconUrl: `${appUrl}${listingRow.item.iconUrl}`,
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       { name: tDiscord("fields.totalPrice"), value: formatPrice(quantity * unitPrice), inline: true },
+      ...(await listingItemDetailFields(tField, listingId, true)),
       { name: tDiscord("fields.seller"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
@@ -852,17 +980,17 @@ async function loadOwnedPendingBuyDeal(
   discordId: string,
   t: Awaited<ReturnType<typeof getTranslations>>,
 ) {
-  const deal = await prisma.deal.findUnique({
-    where: { id: dealId },
-    include: { listing: { include: { item: true } }, user: true },
+  const dealRow = await db.query.deal.findFirst({
+    where: eq(deal.id, dealId),
+    with: { listing: { with: { item: true } }, user: true },
   });
-  if (!deal) throw new Error(t("offerNotFound"));
-  if (deal.status !== "PENDING") throw new Error(t("offerNotPending"));
-  if (deal.listing.type !== "BUY") throw new Error(t("notBuyListing"));
+  if (!dealRow) throw new Error(t("offerNotFound"));
+  if (dealRow.status !== "PENDING") throw new Error(t("offerNotPending"));
+  if (dealRow.listing.type !== "BUY") throw new Error(t("notBuyListing"));
   // El comprador es el poster; el vendedor es quien hizo la oferta (Deal.userId).
-  const ownerId = expectedOwner === "buyer" ? deal.listing.posterId : deal.userId;
+  const ownerId = expectedOwner === "buyer" ? dealRow.listing.posterId : dealRow.userId;
   if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
-  return deal;
+  return dealRow;
 }
 
 // El comprador CONFIRMA una oferta de venta: cuenta como cumplida; si se
@@ -873,70 +1001,76 @@ export async function acceptFulfillOffer(dealId: string) {
   const tDiscord = await getTranslations("discord");
   const tField = await getTranslations("market.field");
 
-  const deal = await loadOwnedPendingBuyDeal(dealId, "buyer", session.user.discordId, t);
+  const dealRow = await loadOwnedPendingBuyDeal(dealId, "buyer", session.user.discordId, t);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "Listing" WHERE id = ${deal.listingId} FOR UPDATE`;
-    const cur = await tx.deal.findUnique({ where: { id: dealId }, select: { status: true, quantity: true } });
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM "Listing" WHERE id = ${dealRow.listingId} FOR UPDATE`);
+    const [cur] = await tx
+      .select({ status: deal.status, quantity: deal.quantity })
+      .from(deal)
+      .where(eq(deal.id, dealId))
+      .limit(1);
     if (!cur || cur.status !== "PENDING") throw new Error(t("offerNotPending"));
-    const listing = await tx.listing.findUnique({
-      where: { id: deal.listingId },
-      select: { quantity: true, status: true },
-    });
-    if (!listing || listing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
+    const [curListing] = await tx
+      .select({ quantity: listing.quantity, status: listing.status })
+      .from(listing)
+      .where(eq(listing.id, dealRow.listingId))
+      .limit(1);
+    if (!curListing || curListing.status !== "ACTIVE") throw new Error(t("listingNotActive"));
 
     // Guard anti-sobrecompra: en "sin precio" las ofertas PENDING no retienen
     // cupo, así que las aceptadas podrían pasarse de la cantidad pedida. Se
     // comprueba al aceptar (inocuo en precio fijo, donde la oferta ya reservó).
-    if (listing.quantity !== null) {
-      const acceptedAgg = await tx.deal.aggregate({
-        where: { listingId: deal.listingId, status: "ACCEPTED" },
-        _sum: { quantity: true },
-      });
-      const alreadyFulfilled = acceptedAgg._sum.quantity ?? 0;
-      if (alreadyFulfilled + cur.quantity > listing.quantity) {
-        throw new Error(t("notEnoughStock", { remaining: listing.quantity - alreadyFulfilled }));
+    if (curListing.quantity !== null) {
+      const [acceptedAgg] = await tx
+        .select({ quantity: sum(deal.quantity) })
+        .from(deal)
+        .where(and(eq(deal.listingId, dealRow.listingId), eq(deal.status, "ACCEPTED")));
+      const alreadyFulfilled = Number(acceptedAgg?.quantity ?? 0);
+      if (alreadyFulfilled + cur.quantity > curListing.quantity) {
+        throw new Error(t("notEnoughStock", { remaining: curListing.quantity - alreadyFulfilled }));
       }
     }
 
-    await tx.deal.update({ where: { id: dealId }, data: { status: "ACCEPTED" } });
+    await tx.update(deal).set({ status: "ACCEPTED" }).where(eq(deal.id, dealId));
     // Cumplido = Σ cantidad de los Deal ACCEPTED (incluido el recién aceptado).
-    const fulfilledAgg = await tx.deal.aggregate({
-      where: { listingId: deal.listingId, status: "ACCEPTED" },
-      _sum: { quantity: true },
-    });
-    const fulfilled = fulfilledAgg._sum.quantity ?? 0;
+    const [fulfilledAgg] = await tx
+      .select({ quantity: sum(deal.quantity) })
+      .from(deal)
+      .where(and(eq(deal.listingId, dealRow.listingId), eq(deal.status, "ACCEPTED")));
+    const fulfilled = Number(fulfilledAgg?.quantity ?? 0);
     // Compra ilimitada (quantity null): nunca se cierra sola, la cierra el
     // comprador a mano (isSoldOut devuelve false).
-    await tx.listing.update({
-      where: { id: deal.listingId },
-      data: { status: isSoldOut(listing.quantity, fulfilled) ? "COMPLETED" : "ACTIVE" },
-    });
+    await tx
+      .update(listing)
+      .set({ status: isSoldOut(curListing.quantity, fulfilled) ? "COMPLETED" : "ACTIVE" })
+      .where(eq(listing.id, dealRow.listingId));
   });
 
   const appUrl = getAppUrl();
-  await sendDirectMessage(deal.userId, {
+  await sendDirectMessage(dealRow.userId, {
     title: tDiscord("dm.fulfillAccepted", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
+      item: formatItemDisplayName(dealRow.listing.item.name, dealRow.listing.refineLevel, dealRow.listing.item.slotCount),
     }),
-    url: `${appUrl}/market/${deal.listingId}`,
+    url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
-    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
+    itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
     fields: [
-      { name: tField("quantity"), value: String(deal.quantity), inline: true },
+      { name: tField("quantity"), value: String(dealRow.quantity), inline: true },
       {
         name: tDiscord("fields.totalPrice"),
-        value: formatPrice(deal.quantity * (deal.unitPrice ?? 0)),
+        value: formatPrice(dealRow.quantity * (dealRow.unitPrice ?? 0)),
         inline: true,
       },
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
       { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
     ],
   });
 
   revalidatePath("/market");
-  revalidatePath(`/market/${deal.listingId}`);
-  return listingCardState(deal.listingId);
+  revalidatePath(`/market/${dealRow.listingId}`);
+  return listingCardState(dealRow.listingId);
 }
 
 // El comprador RECHAZA una oferta de venta.
@@ -944,32 +1078,36 @@ export async function rejectFulfillOffer(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
   const tDiscord = await getTranslations("discord");
+  const tField = await getTranslations("market.field");
 
-  const deal = await loadOwnedPendingBuyDeal(dealId, "buyer", session.user.discordId, t);
-  await prisma.deal.update({ where: { id: dealId }, data: { status: "REJECTED" } });
+  const dealRow = await loadOwnedPendingBuyDeal(dealId, "buyer", session.user.discordId, t);
+  await db.update(deal).set({ status: "REJECTED" }).where(eq(deal.id, dealId));
 
   const appUrl = getAppUrl();
-  await sendDirectMessage(deal.userId, {
+  await sendDirectMessage(dealRow.userId, {
     title: tDiscord("dm.fulfillRejected", {
       username: session.user.username,
-      item: formatItemDisplayName(deal.listing.item.name, deal.listing.refineLevel, deal.listing.item.slotCount),
+      item: formatItemDisplayName(dealRow.listing.item.name, dealRow.listing.refineLevel, dealRow.listing.item.slotCount),
     }),
-    url: `${appUrl}/market/${deal.listingId}`,
+    url: `${appUrl}/market/${dealRow.listingId}`,
     color: DISCORD_EMBED_COLOR.BUY,
-    itemIconUrl: `${appUrl}${deal.listing.item.iconUrl}`,
-    fields: [{ name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false }],
+    itemIconUrl: `${appUrl}${dealRow.listing.item.iconUrl}`,
+    fields: [
+      ...(await listingItemDetailFields(tField, dealRow.listingId, dealRow.listing.type === "BUY")),
+      { name: tDiscord("fields.buyer"), value: `<@${session.user.discordId}>`, inline: false },
+    ],
   });
 
-  revalidatePath(`/market/${deal.listingId}`);
-  return listingCardState(deal.listingId);
+  revalidatePath(`/market/${dealRow.listingId}`);
+  return listingCardState(dealRow.listingId);
 }
 
 // El vendedor CANCELA su propia oferta pendiente.
 export async function cancelFulfillOffer(dealId: string) {
   const session = await requireSession();
   const t = await getTranslations("errors");
-  const deal = await loadOwnedPendingBuyDeal(dealId, "seller", session.user.discordId, t);
-  await prisma.deal.update({ where: { id: dealId }, data: { status: "CANCELLED" } });
-  revalidatePath(`/market/${deal.listingId}`);
-  return listingCardState(deal.listingId);
+  const dealRow = await loadOwnedPendingBuyDeal(dealId, "seller", session.user.discordId, t);
+  await db.update(deal).set({ status: "CANCELLED" }).where(eq(deal.id, dealId));
+  revalidatePath(`/market/${dealRow.listingId}`);
+  return listingCardState(dealRow.listingId);
 }

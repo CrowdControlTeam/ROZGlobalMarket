@@ -1,5 +1,37 @@
-import { Prisma, ItemCategory, EquipSlot, WeaponType, ListingType } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gt,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+  sum,
+  type SQL,
+} from "drizzle-orm";
+import { db } from "@/db";
+import {
+  deal,
+  item,
+  itemOptionDef,
+  listing,
+  listingOption,
+  listingCard,
+  user,
+  ItemCategory,
+  type EquipSlot,
+  type WeaponType,
+  type ListingType,
+} from "@/db/schema";
 
 // Labels vía sortLabel(t, sort) en market-labels.ts (messages/es.json,
 // namespace market.sort.*) — este array solo fija el orden y los valores
@@ -26,6 +58,9 @@ export type MarketFilters = {
   // cliente vía UserPicker, no un "contiene" de texto libre, para no
   // depender de coincidencias parciales entre nombres parecidos.
   posterId?: string;
+  // Conjunto de items concreto (CSV en la URL). Para "buscar todas las piezas de
+  // una build" en una sola búsqueda: lista publicaciones de cualquiera de ellos.
+  itemIds?: string[];
   // Filtro por random option, uno por slot posicional (1..MAX_OPTION_SLOTS
   // — ver src/lib/item-options-constants.ts). Filtra por statCode, no por
   // defId: la misma stat (p.ej. MaxHP %) existe como filas de
@@ -86,110 +121,97 @@ function decodeCursor(raw: string | undefined): Cursor | null {
 
 const PAGE_SIZE = 20;
 
-function orderByFor(sort: MarketSort): Prisma.ListingOrderByWithRelationInput[] {
+// El orden se aplica sobre el core query con JOIN a Item (name_* ordena por
+// Item.name); el desempate por id garantiza un orden total estable para el
+// cursor.
+function orderByFor(sort: MarketSort): SQL[] {
   switch (sort) {
     case "oldest":
-      return [{ createdAt: "asc" }, { id: "asc" }];
+      return [asc(listing.createdAt), asc(listing.id)];
     case "price_asc":
-      return [{ price: "asc" }, { id: "asc" }];
+      return [asc(listing.price), asc(listing.id)];
     case "price_desc":
-      return [{ price: "desc" }, { id: "asc" }];
+      return [desc(listing.price), asc(listing.id)];
     case "name_asc":
-      return [{ item: { name: "asc" } }, { id: "asc" }];
+      return [asc(item.name), asc(listing.id)];
     case "name_desc":
-      return [{ item: { name: "desc" } }, { id: "asc" }];
+      return [desc(item.name), asc(listing.id)];
     case "newest":
     default:
-      return [{ createdAt: "desc" }, { id: "asc" }];
+      return [desc(listing.createdAt), asc(listing.id)];
   }
 }
 
 // Paginación por keyset (no OFFSET/LIMIT): comparamos con los valores del
 // último elemento cargado en vez de contar páginas, para que el resultado
 // no se descuadre si se publican o retiran items mientras se navega.
-function cursorWhereFor(
-  sort: MarketSort,
-  cursor: Cursor | null,
-): Prisma.ListingWhereInput | undefined {
+function cursorWhereFor(sort: MarketSort, cursor: Cursor | null): SQL | undefined {
   if (!cursor) return undefined;
+  const createdAt = new Date(cursor.createdAt);
 
   switch (sort) {
     case "oldest":
-      return {
-        OR: [
-          { createdAt: { gt: cursor.createdAt } },
-          { createdAt: cursor.createdAt, id: { gt: cursor.id } },
-        ],
-      };
+      return or(
+        gt(listing.createdAt, createdAt),
+        and(eq(listing.createdAt, createdAt), gt(listing.id, cursor.id)),
+      );
     // El cursor de una página price_asc/price_desc siempre viene de una
     // consulta que ya excluyó los TRADE (price null) — ver isPriceSort en
     // getListings —, así que cursor.price es un número real aquí.
     case "price_asc":
-      return {
-        OR: [
-          { price: { gt: cursor.price! } },
-          { price: cursor.price, id: { gt: cursor.id } },
-        ],
-      };
+      return or(
+        gt(listing.price, cursor.price!),
+        and(eq(listing.price, cursor.price!), gt(listing.id, cursor.id)),
+      );
     case "price_desc":
-      return {
-        OR: [
-          { price: { lt: cursor.price! } },
-          { price: cursor.price, id: { gt: cursor.id } },
-        ],
-      };
+      return or(
+        lt(listing.price, cursor.price!),
+        and(eq(listing.price, cursor.price!), gt(listing.id, cursor.id)),
+      );
     case "name_asc":
-      return {
-        OR: [
-          { item: { name: { gt: cursor.name } } },
-          { item: { name: cursor.name }, id: { gt: cursor.id } },
-        ],
-      };
+      return or(
+        gt(item.name, cursor.name),
+        and(eq(item.name, cursor.name), gt(listing.id, cursor.id)),
+      );
     case "name_desc":
-      return {
-        OR: [
-          { item: { name: { lt: cursor.name } } },
-          { item: { name: cursor.name }, id: { gt: cursor.id } },
-        ],
-      };
+      return or(
+        lt(item.name, cursor.name),
+        and(eq(item.name, cursor.name), gt(listing.id, cursor.id)),
+      );
     case "newest":
     default:
-      return {
-        OR: [
-          { createdAt: { lt: cursor.createdAt } },
-          { createdAt: cursor.createdAt, id: { gt: cursor.id } },
-        ],
-      };
+      return or(
+        lt(listing.createdAt, createdAt),
+        and(eq(listing.createdAt, createdAt), gt(listing.id, cursor.id)),
+      );
   }
 }
 
 // Una condición por slot de option rellenado en el filtro — se combinan
-// todas con AND (un listing debe cumplirlas todas a la vez), cada una
-// buscando en una fila de ListingOption distinta (por eso son "some"
-// separados y no uno solo con varias condiciones dentro).
+// todas con AND (un listing debe cumplirlas todas a la vez), cada una vía un
+// EXISTS sobre ListingOption+ItemOptionDef correlado al listing (equivale al
+// `options: { some }` de Prisma; por eso son EXISTS separados y no uno solo).
 function optionSlotWhere(
   slotIndex: number,
   statCode?: string,
   min?: number,
   max?: number,
-): Prisma.ListingWhereInput | null {
+): SQL | null {
   if (!statCode) return null;
-  return {
-    options: {
-      some: {
-        slotIndex,
-        def: { statCode },
-        ...(min !== undefined || max !== undefined
-          ? {
-              value: {
-                ...(min !== undefined ? { gte: min } : {}),
-                ...(max !== undefined ? { lte: max } : {}),
-              },
-            }
-          : {}),
-      },
-    },
-  };
+  const inner: SQL[] = [
+    eq(listingOption.listingId, listing.id),
+    eq(listingOption.slotIndex, slotIndex),
+    eq(itemOptionDef.statCode, statCode),
+  ];
+  if (min !== undefined) inner.push(gte(listingOption.value, min));
+  if (max !== undefined) inner.push(lte(listingOption.value, max));
+  return exists(
+    db
+      .select({ one: sql`1` })
+      .from(listingOption)
+      .innerJoin(itemOptionDef, eq(listingOption.defId, itemOptionDef.id))
+      .where(and(...inner)),
+  );
 }
 
 export async function getListings(filters: MarketFilters) {
@@ -214,10 +236,9 @@ export async function getListings(filters: MarketFilters) {
     optionSlotWhere(1, filters.option1Stat, filters.option1Min, filters.option1Max),
     optionSlotWhere(2, filters.option2Stat, filters.option2Min, filters.option2Max),
     optionSlotWhere(3, filters.option3Stat, filters.option3Min, filters.option3Max),
-  ].filter((c): c is Prisma.ListingWhereInput => c !== null);
+  ].filter((c): c is SQL => c !== null);
 
   const cursorCondition = cursorWhereFor(filters.sort, cursor);
-  const andConditions = [...(cursorCondition ? [cursorCondition] : []), ...optionConditions];
 
   // Los listings de tipo TRADE no tienen precio (columna null) — al
   // ordenar explícitamente por precio no tiene sentido mezclarlos (no hay
@@ -225,72 +246,145 @@ export async function getListings(filters: MarketFilters) {
   // intentar resolverles una posición. Fuera de esos dos sorts, sí
   // aparecen con normalidad (recientes, nombre, etc.).
   const isPriceSort = filters.sort === "price_asc" || filters.sort === "price_desc";
-  const priceFilter = {
-    ...(filters.minPrice !== undefined ? { gte: filters.minPrice } : {}),
-    ...(filters.maxPrice !== undefined ? { lte: filters.maxPrice } : {}),
-    ...(isPriceSort ? { not: null } : {}),
-  };
 
-  const baseWhere: Prisma.ListingWhereInput = {
-    status: "ACTIVE",
-    ...(filters.type ? { type: filters.type } : {}),
-    ...(filters.posterId ? { posterId: filters.posterId } : {}),
-    ...(Object.keys(priceFilter).length > 0 ? { price: priceFilter } : {}),
-    ...(filters.refineMin !== undefined || filters.refineMax !== undefined
-      ? {
-          refineLevel: {
-            ...(filters.refineMin !== undefined ? { gte: filters.refineMin } : {}),
-            ...(filters.refineMax !== undefined ? { lte: filters.refineMax } : {}),
-          },
-        }
-      : {}),
-    item: {
-      ...(filters.q ? { name: { contains: filters.q, mode: "insensitive" } } : {}),
-      ...(hasCategory ? { category: { in: filters.category } } : {}),
-      ...(needsSlotFilter ? { slot: { in: filters.slot } } : {}),
-      ...(needsWeaponTypeFilter ? { weaponType: { in: filters.weaponType } } : {}),
-      // Las ranuras son del item (Item.slotCount), no del listing.
-      ...(filters.cardSlotsMin !== undefined || filters.cardSlotsMax !== undefined
-        ? {
-            slotCount: {
-              ...(filters.cardSlotsMin !== undefined ? { gte: filters.cardSlotsMin } : {}),
-              ...(filters.cardSlotsMax !== undefined ? { lte: filters.cardSlotsMax } : {}),
-            },
-          }
-        : {}),
-    },
-  };
+  // Condiciones base (comunes a listado y count): estado + filtros de listing e
+  // item. El JOIN a Item permite filtrar/ordenar por sus columnas (name/category/…).
+  const baseConditions: SQL[] = [eq(listing.status, "ACTIVE")];
+  // Oculta las caducadas aunque el cron aún no las haya marcado EXPIRED
+  // (expiresAt null = no caduca, por diseño → se mantiene visible).
+  baseConditions.push(
+    or(isNull(listing.expiresAt), gt(listing.expiresAt, sql`now()`)) as SQL,
+  );
+  if (filters.type) baseConditions.push(eq(listing.type, filters.type));
+  if (filters.posterId) baseConditions.push(eq(listing.posterId, filters.posterId));
+  if (filters.itemIds && filters.itemIds.length > 0) baseConditions.push(inArray(listing.itemId, filters.itemIds));
+  if (filters.minPrice !== undefined) baseConditions.push(gte(listing.price, filters.minPrice));
+  if (filters.maxPrice !== undefined) baseConditions.push(lte(listing.price, filters.maxPrice));
+  if (isPriceSort) baseConditions.push(isNotNull(listing.price));
+  if (filters.refineMin !== undefined) baseConditions.push(gte(listing.refineLevel, filters.refineMin));
+  if (filters.refineMax !== undefined) baseConditions.push(lte(listing.refineLevel, filters.refineMax));
+  if (filters.q) baseConditions.push(ilike(item.name, `%${filters.q}%`));
+  if (hasCategory) baseConditions.push(inArray(item.category, filters.category!));
+  if (needsSlotFilter) baseConditions.push(inArray(item.slot, filters.slot!));
+  if (needsWeaponTypeFilter) baseConditions.push(inArray(item.weaponType, filters.weaponType!));
+  // Las ranuras son del item (Item.slotCount), no del listing.
+  if (filters.cardSlotsMin !== undefined) baseConditions.push(gte(item.slotCount, filters.cardSlotsMin));
+  if (filters.cardSlotsMax !== undefined) baseConditions.push(lte(item.slotCount, filters.cardSlotsMax));
+  baseConditions.push(...optionConditions);
 
   // El listado pagina por cursor; el total (para "X de Y") cuenta lo mismo
   // pero SIN la condición de cursor — es todo lo que casa, no solo lo que
   // queda por paginar. Las condiciones de option sí van en ambos.
-  const where: Prisma.ListingWhereInput = {
-    ...baseWhere,
-    ...(andConditions.length > 0 ? { AND: andConditions } : {}),
-  };
-  const countWhere: Prisma.ListingWhereInput = {
-    ...baseWhere,
-    ...(optionConditions.length > 0 ? { AND: optionConditions } : {}),
-  };
+  const listWhere = and(...baseConditions, ...(cursorCondition ? [cursorCondition] : []));
+  const countWhere = and(...baseConditions);
 
-  // El count solo en la primera página (sin cursor): al "cargar más" el total
-  // no cambia, así que se devuelve null y el cliente conserva el que ya tenía.
-  const [listings, total] = await Promise.all([
-    prisma.listing.findMany({
-      where,
-      orderBy: orderByFor(filters.sort),
-      take: PAGE_SIZE + 1,
-      include: {
-        item: true,
-        poster: true,
-        options: { include: { def: true }, orderBy: { slotIndex: "asc" } },
-      },
-    }),
-    cursor ? Promise.resolve<number | null>(null) : prisma.listing.count({ where: countWhere }),
+  // `select` acotado (no fila completa de Item con description[] y restrictions
+  // JSON): la card del grid solo usa estos campos — el mayor ahorro de egress. El
+  // tooltip completo se pide aparte al hacer click (fetchDbItemDetail).
+  const [rows, totalResult] = await Promise.all([
+    db
+      .select({
+        id: listing.id,
+        type: listing.type,
+        quantity: listing.quantity,
+        price: listing.price,
+        refineLevel: listing.refineLevel,
+        notes: listing.notes,
+        createdAt: listing.createdAt, // para el cursor de paginación
+        expiresAt: listing.expiresAt, // para el indicador de caducidad (reloj)
+        itemId: item.id,
+        itemName: item.name,
+        itemIconUrl: item.iconUrl,
+        itemSlotCount: item.slotCount,
+        posterId: user.id,
+        posterUsername: user.username,
+      })
+      .from(listing)
+      .innerJoin(item, eq(listing.itemId, item.id))
+      .innerJoin(user, eq(listing.posterId, user.id))
+      .where(listWhere)
+      .orderBy(...orderByFor(filters.sort))
+      .limit(PAGE_SIZE + 1),
+    // El count solo en la primera página (sin cursor): al "cargar más" el total
+    // no cambia, así que se devuelve null y el cliente conserva el que ya tenía.
+    cursor
+      ? Promise.resolve<number | null>(null)
+      : db
+          .select({ value: count() })
+          .from(listing)
+          .innerJoin(item, eq(listing.itemId, item.id))
+          .where(countWhere)
+          .then((r) => r[0]?.value ?? 0),
   ]);
 
-  const hasMore = listings.length > PAGE_SIZE;
-  const page = hasMore ? listings.slice(0, PAGE_SIZE) : listings;
+  const hasMore = rows.length > PAGE_SIZE;
+  const pageRows = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
+  const pageIds = pageRows.map((l) => l.id);
+
+  // Options de la página en una sola consulta (el JOIN del listado se dejó plano
+  // para no multiplicar filas por option). Se agrupan por listing, ya en la
+  // forma que espera el grid ({ slotIndex, value, def: { label } }).
+  const optionRows =
+    pageIds.length > 0
+      ? await db
+          .select({
+            listingId: listingOption.listingId,
+            slotIndex: listingOption.slotIndex,
+            value: listingOption.value,
+            label: itemOptionDef.label,
+          })
+          .from(listingOption)
+          .innerJoin(itemOptionDef, eq(listingOption.defId, itemOptionDef.id))
+          .where(inArray(listingOption.listingId, pageIds))
+          .orderBy(asc(listingOption.slotIndex))
+      : [];
+  const optionsByListing = new Map<string, { slotIndex: number; value: number; def: { label: string } }[]>();
+  for (const o of optionRows) {
+    const list = optionsByListing.get(o.listingId) ?? [];
+    list.push({ slotIndex: o.slotIndex, value: o.value, def: { label: o.label } });
+    optionsByListing.set(o.listingId, list);
+  }
+
+  // Cartas de la página, misma técnica que las options: una consulta con JOIN al
+  // item de la carta, agrupadas por listing en la forma { slotIndex, card }.
+  type CardRow = { slotIndex: number; card: { id: string; name: string; iconUrl: string } };
+  const cardRows =
+    pageIds.length > 0
+      ? await db
+          .select({
+            listingId: listingCard.listingId,
+            slotIndex: listingCard.slotIndex,
+            cardId: item.id,
+            cardName: item.name,
+            cardIconUrl: item.iconUrl,
+          })
+          .from(listingCard)
+          .innerJoin(item, eq(listingCard.cardItemId, item.id))
+          .where(inArray(listingCard.listingId, pageIds))
+          .orderBy(asc(listingCard.slotIndex))
+      : [];
+  const cardsByListing = new Map<string, CardRow[]>();
+  for (const c of cardRows) {
+    const list = cardsByListing.get(c.listingId) ?? [];
+    list.push({ slotIndex: c.slotIndex, card: { id: c.cardId, name: c.cardName, iconUrl: c.cardIconUrl } });
+    cardsByListing.set(c.listingId, list);
+  }
+
+  // Reconstrucción a la forma anidada que devolvía Prisma (item/poster/options).
+  const page = pageRows.map((l) => ({
+    id: l.id,
+    type: l.type,
+    quantity: l.quantity,
+    price: l.price,
+    refineLevel: l.refineLevel,
+    notes: l.notes,
+    createdAt: l.createdAt,
+    expiresAt: l.expiresAt,
+    item: { id: l.itemId, name: l.itemName, iconUrl: l.itemIconUrl, slotCount: l.itemSlotCount },
+    poster: { id: l.posterId, username: l.posterUsername },
+    options: optionsByListing.get(l.id) ?? [],
+    cards: cardsByListing.get(l.id) ?? [],
+  }));
   const last = page.at(-1);
 
   const nextCursor =
@@ -307,11 +401,14 @@ export async function getListings(filters: MarketFilters) {
   // quantitySold). Un groupBy para toda la página en vez de una consulta por
   // card. `reserved` (PENDING) permite que la card reste lo pendiente igual que
   // el detalle (en precio fijo); el grid decide si restarlo según el tipo/modo.
-  const dealAgg = await prisma.deal.groupBy({
-    by: ["listingId", "status"],
-    where: { listingId: { in: page.map((l) => l.id) }, status: { in: ["ACCEPTED", "PENDING"] } },
-    _sum: { quantity: true },
-  });
+  const dealAgg =
+    pageIds.length > 0
+      ? await db
+          .select({ listingId: deal.listingId, status: deal.status, quantity: sum(deal.quantity) })
+          .from(deal)
+          .where(and(inArray(deal.listingId, pageIds), inArray(deal.status, ["ACCEPTED", "PENDING"])))
+          .groupBy(deal.listingId, deal.status)
+      : [];
   const soldMap = new Map<string, number>();
   const reservedMap = new Map<string, number>();
   // Listings con algún Deal VIVO (PENDING o ACCEPTED), sea del modo que sea —a
@@ -320,7 +417,7 @@ export async function getListings(filters: MarketFilters) {
   // independiente, así el botón no aparece cuando el server lo rechazaría.
   const dealsMap = new Set<string>();
   for (const g of dealAgg) {
-    const q = g._sum.quantity ?? 0;
+    const q = Number(g.quantity ?? 0);
     if (g.status === "ACCEPTED") soldMap.set(g.listingId, (soldMap.get(g.listingId) ?? 0) + q);
     else if (g.status === "PENDING") reservedMap.set(g.listingId, (reservedMap.get(g.listingId) ?? 0) + q);
     dealsMap.add(g.listingId);
@@ -332,5 +429,5 @@ export async function getListings(filters: MarketFilters) {
     hasLiveDeals: dealsMap.has(l.id),
   }));
 
-  return { listings: pageWithSold, nextCursor, total };
+  return { listings: pageWithSold, nextCursor, total: totalResult };
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ItemIcon } from "@/components/ItemIcon";
 import { useTranslations } from "next-intl";
-import type { EquipSlot } from "@prisma/client";
+import type { EquipSlot } from "@/db/enums";
 import { searchItems } from "@/lib/listings";
 import { inputClass } from "@/lib/ui";
 import { categoryLabel, weaponTypeLabel } from "@/lib/market-labels";
@@ -28,6 +28,8 @@ export function ItemPicker({
   onClear,
   locked = false,
   slotFilter,
+  positionFilter,
+  filterResult,
 }: {
   selected: ItemResult | null;
   onSelect: (item: ItemResult) => void;
@@ -40,8 +42,14 @@ export function ItemPicker({
   // coincidía con lo que decía el input.
   onClear: () => void;
   // Si se pasa, la búsqueda solo devuelve items que encajan en ese slot de
-  // equipo (lo usa el picker de BiS para no ofrecer items de otro slot).
+  // equipo (lo usa el editor de builds para no ofrecer items de otro slot).
   slotFilter?: EquipSlot;
+  // Además del slot, acota los tocados a una posición (Upper/Middle/Lower) —
+  // lo usan los 3 slots de tocado del editor de builds.
+  positionFilter?: "Upper" | "Middle" | "Lower";
+  // Filtro extra en cliente sobre los resultados (el editor de builds lo usa
+  // para la ocupación multi-slot de tocados: solo los que puede colocar aquí).
+  filterResult?: (item: ItemResult) => boolean;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ItemResult[]>([]);
@@ -64,7 +72,7 @@ export function ItemPicker({
     debounceRef.current = setTimeout(() => {
       startTransition(async () => {
         try {
-          const found = await searchItems(value, slotFilter);
+          const found = await searchItems(value, slotFilter, positionFilter);
           setResults(found);
         } catch (err) {
           setError(getErrorMessage(err, tCommon("searchError")));
@@ -78,6 +86,8 @@ export function ItemPicker({
     setQuery("");
     setResults([]);
   }
+
+  const shownResults = filterResult ? results.filter(filterResult) : results;
 
   // Con un item elegido se muestra como TARJETA (icono + nombre + pista +
   // "Cambiar"); sin selección, el buscador con su desplegable de resultados.
@@ -124,11 +134,11 @@ export function ItemPicker({
       {error && (
         <p className="absolute inset-x-0 top-full z-20 mt-1 text-sm text-red-700">{error}</p>
       )}
-      {results.length > 0 && (
+      {shownResults.length > 0 && (
         // Desplegable FLOTANTE (absoluto) para no empujar el contenido del modal
         // ni generar scroll: se superpone sobre lo de debajo.
         <ul className="absolute inset-x-0 top-full z-20 mt-1 flex max-h-64 flex-col gap-1 overflow-y-auto rounded-md border-2 border-ro-panel-border bg-ro-panel-alt p-1 shadow-xl">
-          {results.map((item) => (
+          {shownResults.map((item) => (
             <li key={item.id}>
               <button
                 type="button"

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { z } from "zod";
-import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@prisma/client";
+import { ItemCategory, EquipSlot, WeaponType, ListingType } from "@/db/enums";
 import { isMarketSort, type MarketFilters as MarketFiltersType } from "@/lib/market";
 import { requireSession } from "@/lib/guard";
 import { listSavedSearches } from "@/lib/saved-searches";
@@ -40,6 +40,15 @@ const searchParamsSchema = z.object({
   // query string por el SegmentedTypeSelector — ya no hay rutas por tipo.
   type: z.enum(ListingType).optional(),
   posterId: z.string().trim().min(1).optional(),
+  // CSV de itemIds (buscar todas las piezas de una build). Se sanea a array no vacio.
+  itemIds: z
+    .string()
+    .optional()
+    .transform((v): string[] | undefined => {
+      if (!v) return undefined;
+      const arr = v.split(",").map((s) => s.trim()).filter(Boolean);
+      return arr.length > 0 ? arr : undefined;
+    }),
   option1Stat: z.string().trim().min(1).optional(),
   option1Min: z.coerce.number().int().optional(),
   option1Max: z.coerce.number().int().optional(),
@@ -78,6 +87,7 @@ export async function MarketPageContent({
     weaponType: firstValue(raw.weaponType),
     type: firstValue(raw.type),
     posterId: firstValue(raw.posterId),
+    itemIds: firstValue(raw.itemIds),
     option1Stat: firstValue(raw.option1Stat),
     option1Min: firstValue(raw.option1Min),
     option1Max: firstValue(raw.option1Max),
