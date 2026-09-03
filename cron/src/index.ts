@@ -1,7 +1,12 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
 import { and, eq, isNotNull, lte, sql } from "drizzle-orm";
 import { listing } from "../../src/db/schema";
+
+// En Workers, las queries sueltas del Pool de Neon deben ir por HTTP fetch en
+// vez de abrir un WebSocket (mismo motivo que src/db/index.ts en la app): sin
+// esto, el UPDATE de expiración fallaría al montar el socket.
+neonConfig.poolQueryViaFetch = true;
 
 // Tipos mínimos de Workers inline (evitamos añadir @cloudflare/workers-types
 // solo por dos firmas en un worker de ~30 líneas).
