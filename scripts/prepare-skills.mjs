@@ -42,6 +42,9 @@ for (const id of usedIds) {
   // que no traen versión por job.
   const req = {};
   for (const p of s.prerequisites ?? []) {
+    // Algunos prereqs vienen con jobId null (Super_Baby, no plannable): se
+    // ignoran para no meter una clave "null" basura en el bundle.
+    if (p.jobId == null) continue;
     req[p.jobId] = p.skills.map((x) => ({ id: x.skillId, lv: x.level }));
   }
   const reqDefault = (s.requiredSkills ?? []).map((x) => ({ id: x.skillId, lv: x.level }));
