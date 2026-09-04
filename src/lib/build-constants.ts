@@ -1,5 +1,6 @@
 // Puro y sin dependencias de servidor (client-safe), como item-slots.ts.
-import { BuildSlot, EquipSlot } from "@/db/enums";
+import { BuildSlot, EquipSlot, ItemCategory, WeaponType } from "@/db/enums";
+import { itemFitsSlot, isOneHandWeapon } from "@/lib/item-slots";
 
 // Los 10 slots de una build, en orden de paperdoll (fila superior tocados, luego
 // el resto). Cada BuildSlot mapea al EquipSlot con el que se filtran los items
@@ -32,6 +33,29 @@ const BUILD_SLOT_TO_EQUIP: Record<BuildSlot, EquipSlot> = {
 
 export function buildSlotToEquipSlot(slot: BuildSlot): EquipSlot {
   return BUILD_SLOT_TO_EQUIP[slot];
+}
+
+// Clases que pueden empuñar dos armas (dual wield): Assassin y Ninja. Sus
+// evoluciones aún no están en el juego; cuando lleguen, añadir sus jobId aquí.
+// Los ids son los `jobId` de skill-planner.json (estables con la extracción).
+export const DUAL_WIELD_JOB_IDS: ReadonlySet<number> = new Set([12, 25]); // Assassin, Ninja
+
+export function isDualWieldJob(jobId: number | null | undefined): boolean {
+  return jobId != null && DUAL_WIELD_JOB_IDS.has(jobId);
+}
+
+// ¿Encaja un item en un slot de build para una clase dada? Igual que itemFitsSlot
+// salvo en la off-hand (SHIELD): las clases con dual wield pueden llevar ahí un
+// arma de UNA mano además de un escudo. El resto de slots no dependen de la clase.
+export function itemFitsBuildSlot(
+  item: { category: ItemCategory; slot: EquipSlot | null; weaponType: WeaponType | null },
+  buildSlot: BuildSlot,
+  jobId: number | null | undefined,
+): boolean {
+  if (buildSlot === BuildSlot.SHIELD && isDualWieldJob(jobId) && isOneHandWeapon(item)) {
+    return true;
+  }
+  return itemFitsSlot(item, buildSlotToEquipSlot(buildSlot));
 }
 
 // Posición de tocado (Item.position, tokens "Upper"/"Middle"/"Lower") exigida

@@ -7,8 +7,9 @@ import { X } from "lucide-react";
 import { ItemIcon } from "@/components/ItemIcon";
 import { ItemPicker, type ItemResult } from "@/app/market/ItemPicker";
 import { CardPicker } from "./CardPicker";
-import type { BuildSlot, BuildTag, ItemOptionGroup } from "@/db/enums";
+import type { BuildSlot, BuildTag, ItemCategory, ItemOptionGroup, WeaponType } from "@/db/enums";
 import { BUILD_TAG_VALUES } from "@/db/enums";
+import { isTwoHandWeapon } from "@/lib/item-slots";
 import { MAX_OPTION_SLOTS, emptyOptionSelections, type OptionSelection } from "@/lib/item-options-constants";
 import {
   BUILD_SLOTS,
@@ -16,6 +17,7 @@ import {
   PAPERDOLL_LEFT,
   PAPERDOLL_RIGHT,
   buildSlotToEquipSlot,
+  isDualWieldJob,
   BUILD_SLOT_POSITION,
   headgearPrimary,
   parsePositions,
@@ -45,6 +47,11 @@ type SlotItem = {
   // Ubicación del tocado ("Upper"/"Middle"/"Lower" o combinaciones); null en el
   // resto. Determina qué slots ocupa (ocupación multi-slot).
   position: string | null;
+  // Categoría del item: se usa para vaciar la off-hand si tiene un arma y la
+  // clase deja de permitir dual wield (ver handleJobChange).
+  category: ItemCategory;
+  // Tipo de arma (null si no es arma): un arma de dos manos ocupa la off-hand.
+  weaponType: WeaponType | null;
 };
 
 // Construye el SlotItem desde un resultado del picker (mismo campos en pick y
@@ -57,6 +64,8 @@ function toSlotItem(item: ItemResult): SlotItem {
     slotCount: item.slotCount,
     optionGroup: item.optionGroup,
     position: item.position ?? null,
+    category: item.category,
+    weaponType: item.weaponType ?? null,
   };
 }
 type CardSel = { id: string; name: string; iconUrl: string } | null;
@@ -103,19 +112,44 @@ export function BuildEditor({
   function toggleTag(tag: BuildTag) {
     setTags((prev) => (prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]));
   }
+  // Dual wield solo lo permiten ciertas clases (Assassin/Ninja) en la off-hand.
+  // Si se cambia a una clase que no, se vacía un arma que hubiera quedado en la
+  // off-hand (un escudo se conserva); así no queda un estado que el servidor
+  // rechazaría al guardar.
+  function handleJobChange(newJobId: number | null) {
+    setJobId(newJobId);
+    if (!isDualWieldJob(newJobId)) {
+      setSlots((prev) => {
+        const s = prev.SHIELD;
+        if (!s || s.item.category !== "WEAPON") return prev;
+        const next = { ...prev };
+        delete next.SHIELD;
+        return next;
+      });
+    }
+  }
   function patchSlot(slot: BuildSlot, patch: Partial<SlotState>) {
     setSlots((prev) => (prev[slot] ? { ...prev, [slot]: { ...prev[slot]!, ...patch } } : prev));
   }
+  // Un arma de dos manos en la mano principal ocupa también la off-hand: al
+  // ponerla se vacía lo que hubiera en SHIELD (escudo o arma de dual wield).
+  function occupyOffhandIfTwoHand(slot: BuildSlot, item: SlotItem, next: Partial<Record<BuildSlot, SlotState>>) {
+    if (slot === "WEAPON" && isTwoHandWeapon(item)) delete next.SHIELD;
+  }
   function pickItem(slot: BuildSlot, item: SlotItem) {
-    setSlots((prev) => ({
-      ...prev,
-      [slot]: {
-        item,
-        refine: prev[slot]?.refine ?? 0,
-        options: emptyOptionSelections(),
-        cards: Array.from({ length: item.slotCount }, () => null),
-      },
-    }));
+    setSlots((prev) => {
+      const next = {
+        ...prev,
+        [slot]: {
+          item,
+          refine: prev[slot]?.refine ?? 0,
+          options: emptyOptionSelections(),
+          cards: Array.from({ length: item.slotCount }, () => null),
+        },
+      };
+      occupyOffhandIfTwoHand(slot, item, next);
+      return next;
+    });
   }
   // Cambiar el item de un slot YA relleno conservando refino, options y cartas
   // (las cartas se redimensionan al slotCount del item nuevo: se mantienen las
@@ -123,9 +157,11 @@ export function BuildEditor({
   function changeItem(slot: BuildSlot, item: SlotItem) {
     setSlots((prev) => {
       const s = prev[slot];
-      if (!s) return { ...prev, [slot]: { item, refine: 0, options: emptyOptionSelections(), cards: Array.from({ length: item.slotCount }, () => null) } };
-      const cards = Array.from({ length: item.slotCount }, (_, i) => s.cards[i] ?? null);
-      return { ...prev, [slot]: { ...s, item, cards } };
+      const next = !s
+        ? { ...prev, [slot]: { item, refine: 0, options: emptyOptionSelections(), cards: Array.from({ length: item.slotCount }, () => null) } }
+        : { ...prev, [slot]: { ...s, item, cards: Array.from({ length: item.slotCount }, (_, i) => s.cards[i] ?? null) } };
+      occupyOffhandIfTwoHand(slot, item, next);
+      return next;
     });
   }
   function clearSlot(slot: BuildSlot) {
@@ -166,6 +202,18 @@ export function BuildEditor({
     };
   }
 
+  // Ocupación del off-hand por un arma de dos manos: si la mano principal lleva
+  // una, el slot SHIELD queda bloqueado (secundario), igual que un tocado
+  // multi-posición bloquea sus otras ranuras. La mano principal se ignora
+  // mientras se está cambiando (así se puede pasar a un arma de una mano sin que
+  // el off-hand parpadee bloqueándose).
+  const mainHand = changingSlot === "WEAPON" ? undefined : slots.WEAPON?.item;
+  const offhandOccupiedByTwoHand = !!mainHand && isTwoHandWeapon(mainHand);
+  function shieldProps(slot: BuildSlot): { secondary?: { item: SlotItem; onRemove: () => void } } {
+    if (slot !== "SHIELD" || !offhandOccupiedByTwoHand || !mainHand) return {};
+    return { secondary: { item: mainHand, onRemove: () => clearSlot("WEAPON") } };
+  }
+
   const renderSlot = (slot: BuildSlot) => (
     <BuildSlotRow
       slot={slot}
@@ -182,7 +230,9 @@ export function BuildEditor({
       isChanging={changingSlot === slot}
       onStartChange={() => setChangingSlot(slot)}
       onCancelChange={() => setChangingSlot(null)}
+      dualWieldOffhand={slot === "SHIELD" && isDualWieldJob(jobId)}
       {...headgearProps(slot)}
+      {...shieldProps(slot)}
     />
   );
 
@@ -191,6 +241,10 @@ export function BuildEditor({
   function save() {
     if (jobId === null) return;
     setError(null);
+    // Un arma de dos manos ocupa la off-hand: si la mano principal lleva una, no
+    // se envía lo que hubiera en SHIELD (cubre también builds antiguas creadas
+    // antes del bloqueo, que podían tener arma 2h + escudo a la vez).
+    const twoHandMain = !!slots.WEAPON && isTwoHandWeapon(slots.WEAPON.item);
     const input: BuildInput = {
       name: name.trim(),
       jobId,
@@ -199,6 +253,7 @@ export function BuildEditor({
       entries: BUILD_SLOTS.flatMap((slot) => {
         const s = slots[slot];
         if (!s) return [];
+        if (slot === "SHIELD" && twoHandMain) return [];
         const options = s.options
           .map((o, i) => ({ slotIndex: i + 1, defId: o.defId, value: o.value }))
           .filter((o) => o.defId !== "" && o.value !== "")
@@ -256,7 +311,7 @@ export function BuildEditor({
           </span>
           <select
             value={jobId ?? ""}
-            onChange={(e) => setJobId(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) => handleJobChange(e.target.value ? Number(e.target.value) : null)}
             className={inputClass}
           >
             <option value="">{t("chooseClass")}</option>
@@ -357,6 +412,7 @@ function BuildSlotRow({
   isChanging,
   onStartChange,
   onCancelChange,
+  dualWieldOffhand,
 }: {
   slot: BuildSlot;
   state: SlotState | undefined;
@@ -374,6 +430,8 @@ function BuildSlotRow({
   isChanging: boolean;
   onStartChange: () => void;
   onCancelChange: () => void;
+  // Off-hand con dual wield: el picker ofrece también armas de una mano.
+  dualWieldOffhand?: boolean;
 }) {
   const t = useTranslations("builds.form");
   const tSlot = useTranslations("builds.slots");
@@ -420,6 +478,7 @@ function BuildSlotRow({
           slotFilter={buildSlotToEquipSlot(slot)}
           positionFilter={BUILD_SLOT_POSITION[slot]}
           filterResult={pickerFilter}
+          dualWieldOffhand={dualWieldOffhand}
         />
       </div>
     );
@@ -453,6 +512,7 @@ function BuildSlotRow({
                 slotFilter={buildSlotToEquipSlot(slot)}
                 positionFilter={BUILD_SLOT_POSITION[slot]}
                 filterResult={pickerFilter}
+                dualWieldOffhand={dualWieldOffhand}
               />
             </div>
             <button
