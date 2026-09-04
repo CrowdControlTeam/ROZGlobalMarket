@@ -31,6 +31,54 @@ const jobs = TREES.filter((t) => t.plannable && t.jobId !== NOVICE_JOB).map((t) 
 const usedIds = new Set(noviceIds);
 jobs.forEach((j) => j.cells.forEach((c) => usedIds.add(c.id)));
 
+// Stats de combate/coste (dbStats del cliente), recortadas y normalizadas para
+// el DETALLE de la skill (no el tooltip). Campos ausentes se omiten; los
+// por-nivel se guardan como array (o escalar si no varían). Los tiempos van en
+// ms (el detalle los pasa a segundos).
+function normHits(hc) {
+  if (typeof hc === "number") return hc > 1 ? hc : undefined; // 1 golpe no aporta
+  if (Array.isArray(hc)) {
+    const arr = hc.map((x) => x.Count);
+    return arr.some((n) => n > 1) ? arr : undefined;
+  }
+  return undefined;
+}
+function buildStats(s) {
+  const d = s.dbStats;
+  if (!d) return undefined;
+  const st = {};
+  if (d.skillType) st.type = d.skillType; // Magic | Weapon | Misc
+  if (d.element && d.element !== "Weapon") st.element = d.element; // "Weapon" = elemento del arma
+  if (d.targetType) st.target = d.targetType; // Attack | Self | Ground | Support | Trap
+  if (typeof d.range === "number" && d.range > 0) st.range = d.range;
+  if (d.splashArea != null && !(Array.isArray(d.splashArea) && !d.splashArea.length)) st.splash = d.splashArea;
+  const hits = normHits(d.hitCount);
+  if (hits) st.hits = hits;
+  if (d.castTime != null && !(Array.isArray(d.castTime) && !d.castTime.length)) st.castVar = d.castTime;
+  if (typeof d.fixedCastTime === "number" && d.fixedCastTime > 0) st.castFixed = d.fixedCastTime;
+  if (typeof d.afterCastActDelay === "number" && d.afterCastActDelay > 0) st.afterCast = d.afterCastActDelay;
+  if (typeof d.cooldown === "number" && d.cooldown > 0) st.cooldown = d.cooldown;
+  const r = d.requires || {};
+  const cost = {};
+  if (r.hpCost != null) cost.hp = r.hpCost;
+  if (r.zenyCost != null) cost.zeny = r.zenyCost;
+  if (typeof r.spiritSphere === "number" && r.spiritSphere > 0) cost.spirit = r.spiritSphere;
+  if (r.ammo && typeof r.ammo === "object" && Object.keys(r.ammo).length) cost.ammo = true;
+  if (r.weapon && typeof r.weapon === "object") {
+    const w = Object.keys(r.weapon);
+    // Un conjunto pequeño = requisito real (p. ej. {Bow}); la lista casi completa
+    // significa "cualquier arma" → no se muestra.
+    if (w.length > 0 && w.length < 8) cost.weapon = w;
+  }
+  if (typeof r.state === "string") cost.state = r.state;
+  if (r.status && typeof r.status === "object" && Object.keys(r.status).length) cost.status = Object.keys(r.status);
+  if (Array.isArray(r.itemCost) && r.itemCost.length) {
+    cost.items = r.itemCost.map((x) => ({ name: String(x.Item).replace(/_/g, " "), amount: x.Amount }));
+  }
+  if (Object.keys(cost).length) st.cost = cost;
+  return Object.keys(st).length ? st : undefined;
+}
+
 const skills = {};
 for (const id of usedIds) {
   const s = skillById.get(id);
@@ -53,6 +101,7 @@ for (const id of usedIds) {
   // coste > 0 (las pasivas y las que no gastan SP se omiten). Se muestra en el
   // detalle de la skill (SkillModal), no en el tooltip de hover.
   const sp = Array.isArray(s.spCost) && s.spCost.some((n) => n > 0) ? s.spCost : undefined;
+  const stats = buildStats(s);
 
   skills[id] = {
     name: s.name,
@@ -65,6 +114,7 @@ for (const id of usedIds) {
     req,
     reqDefault,
     ...(sp ? { sp } : {}),
+    ...(stats ? { stats } : {}),
   };
 }
 

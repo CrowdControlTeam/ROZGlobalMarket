@@ -11,6 +11,31 @@ export type Job = {
   points: number;
   cells: Cell[];
 };
+// Stats de combate/coste para el detalle (ver scripts/prepare-skills.mjs).
+// Los por-nivel son array (o escalar si no varían); los tiempos van en ms.
+export type SkillStats = {
+  type?: string; // Magic | Weapon | Misc
+  element?: string; // Fire | Water | ... (ausente si usa el elemento del arma)
+  target?: string; // Attack | Self | Ground | Support | Trap
+  range?: number;
+  splash?: number | number[];
+  hits?: number | number[];
+  castVar?: number | number[]; // cast variable (ms)
+  castFixed?: number; // cast fijo (ms)
+  afterCast?: number; // delay tras cast (ms)
+  cooldown?: number; // ms
+  cost?: {
+    hp?: number | number[];
+    zeny?: number | number[];
+    spirit?: number; // esferas espirituales
+    ammo?: boolean;
+    weapon?: string[]; // tipos de arma requeridos (conjunto pequeño)
+    state?: string; // estado requerido (Riding, Cart, Hiding...)
+    status?: string[];
+    items?: { name: string; amount: number }[];
+  };
+};
+
 export type Skill = {
   name: string;
   max: number;
@@ -20,6 +45,7 @@ export type Skill = {
   req: Record<string, SkillReq[]>; // prereqs por jobId
   reqDefault: SkillReq[]; // fallback plano (requiredSkills)
   sp?: number[]; // consumo de SP por nivel (ausente si no gasta SP)
+  stats?: SkillStats; // combate/coste para el detalle
 };
 type SkillData = { jobs: Job[]; noviceCells: Cell[]; skills: Record<string, Skill> };
 
