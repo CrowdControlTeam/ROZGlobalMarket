@@ -159,4 +159,16 @@ runSeed(async () => {
     }));
   fs.writeFileSync("src/data/catalog-search.json", JSON.stringify(bundle));
   console.log(`Bundle comerciable: ${bundle.length} items → src/data/catalog-search.json`);
+
+  // Complete catalog shipped with the app: the FULL item record (every column,
+  // all items) loaded in memory so item display/validation never queries Postgres
+  // — items are static reference data, imported here, never mutated at runtime.
+  // See src/lib/item-store.ts. `updatedAt` is dropped (runtime-only, not needed).
+  const fullCatalog = rows.map((r) => {
+    const rest: Partial<ItemRow> = { ...r };
+    delete rest.updatedAt; // timestamp de runtime: fuera del bundle (diffs estables)
+    return rest;
+  });
+  fs.writeFileSync("src/data/item-catalog.json", JSON.stringify(fullCatalog));
+  console.log(`Catálogo completo: ${fullCatalog.length} items → src/data/item-catalog.json`);
 });
