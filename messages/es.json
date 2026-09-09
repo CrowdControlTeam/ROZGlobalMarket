@@ -261,8 +261,8 @@
         "heading": "Publicaciones por tipo y estado",
         "closed": "Cerrada"
       },
-      "tradeOffers": {
-        "heading": "Ofertas de intercambio por estado"
+      "offers": {
+        "heading": "Ofertas por estado"
       },
       "rankings": {
         "topPosters": "Quién más publica",

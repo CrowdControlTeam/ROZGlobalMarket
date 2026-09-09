@@ -261,8 +261,8 @@
         "heading": "Listings by type and status",
         "closed": "Closed"
       },
-      "tradeOffers": {
-        "heading": "Trade offers by status"
+      "offers": {
+        "heading": "Offers by status"
       },
       "rankings": {
         "topPosters": "Who posts the most",

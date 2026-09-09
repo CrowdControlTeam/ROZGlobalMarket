@@ -129,13 +129,13 @@ export default async function AdminStatsPage({
         </div>
       </Panel>
 
-      <Panel title={t("tradeOffers.heading")} className="mb-6">
+      <Panel title={t("offers.heading")} className="mb-6">
         <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
           {OFFER_STATUSES.map((status) => (
             <StatTile
               key={status}
               label={offerStatusLabel(tMarket, status)}
-              value={stats.totals.tradeOffersByStatus[status]}
+              value={stats.totals.offersByStatus[status]}
             />
           ))}
         </dl>
