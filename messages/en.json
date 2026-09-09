@@ -842,6 +842,7 @@
       "searchMarket": "Search the market",
       "searchAllMarket": "Search all in the market",
       "publishItem": "Publish on the market",
+      "skills": "Skills",
       "avail": {
         "SALE": "{n, plural, one {# sale} other {# sales}}",
         "BUY": "{n, plural, one {# buy order} other {# buy orders}}",
