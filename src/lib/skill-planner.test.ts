@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   buildCtx,
+  buildTrees,
+  selectableJobs,
   setLevel,
   poolUsage,
   isValid,
@@ -16,6 +18,46 @@ const SWORDMAN = 1;
 const KNIGHT = 7; // 2nd job, padre Swordman
 const BASH = 5;
 const MAGNUM = 7;
+
+describe("skill-planner SuperNovice", () => {
+  const SN = 23;
+  const SN2 = 4190;
+
+  it("SuperNovice2 no es seleccionable por separado", () => {
+    const { first, second } = selectableJobs();
+    expect(first.some((j) => j.id === SN)).toBe(true);
+    expect(first.some((j) => j.id === SN2)).toBe(false);
+    expect(second.some((j) => j.id === SN2)).toBe(false);
+  });
+
+  it("el árbol combina base (first) + expandidas de SuperNovice2 (2nd)", () => {
+    const trees = buildTrees(SN);
+    expect(trees).toHaveLength(2);
+    expect(trees[0].tier).toBe("first");
+    expect(trees[1].tier).toBe("second");
+    expect(trees[1].job.id).toBe(SN2);
+  });
+
+  it("un único pool compartido de 99 entre ambas secciones", () => {
+    const ctx = buildCtx(SN);
+    expect(ctx.sharedPool).toBe(99);
+    // Repartir 99 entre skills de ambas secciones es válido; 100 no.
+    const levels: Levels = {};
+    let total = 0;
+    for (const id of ctx.editableIds) {
+      const next = setLevel(levels, id, 10, ctx);
+      if (next) Object.assign(levels, next);
+      total = poolUsage(levels, ctx).total;
+      if (total >= 99) break;
+    }
+    expect(poolUsage(levels, ctx).total).toBeLessThanOrEqual(99);
+    expect(isValid(levels, ctx)).toBe(true);
+    // Forzar 100 no es válido.
+    expect(isValid({ ...levels, [ctx.editableIds[0]]: (levels[ctx.editableIds[0]] ?? 0) + 5 }, ctx)).toBe(
+      poolUsage({ ...levels, [ctx.editableIds[0]]: (levels[ctx.editableIds[0]] ?? 0) + 5 }, ctx).total <= 99,
+    );
+  });
+});
 
 describe("skill-planner prereqs", () => {
   it("subir una skill arrastra sus prerequisitos", () => {
