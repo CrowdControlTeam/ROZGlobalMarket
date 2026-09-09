@@ -36,6 +36,13 @@
       "when": 1788390358982,
       "tag": "0004_unlimited_no_expiry",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788947273589,
+      "tag": "0005_listing_denormalized_item",
+      "breakpoints": true
     }
   ]
 }

@@ -405,6 +405,12 @@ export async function createListing(formData: FormData) {
       .values({
         posterId: session.user.discordId,
         itemId: parsed.data.itemId,
+        // Campos de item desnormalizados para el grid (filtro/orden/paginación).
+        itemName: item.name,
+        itemCategory: item.category,
+        itemSlot: item.slot,
+        itemWeaponType: item.weaponType,
+        itemSlotCount: item.slotCount,
         type: parsed.data.type,
         quantity,
         price,
@@ -561,7 +567,21 @@ export async function updateListing(listingId: string, formData: FormData) {
     await tx.delete(listingCard).where(eq(listingCard.listingId, listingId));
     await tx
       .update(listing)
-      .set({ type, itemId: item.id, quantity, price, refineLevel, notes, expiresAt })
+      .set({
+        type,
+        itemId: item.id,
+        // Se re-sincronizan por si cambia el item de la publicación al editar.
+        itemName: item.name,
+        itemCategory: item.category,
+        itemSlot: item.slot,
+        itemWeaponType: item.weaponType,
+        itemSlotCount: item.slotCount,
+        quantity,
+        price,
+        refineLevel,
+        notes,
+        expiresAt,
+      })
       .where(eq(listing.id, listingId));
     if (rawOptions.length > 0) {
       await tx.insert(listingOption).values(

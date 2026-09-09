@@ -62,8 +62,22 @@ export const listing = pgTable("Listing", {
 	// updatedAt: Prisma filled this client-side (@updatedAt); the DB has no default
 	// or trigger, so Drizzle sets it on insert and update (same for the other tables
 	// with updatedAt).
+	// Denormalized item fields: the market grid filters, sorts and keyset-paginates
+	// by these in SQL. Items live in memory (see item-store), not the DB, so these
+	// are copied onto the listing at write time and refreshed by the item import if
+	// the item changes. Everything else about the item (icon, full record) is
+	// resolved from memory by itemId — these columns are ONLY what the grid queries.
+	// Defaults exist so ADD COLUMN is clean on existing rows; the app always sets
+	// real values on write (see createListing/updateListing).
+	itemName: text().default('').notNull(),
+	itemCategory: itemCategory().default('ETC').notNull(),
+	itemSlot: equipSlot(),
+	itemWeaponType: weaponType(),
+	itemSlotCount: integer().default(0).notNull(),
 }, (table) => [
 	index("Listing_price_idx").using("btree", table.price.asc().nullsLast().op("int4_ops")),
+	// Orden por nombre del grid (name_asc/desc) con paginación keyset por (itemName, id).
+	index("Listing_itemName_idx").using("btree", table.itemName.asc().nullsLast().op("text_ops")),
 	index("Listing_status_createdAt_idx").using("btree", table.status.asc().nullsLast().op("timestamp_ops"), table.createdAt.asc().nullsLast().op("timestamp_ops")),
 	// Sirve tanto al filtro del mercado (status='ACTIVE' AND expiresAt > now())
 	// como al barrido del cron (status='ACTIVE' AND expiresAt <= now()).

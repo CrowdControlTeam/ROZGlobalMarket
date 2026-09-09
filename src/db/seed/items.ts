@@ -16,7 +16,7 @@
 // (game-style card); copied to public/ from the extractor separately.
 
 import fs from "node:fs";
-import { count, eq, notInArray } from "drizzle-orm";
+import { count, eq, notInArray, sql } from "drizzle-orm";
 import { buildEntry, buildEntryCard, item, listing, type EquipSlot, type ItemCategory, type WeaponType } from "../schema";
 import { db, runSeed } from "./client";
 
@@ -128,6 +128,18 @@ runSeed(async () => {
 
   // 3) Delete the items that are gone (their references were already cleaned up).
   await db.delete(item).where(notInArray(item.id, validIds));
+
+  // 4) Re-sync the denormalized item fields copied onto each Listing (used by the
+  //    market grid to filter/sort/paginate in SQL) in case an item's data changed.
+  await db.execute(sql`
+    UPDATE "Listing" l SET
+      "itemName" = i."name",
+      "itemCategory" = i."category",
+      "itemSlot" = i."slot",
+      "itemWeaponType" = i."weaponType",
+      "itemSlotCount" = i."slotCount"
+    FROM "Item" i WHERE l."itemId" = i."id"
+  `);
 
   const [{ total } = { total: 0 }] = await db.select({ total: count() }).from(item);
   const [{ tradeable } = { tradeable: 0 }] = await db
