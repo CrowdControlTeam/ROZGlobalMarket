@@ -1,6 +1,7 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { deal, listing as listingTable } from "@/db/schema";
+import { getItem, getItemDisplay } from "@/lib/item-store";
 import { requireSession } from "@/lib/guard";
 import { getItemOptionGroup, loadMagicalWeaponTypes, isOptionsFeatureAvailable } from "@/lib/item-options";
 import { isImageRecognitionAvailable } from "@/lib/item-recognition";
@@ -28,12 +29,9 @@ export async function EditSlot({
   const listing = await db.query.listing.findFirst({
     where: eq(listingTable.id, listingId),
     with: {
-      item: true,
+      // El item y el de cada carta se resuelven en memoria (item-store) por id.
       options: { orderBy: (o) => asc(o.slotIndex) },
-      cards: {
-        with: { card: { columns: { id: true, name: true, iconUrl: true } } },
-        orderBy: (c) => asc(c.slotIndex),
-      },
+      cards: { orderBy: (c) => asc(c.slotIndex) },
     },
   });
 
@@ -58,15 +56,17 @@ export async function EditSlot({
   // Mismo shape que devuelve searchItems (CatalogItem + optionGroup derivado),
   // para que el ItemPicker/PublishForm lo traten igual que un item recién
   // elegido del buscador.
+  const catalogItem = getItem(listing.itemId);
+  if (!catalogItem) return null; // item fuera del catálogo actual
   const item: ItemResult = {
-    id: listing.item.id,
-    name: listing.item.name,
-    iconUrl: listing.item.iconUrl,
-    category: listing.item.category,
-    slot: listing.item.slot,
-    weaponType: listing.item.weaponType,
-    slotCount: listing.item.slotCount,
-    optionGroup: optionsAvailable ? getItemOptionGroup(listing.item, magicalTypes) : null,
+    id: catalogItem.id,
+    name: catalogItem.name,
+    iconUrl: catalogItem.iconUrl,
+    category: catalogItem.category,
+    slot: catalogItem.slot,
+    weaponType: catalogItem.weaponType,
+    slotCount: catalogItem.slotCount,
+    optionGroup: optionsAvailable ? getItemOptionGroup(catalogItem, magicalTypes) : null,
   };
 
   const editListing: EditListingData = {
@@ -80,7 +80,7 @@ export async function EditSlot({
     optionSelections: buildOptionSelectionsFromDetected(
       listing.options.map((o) => ({ slotIndex: o.slotIndex, defId: o.defId, value: o.value })),
     ),
-    cards: listing.cards.map((c) => ({ slotIndex: c.slotIndex, card: c.card })),
+    cards: listing.cards.map((c) => ({ slotIndex: c.slotIndex, card: getItemDisplay(c.cardItemId) })),
   };
 
   // Editar = mismo modal que crear: con escáner (si está disponible) e item

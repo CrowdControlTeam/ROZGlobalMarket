@@ -6,7 +6,6 @@ import { and, asc, count, desc, eq, inArray, sql, sum } from "drizzle-orm";
 import { db } from "@/db";
 import {
   deal,
-  item as itemTable,
   itemOptionDef,
   listing,
   listingOption,
@@ -14,8 +13,8 @@ import {
   user,
   ItemOptionGroup,
   type EquipSlot,
-  type Item,
 } from "@/db/schema";
+import { getItem, getItems, getItemDisplay, type FullItem } from "@/lib/item-store";
 import { itemFitsSlot, isOneHandWeapon, cardFitsEquipSlot } from "@/lib/item-slots";
 import { positionAllows, type HeadgearPosition } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
@@ -133,13 +132,9 @@ export async function getMyListings() {
     where: eq(listing.posterId, session.user.discordId),
     orderBy: desc(listing.createdAt),
     with: {
-      // select en item (no fila completa): la card solo usa nombre/icono/slots.
-      item: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
+      // El item y el de cada carta se resuelven en memoria (item-store) por id.
       options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
-      cards: {
-        with: { card: { columns: { id: true, name: true, iconUrl: true, slotCount: true } } },
-        orderBy: (c) => asc(c.slotIndex),
-      },
+      cards: { orderBy: (c) => asc(c.slotIndex) },
     },
   });
 
@@ -166,6 +161,8 @@ export async function getMyListings() {
   const liveSet = new Set(liveByListing.map((g) => g.listingId));
   return listings.map((l) => ({
     ...l,
+    item: getItemDisplay(l.itemId),
+    cards: l.cards.map((c) => ({ ...c, card: getItemDisplay(c.cardItemId) })),
     sold: soldMap.get(l.id) ?? 0,
     hasLiveDeals: liveSet.has(l.id),
   }));
@@ -180,8 +177,9 @@ export async function getMyPendingDeals() {
   const session = await requireSession();
   const me = session.user.discordId;
 
-  const itemCols = { id: true, name: true, iconUrl: true, slotCount: true } as const;
-  const [incoming, outgoing] = await Promise.all([
+  // El item del listing y el item ofrecido (offeredItemId) se resuelven en memoria
+  // (item-store) por id — los items no viven en la BD.
+  const [incomingRaw, outgoingRaw] = await Promise.all([
     // Entrantes: Deal PENDING sobre MIS listings. El filtro por `listing.posterId`
     // (relación) se hace con subconsulta de ids (Prisma lo hacía con `listing: { … }`).
     db.query.deal.findMany({
@@ -190,23 +188,20 @@ export async function getMyPendingDeals() {
         inArray(deal.listingId, db.select({ id: listing.id }).from(listing).where(eq(listing.posterId, me))),
       ),
       orderBy: asc(deal.createdAt),
-      with: {
-        listing: { with: { item: { columns: itemCols } } },
-        user: true,
-        offeredItem: { columns: itemCols },
-      },
+      with: { listing: true, user: true },
     }),
     db.query.deal.findMany({
       where: and(eq(deal.status, "PENDING"), eq(deal.userId, me)),
       orderBy: desc(deal.createdAt),
-      with: {
-        listing: { with: { item: { columns: itemCols }, poster: true } },
-        offeredItem: { columns: itemCols },
-      },
+      with: { listing: { with: { poster: true } } },
     }),
   ]);
-
-  return { incoming, outgoing };
+  const withDealItems = <D extends { offeredItemId: string | null; listing: { itemId: string } }>(d: D) => ({
+    ...d,
+    offeredItem: d.offeredItemId ? getItemDisplay(d.offeredItemId) : null,
+    listing: { ...d.listing, item: getItemDisplay(d.listing.itemId) },
+  });
+  return { incoming: incomingRaw.map(withDealItems), outgoing: outgoingRaw.map(withDealItems) };
 }
 
 // Devuelve el catálogo de options posibles de un grupo, ya ordenado por
@@ -244,7 +239,7 @@ export async function getAllOptionChoices() {
 async function parseListingFields(
   formData: FormData,
   type: "SALE" | "BUY" | "TRADE" | "GIFT",
-  item: Item,
+  item: FullItem,
   t: Awaited<ReturnType<typeof getTranslations>>,
 ) {
   // Precio: solo SALE/BUY. null = "sin precio" (competitivo, señal `noPrice`) o
@@ -326,7 +321,7 @@ async function parseListingFields(
 // categoría CARD y encajar en el slot de equipo del item (cardFitsEquipSlot).
 async function parseCardsFromFormData(
   formData: FormData,
-  item: Item,
+  item: FullItem,
   t: Awaited<ReturnType<typeof getTranslations>>,
 ): Promise<{ slotIndex: number; cardItemId: string; name: string }[]> {
   if (item.slotCount <= 0) return [];
@@ -338,11 +333,7 @@ async function parseCardsFromFormData(
   if (picked.length === 0) return [];
 
   const ids = [...new Set(picked.map((p) => p.cardItemId))];
-  const rows = await db
-    .select({ id: itemTable.id, name: itemTable.name, category: itemTable.category, cardSlot: itemTable.cardSlot })
-    .from(itemTable)
-    .where(inArray(itemTable.id, ids));
-  const byId = new Map(rows.map((r) => [r.id, r]));
+  const byId = getItems(ids); // cartas resueltas en memoria (item-store)
   return picked.map((p) => {
     const card = byId.get(p.cardItemId);
     if (!card || card.category !== "CARD") throw new Error(t("itemNotFound"));
@@ -379,7 +370,7 @@ export async function createListing(formData: FormData) {
     throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
   }
 
-  const [item] = await db.select().from(itemTable).where(eq(itemTable.id, parsed.data.itemId)).limit(1);
+  const item = getItem(parsed.data.itemId); // item resuelto en memoria (item-store)
   if (!item) throw new Error(t("itemNotFound"));
 
   // Regalo CON destinatario = entrega directa (ver más abajo). Sin destinatario,
@@ -537,7 +528,7 @@ export async function updateListing(listingId: string, formData: FormData) {
   // validan contra el item nuevo y el tipo nuevo).
   const itemId = ((formData.get("itemId") as string) || "").trim();
   if (!itemId) throw new Error(t("selectItem"));
-  const [item] = await db.select().from(itemTable).where(eq(itemTable.id, itemId)).limit(1);
+  const item = getItem(itemId); // item resuelto en memoria (item-store)
   if (!item) throw new Error(t("itemNotFound"));
 
   const { price, quantity, refineLevel, notes, rawOptions, cards } =
@@ -674,7 +665,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
     // stock del disponible. Ver el núcleo del rediseño en deals.ts.
     await tx.execute(sql`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`);
 
-    const row = await tx.query.listing.findFirst({ where: eq(listing.id, listingId), with: { item: true } });
+    const row = await tx.query.listing.findFirst({ where: eq(listing.id, listingId) });
     if (!row) throw new Error(t("listingNotFound"));
     if (row.posterId === session.user.discordId) {
       throw new Error(t("cannotBuyOwn"));
@@ -733,7 +724,7 @@ export async function reserveListing(listingId: string, formData: FormData) {
       unitPrice,
     });
 
-    return { listing: row, unitPrice };
+    return { listing: { ...row, item: getItemDisplay(row.itemId) }, unitPrice };
   });
 
   // Aviso al vendedor de que hay una reserva por confirmar (best-effort; el
@@ -771,14 +762,16 @@ async function loadOwnedPendingSaleDeal(
 ) {
   const dealRow = await db.query.deal.findFirst({
     where: eq(deal.id, dealId),
-    with: { listing: { with: { item: true } }, user: true },
+    with: { listing: true, user: true },
   });
   if (!dealRow) throw new Error(t("offerNotFound"));
   if (dealRow.status !== "PENDING") throw new Error(t("offerNotPending"));
   if (dealRow.listing.type !== "SALE") throw new Error(t("notDirectSale"));
   const ownerId = expectedOwner === "poster" ? dealRow.listing.posterId : dealRow.userId;
   if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
-  return dealRow;
+  // El item del listing se resuelve en memoria (item-store) y se adjunta para que
+  // los mensajes de Discord de abajo sigan usando dealRow.listing.item.
+  return { ...dealRow, listing: { ...dealRow.listing, item: getItemDisplay(dealRow.listing.itemId) } };
 }
 
 // El vendedor CONFIRMA una reserva: pasa a vendida (ACCEPTED); si con eso se
@@ -929,7 +922,7 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
 
   const { listing: listingRow, unitPrice } = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`);
-    const row = await tx.query.listing.findFirst({ where: eq(listing.id, listingId), with: { item: true } });
+    const row = await tx.query.listing.findFirst({ where: eq(listing.id, listingId) });
     if (!row) throw new Error(t("listingNotFound"));
     if (row.posterId === session.user.discordId) throw new Error(t("cannotOfferOwn"));
     if (row.status !== "ACTIVE") throw new Error(t("listingNotActive"));
@@ -977,7 +970,7 @@ export async function offerToFulfill(listingId: string, formData: FormData) {
       status: "PENDING",
       unitPrice,
     });
-    return { listing: row, unitPrice };
+    return { listing: { ...row, item: getItemDisplay(row.itemId) }, unitPrice };
   });
 
   // Aviso al comprador (poster) de que hay una oferta de venta por confirmar.
@@ -1011,7 +1004,7 @@ async function loadOwnedPendingBuyDeal(
 ) {
   const dealRow = await db.query.deal.findFirst({
     where: eq(deal.id, dealId),
-    with: { listing: { with: { item: true } }, user: true },
+    with: { listing: true, user: true },
   });
   if (!dealRow) throw new Error(t("offerNotFound"));
   if (dealRow.status !== "PENDING") throw new Error(t("offerNotPending"));
@@ -1019,7 +1012,9 @@ async function loadOwnedPendingBuyDeal(
   // El comprador es el poster; el vendedor es quien hizo la oferta (Deal.userId).
   const ownerId = expectedOwner === "buyer" ? dealRow.listing.posterId : dealRow.userId;
   if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
-  return dealRow;
+  // El item del listing se resuelve en memoria (item-store) y se adjunta para que
+  // los mensajes de Discord de abajo sigan usando dealRow.listing.item.
+  return { ...dealRow, listing: { ...dealRow.listing, item: getItemDisplay(dealRow.listing.itemId) } };
 }
 
 // El comprador CONFIRMA una oferta de venta: cuenta como cumplida; si se

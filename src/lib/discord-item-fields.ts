@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { item, itemOptionDef, listingCard, listingOption } from "@/db/schema";
+import { itemOptionDef, listingCard, listingOption } from "@/db/schema";
+import { getItemDisplay } from "@/lib/item-store";
 import { formatOptionAmount } from "@/lib/market-labels";
 
 type EmbedField = { name: string; value: string; inline: boolean };
@@ -38,19 +39,20 @@ export async function listingItemDetailFields(
   listingId: string,
   isBuy: boolean,
 ): Promise<EmbedField[]> {
-  const [options, cards] = await Promise.all([
+  const [options, cardLinks] = await Promise.all([
     db
       .select({ label: itemOptionDef.label, value: listingOption.value })
       .from(listingOption)
       .innerJoin(itemOptionDef, eq(listingOption.defId, itemOptionDef.id))
       .where(eq(listingOption.listingId, listingId))
       .orderBy(asc(listingOption.slotIndex)),
+    // Solo la relación; el nombre de cada carta se resuelve en memoria (item-store).
     db
-      .select({ name: item.name })
+      .select({ cardItemId: listingCard.cardItemId })
       .from(listingCard)
-      .innerJoin(item, eq(listingCard.cardItemId, item.id))
       .where(eq(listingCard.listingId, listingId))
       .orderBy(asc(listingCard.slotIndex)),
   ]);
+  const cards = cardLinks.map((c) => ({ name: getItemDisplay(c.cardItemId).name }));
   return itemDetailFields(tField, options, cards, isBuy);
 }

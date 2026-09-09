@@ -47,6 +47,17 @@ export function getItem(id: string): FullItem | undefined {
   return BY_ID.get(id);
 }
 
+// Proyección ligera para mostrar un item (icono + nombre + ranuras) — la forma
+// que devolvían los JOIN a Item en el mercado/detalle/builds. Devuelve un
+// fallback estable si el id no está en el catálogo (defensivo: no debería pasar).
+export type ItemDisplay = { id: string; name: string; iconUrl: string; slotCount: number };
+export function getItemDisplay(id: string): ItemDisplay {
+  const it = BY_ID.get(id);
+  return it
+    ? { id: it.id, name: it.name, iconUrl: it.iconUrl, slotCount: it.slotCount }
+    : { id, name: id, iconUrl: "", slotCount: 0 };
+}
+
 // Varios items por id, como Map (para resolver en bloque los items de una lista
 // de listings/entradas sin repetir búsquedas). Ignora ids desconocidos.
 export function getItems(ids: Iterable<string>): Map<string, FullItem> {
