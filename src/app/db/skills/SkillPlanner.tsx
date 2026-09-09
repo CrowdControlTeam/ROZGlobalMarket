@@ -138,8 +138,10 @@ export function SkillPlanner({
       ) : (
         <div className="flex flex-col gap-4">
           {trees.map((tree) => {
-            const used = tree.tier === "first" ? usage.pool1stUsed : usage.pool2ndUsed;
-            const total = tree.tier === "first" ? ctx.P1 : ctx.P2;
+            // SuperNovice: pool ÚNICO compartido → ambas secciones muestran el
+            // mismo gasto total sobre 99. El resto de jobs, pool por tier.
+            const used = ctx.sharedPool != null ? usage.total : tree.tier === "first" ? usage.pool1stUsed : usage.pool2ndUsed;
+            const total = ctx.sharedPool != null ? ctx.sharedPool : tree.tier === "first" ? ctx.P1 : ctx.P2;
             return (
             <div key={tree.job.id} className="rounded-lg border-2 border-ro-panel-border bg-ro-panel/50 p-4">
               <div className="mb-3 flex items-baseline gap-2">
