@@ -89,16 +89,15 @@ export async function getMarketStats(period: StatsPeriod = "7d") {
     posterIds.add(l.posterId);
   }
 
-  // Estados de las ofertas de intercambio (ahora Deal sobre listings TRADE).
-  const tradeOffersByStatus: Record<DealStatus, number> = {
+  // Estados de TODAS las ofertas (Deal): reservas/pujas de venta-compra, ofertas
+  // de intercambio y reclamaciones de regalo — cualquier tipo de listing.
+  const offersByStatus: Record<DealStatus, number> = {
     PENDING: 0,
     ACCEPTED: 0,
     REJECTED: 0,
     CANCELLED: 0,
   };
-  for (const d of deals) {
-    if (d.listing.type === "TRADE") tradeOffersByStatus[d.status]++;
-  }
+  for (const d of deals) offersByStatus[d.status]++;
 
   // --- Rankings ---
   const topPostersMap = new Map<string, UserTotal>();
@@ -154,7 +153,7 @@ export async function getMarketStats(period: StatsPeriod = "7d") {
     totals: {
       listingsByTypeStatus,
       zenyMoved,
-      tradeOffersByStatus,
+      offersByStatus,
       giftsSent,
       postersCount: posterIds.size,
       totalUsers,
