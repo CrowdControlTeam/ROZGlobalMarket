@@ -72,6 +72,7 @@ export default async function EditBuildPage({ params }: { params: Promise<{ id: 
     tags: buildRow.tags,
     notes: buildRow.notes,
     slots,
+    skillCode: buildRow.skillCode,
   };
 
   return (
