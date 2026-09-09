@@ -234,6 +234,10 @@ export const build = pgTable("Build", {
 	jobId: integer().notNull(),
 	tags: buildTag().array().default([]).notNull(),
 	notes: text(),
+	// Código exportado del skill planner (base64url; ver encodeBuild/decodeBuild).
+	// Opcional: null = la build no lleva plan de skills. Su jobId codificado debe
+	// coincidir con `jobId` (se valida al guardar).
+	skillCode: text(),
 	createdAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 }, (table) => [

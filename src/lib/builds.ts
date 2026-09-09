@@ -16,7 +16,7 @@ import { getItem, getItems } from "@/lib/item-store";
 import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { loadMaxRefineLevel } from "@/lib/refine";
-import { getJob } from "@/lib/skill-planner";
+import { getJob, decodeBuild } from "@/lib/skill-planner";
 import { isTwoHandWeapon } from "@/lib/item-slots";
 import { loadMagicalWeaponTypes, getItemOptionGroup, validateOptions } from "@/lib/item-options";
 import {
@@ -207,6 +207,8 @@ const buildInputSchema = z.object({
   tags: z.array(z.enum(BUILD_TAG_VALUES)),
   notes: z.string().max(MAX_BUILD_NOTES_LENGTH).nullish(),
   entries: z.array(entrySchema),
+  // Código exportado del skill planner (opcional). Se valida contra la clase.
+  skillCode: z.string().max(2048).nullish(),
 });
 
 export type BuildInput = z.infer<typeof buildInputSchema>;
@@ -221,6 +223,16 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
   const data = parsed.data;
 
   if (!getJob(data.jobId)) throw new Error(t("buildInvalidJob"));
+
+  // Código de skills (opcional): debe decodificar y ser de la MISMA clase que la
+  // build. Se guarda el código tal cual (compacto/versionado); el detalle lo
+  // decodifica para la preview.
+  let skillCode: string | null = null;
+  if (data.skillCode) {
+    const decoded = decodeBuild(data.skillCode);
+    if (!decoded || decoded.jobId !== data.jobId) throw new Error(t("buildInvalidSkillCode"));
+    skillCode = data.skillCode;
+  }
 
   const tags = Array.from(new Set(data.tags));
   if (tags.length === 0) throw new Error(t("buildNeedTag"));
@@ -291,7 +303,7 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
   }
 
   const notes = data.notes?.trim() || null;
-  return { name: data.name, jobId: data.jobId, tags, notes, entries };
+  return { name: data.name, jobId: data.jobId, tags, notes, entries, skillCode };
 }
 
 // Inserta las piezas de una build (una a una para enlazar options/cartas por id).
@@ -332,7 +344,7 @@ export async function createBuild(input: unknown) {
   const created = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(build)
-      .values({ ownerId: me, name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes })
+      .values({ ownerId: me, name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes, skillCode: data.skillCode })
       .returning();
     await insertEntries(tx, row.id, data.entries);
     return row;
@@ -355,7 +367,7 @@ export async function updateBuild(id: string, input: unknown) {
   await db.transaction(async (tx) => {
     await tx
       .update(build)
-      .set({ name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes })
+      .set({ name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes, skillCode: data.skillCode })
       .where(eq(build.id, id));
     // Piezas: se borran y se recrean (más simple que un diff; ≤10 piezas). Las
     // options/cartas caen en cascada al borrar las entries.
