@@ -5,7 +5,8 @@ import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { deal, item as itemTable, listing } from "@/db/schema";
+import { deal, listing } from "@/db/schema";
+import { getItem, getItemDisplay } from "@/lib/item-store";
 import { requireSession } from "@/lib/guard";
 import { listingCardState } from "@/lib/listing-card";
 import { loadMarketConfig } from "@/lib/market-config";
@@ -33,7 +34,6 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
 
   const listingRow = await db.query.listing.findFirst({
     where: eq(listing.id, listingId),
-    with: { item: true },
   });
   if (!listingRow) throw new Error(t("listingNotFound"));
   if (listingRow.type !== "TRADE") throw new Error(t("notTradeListing"));
@@ -57,7 +57,7 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
     throw new Error(parsed.error.issues[0]?.message ?? t("invalidData"));
   }
 
-  const [item] = await db.select().from(itemTable).where(eq(itemTable.id, parsed.data.itemId)).limit(1);
+  const item = getItem(parsed.data.itemId); // item ofrecido, resuelto en memoria
   if (!item) throw new Error(t("itemNotFound"));
 
   const refineEligible = isRefineEligible(item);
@@ -96,6 +96,7 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
   // Aviso al poster de que le han ofrecido un intercambio (coherente con
   // venta/compra/regalo, que también avisan al recibir la oferta). Best-effort.
   const appUrl = getAppUrl();
+  const listingItem = getItemDisplay(listingRow.itemId); // item del listing, en memoria
   const tDiscord = await getTranslations("discord");
   const tField = await getTranslations("market.field");
   const zenyField =
@@ -105,11 +106,11 @@ export async function createTradeOffer(listingId: string, formData: FormData) {
   await sendDirectMessage(listingRow.posterId, {
     title: tDiscord("dm.tradeOffered", {
       username: session.user.username,
-      item: formatItemDisplayName(listingRow.item.name, listingRow.refineLevel, listingRow.item.slotCount),
+      item: formatItemDisplayName(listingItem.name, listingRow.refineLevel, listingItem.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.TRADE,
-    itemIconUrl: `${appUrl}${listingRow.item.iconUrl}`,
+    itemIconUrl: `${appUrl}${listingItem.iconUrl}`,
     fields: [
       { name: tDiscord("fields.offeredItem"), value: formatItemDisplayName(item.name, refineLevel, item.slotCount), inline: true },
       ...zenyField,
@@ -132,7 +133,7 @@ async function loadOwnedPendingDeal(
 ) {
   const dealRow = await db.query.deal.findFirst({
     where: eq(deal.id, dealId),
-    with: { listing: { with: { item: true } }, offeredItem: true, user: true },
+    with: { listing: true, user: true },
   });
   if (!dealRow) throw new Error(t("offerNotFound"));
   if (dealRow.status !== "PENDING") throw new Error(t("offerNotPending"));
@@ -140,7 +141,13 @@ async function loadOwnedPendingDeal(
   const ownerId = expectedOwner === "poster" ? dealRow.listing.posterId : dealRow.userId;
   if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
 
-  return dealRow;
+  // El item del listing y el item ofrecido se resuelven en memoria (item-store)
+  // y se adjuntan para que los mensajes de Discord de abajo los sigan usando.
+  return {
+    ...dealRow,
+    listing: { ...dealRow.listing, item: getItemDisplay(dealRow.listing.itemId) },
+    offeredItem: dealRow.offeredItemId ? getItemDisplay(dealRow.offeredItemId) : null,
+  };
 }
 
 export async function acceptTradeOffer(dealId: string) {

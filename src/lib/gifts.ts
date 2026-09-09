@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql, sum } from "drizzle-orm";
 import { db } from "@/db";
 import { deal, listing, user } from "@/db/schema";
+import { getItemDisplay } from "@/lib/item-store";
 import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { sendDirectMessage } from "@/lib/discord-bot";
@@ -54,9 +55,7 @@ export async function getMyGifts() {
     ),
     orderBy: desc(listing.createdAt),
     with: {
-      // select en item (no fila completa): la UI de regalos solo usa nombre/
-      // icono/slots. poster/user (pequeños) se dejan completos.
-      item: { columns: { id: true, name: true, iconUrl: true, slotCount: true } },
+      // El item se resuelve en memoria (item-store); poster/user (pequeños) van completos.
       poster: true,
       options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
       deals: { with: { user: true } },
@@ -67,16 +66,17 @@ export async function getMyGifts() {
     .map((l) => {
       const recipientDeal = l.deals[0];
       if (!recipientDeal) return null;
+      const item = getItemDisplay(l.itemId);
       return {
         id: l.id,
         senderId: l.posterId,
         sender: l.poster,
         recipientId: recipientDeal.userId,
         recipient: recipientDeal.user,
-        item: l.item,
+        item,
         options: l.options,
         refineLevel: l.refineLevel,
-        cardSlots: l.item.slotCount,
+        cardSlots: item.slotCount,
         // Un GIFT siempre tiene tope (nunca es "ilimitado"), pero Listing.quantity
         // es nullable a nivel de esquema; el ?? 1 es solo para el tipo.
         quantity: l.quantity ?? 1,
@@ -108,7 +108,7 @@ export async function claimGift(listingId: string, formData: FormData) {
 
   const giftListing = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM "Listing" WHERE id = ${listingId} FOR UPDATE`);
-    const row = await tx.query.listing.findFirst({ where: eq(listing.id, listingId), with: { item: true } });
+    const row = await tx.query.listing.findFirst({ where: eq(listing.id, listingId) });
     if (!row) throw new Error(t("listingNotFound"));
     if (row.posterId === session.user.discordId) throw new Error(t("cannotClaimOwn"));
     if (row.status !== "ACTIVE") throw new Error(t("listingNotActive"));
@@ -137,14 +137,15 @@ export async function claimGift(listingId: string, formData: FormData) {
   });
 
   const appUrl = getAppUrl();
+  const giftItem = getItemDisplay(giftListing.itemId);
   await sendDirectMessage(giftListing.posterId, {
     title: tDiscord("dm.giftClaimRequested", {
       username: session.user.username,
-      item: formatItemDisplayName(giftListing.item.name, giftListing.refineLevel, giftListing.item.slotCount),
+      item: formatItemDisplayName(giftItem.name, giftListing.refineLevel, giftItem.slotCount),
     }),
     url: `${appUrl}/market/${listingId}`,
     color: DISCORD_EMBED_COLOR.GIFT,
-    itemIconUrl: `${appUrl}${giftListing.item.iconUrl}`,
+    itemIconUrl: `${appUrl}${giftItem.iconUrl}`,
     fields: [
       { name: tField("quantity"), value: String(quantity), inline: true },
       ...(await listingItemDetailFields(tField, listingId, false)),
@@ -165,14 +166,16 @@ async function loadOwnedPendingGiftDeal(
 ) {
   const dealRow = await db.query.deal.findFirst({
     where: eq(deal.id, dealId),
-    with: { listing: { with: { item: true } }, user: true },
+    with: { listing: true, user: true },
   });
   if (!dealRow) throw new Error(t("offerNotFound"));
   if (dealRow.status !== "PENDING") throw new Error(t("offerNotPending"));
   if (dealRow.listing.type !== "GIFT") throw new Error(t("notClaimableGift"));
   const ownerId = expectedOwner === "giver" ? dealRow.listing.posterId : dealRow.userId;
   if (ownerId !== discordId) throw new Error(t("noPermissionOffer"));
-  return dealRow;
+  // El item del listing se resuelve en memoria (item-store) y se adjunta para
+  // que los mensajes de Discord de abajo sigan usando dealRow.listing.item.
+  return { ...dealRow, listing: { ...dealRow.listing, item: getItemDisplay(dealRow.listing.itemId) } };
 }
 
 // El que regala CONFIRMA una reclamación: cuenta como entregada; si se agota la

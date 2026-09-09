@@ -9,10 +9,10 @@ import {
   buildEntry,
   buildEntryOption,
   buildEntryCard,
-  item as itemTable,
   listing,
 } from "@/db/schema";
-import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES, ItemCategory, type ListingType } from "@/db/enums";
+import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES, ItemCategory, type EquipSlot, type ListingType, type WeaponType } from "@/db/enums";
+import { getItem, getItems } from "@/lib/item-store";
 import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { loadMaxRefineLevel } from "@/lib/refine";
@@ -30,20 +30,33 @@ import {
 } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
 
-const itemCols = { id: true, name: true, iconUrl: true, slotCount: true, position: true } as const;
 const ownerCols = { id: true, username: true } as const;
+
+// El item de una pieza de build (y de sus cartas) se resuelve en memoria
+// (item-store) por id — los items no viven en la BD. Se proyecta a lo que usa la
+// vista (sin description[], que no se manda al cliente).
+type BuildPieceItem = { id: string; name: string; iconUrl: string; slotCount: number; position: string | null };
+function pieceItem(id: string): BuildPieceItem {
+  const it = getItem(id);
+  return { id, name: it?.name ?? id, iconUrl: it?.iconUrl ?? "", slotCount: it?.slotCount ?? 0, position: it?.position ?? null };
+}
+// Para editar, el editor recomputa el grupo de options y valida slots, así que
+// además necesita category/slot/weaponType.
+type EditPieceItem = BuildPieceItem & { category: ItemCategory; slot: EquipSlot | null; weaponType: WeaponType | null };
+function editPieceItem(id: string): EditPieceItem {
+  const it = getItem(id);
+  return { ...pieceItem(id), category: it?.category ?? ItemCategory.ETC, slot: it?.slot ?? null, weaponType: it?.weaponType ?? null };
+}
 
 // TODAS las builds (de todos los usuarios) para la página de la comunidad, con
 // dueño y piezas (solo el item; options/cartas no hacen falta en el listado).
 export async function listBuilds() {
   await requireSession();
-  return db.query.build.findMany({
+  const rows = await db.query.build.findMany({
     orderBy: desc(build.updatedAt),
-    with: {
-      owner: { columns: ownerCols },
-      entries: { with: { item: { columns: itemCols } } },
-    },
+    with: { owner: { columns: ownerCols }, entries: true },
   });
+  return rows.map((b) => ({ ...b, entries: b.entries.map((e) => ({ ...e, item: pieceItem(e.itemId) })) }));
 }
 
 // TODAS las builds con el detalle completo (item + options + cartas), para el
@@ -51,40 +64,53 @@ export async function listBuilds() {
 // otra ida al servidor. Misma forma de pieza que getBuild.
 export async function listBuildsDetailed() {
   await requireSession();
-  return db.query.build.findMany({
+  const rows = await db.query.build.findMany({
     orderBy: desc(build.updatedAt),
     with: {
       owner: { columns: ownerCols },
       entries: {
         with: {
-          item: { columns: itemCols },
           options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
-          cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
+          cards: { orderBy: (c) => asc(c.slotIndex) },
         },
       },
     },
   });
+  return rows.map((b) => ({
+    ...b,
+    entries: b.entries.map((e) => ({
+      ...e,
+      item: pieceItem(e.itemId),
+      cards: e.cards.map((c) => ({ ...c, card: pieceItem(c.cardItemId) })),
+    })),
+  }));
 }
 
 // Una build concreta para el DETALLE — visible para cualquiera (logueado). Las
 // piezas traen item + options (con su def) + cartas (con el item de la carta).
 export async function getBuild(id: string) {
   await requireSession();
-  return (
-    (await db.query.build.findFirst({
-      where: eq(build.id, id),
-      with: {
-        owner: { columns: ownerCols },
-        entries: {
-          with: {
-            item: { columns: itemCols },
-            options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
-            cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
-          },
+  const row = await db.query.build.findFirst({
+    where: eq(build.id, id),
+    with: {
+      owner: { columns: ownerCols },
+      entries: {
+        with: {
+          options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+          cards: { orderBy: (c) => asc(c.slotIndex) },
         },
       },
-    })) ?? null
-  );
+    },
+  });
+  if (!row) return null;
+  return {
+    ...row,
+    entries: row.entries.map((e) => ({
+      ...e,
+      item: pieceItem(e.itemId),
+      cards: e.cards.map((c) => ({ ...c, card: pieceItem(c.cardItemId) })),
+    })),
+  };
 }
 
 // Una build concreta para EDITAR — solo del propietario (null si no lo es). El
@@ -97,18 +123,23 @@ export async function getMyBuild(id: string) {
     with: {
       entries: {
         with: {
-          item: {
-            columns: { id: true, name: true, iconUrl: true, slotCount: true, category: true, slot: true, weaponType: true, position: true },
-          },
           options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
-          cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
+          cards: { orderBy: (c) => asc(c.slotIndex) },
         },
       },
     },
   });
   if (!row) return null;
   if (row.ownerId !== session.user.discordId) return null;
-  return row;
+  // El item de la pieza trae además category/slot/weaponType para el editor.
+  return {
+    ...row,
+    entries: row.entries.map((e) => ({
+      ...e,
+      item: editPieceItem(e.itemId),
+      cards: e.cards.map((c) => ({ ...c, card: pieceItem(c.cardItemId) })),
+    })),
+  };
 }
 
 // Disponibilidad en el mercado de los items de una build: nº de publicaciones
@@ -206,18 +237,8 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
     const itemIds = [...new Set(entries.map((e) => e.itemId))];
     const cardIds = [...new Set(entries.flatMap((e) => e.cards.map((c) => c.cardItemId)))];
     const allIds = [...new Set([...itemIds, ...cardIds])];
-    const rows = await db
-      .select({
-        id: itemTable.id,
-        category: itemTable.category,
-        slot: itemTable.slot,
-        weaponType: itemTable.weaponType,
-        slotCount: itemTable.slotCount,
-        position: itemTable.position,
-      })
-      .from(itemTable)
-      .where(inArray(itemTable.id, allIds));
-    const byId = new Map(rows.map((r) => [r.id, r]));
+    // Items/cartas resueltos en memoria (item-store), no desde la BD.
+    const byId = getItems(allIds);
 
     for (const e of entries) {
       const it = byId.get(e.itemId);

@@ -151,27 +151,6 @@ runSeed(async () => {
     `Cambios: ${createdCount} nuevos | ${matchedCount} existentes re-sincronizados | ${deletedCount} borrados`,
   );
 
-  // Search bundle shipped with the app (TRADEABLE only): used by the publish
-  // autocomplete and the image-recognition match (by name + slotCount). See
-  // src/lib/item-catalog.ts.
-  const bundle = rows
-    .filter((r) => r.tradeable)
-    .map((r) => ({
-      id: r.id,
-      // The name carries the slot suffix ("Coat[1]") to tell apart, in the search,
-      // the with/without-slots variants of the same item.
-      name: (r.slotCount ?? 0) > 0 ? `${r.name}[${r.slotCount}]` : r.name,
-      iconUrl: r.iconUrl,
-      category: r.category,
-      slot: r.slot,
-      weaponType: r.weaponType,
-      slotCount: r.slotCount,
-      position: r.position ?? null,
-      cardSlot: r.cardSlot ?? null,
-    }));
-  fs.writeFileSync("src/data/catalog-search.json", JSON.stringify(bundle));
-  console.log(`Bundle comerciable: ${bundle.length} items → src/data/catalog-search.json`);
-
   // Complete catalog shipped with the app: the FULL item record (every column,
   // all items) loaded in memory so item display/validation never queries Postgres
   // — items are static reference data, imported here, never mutated at runtime.
