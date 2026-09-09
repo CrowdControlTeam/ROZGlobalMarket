@@ -27,6 +27,7 @@ import {
 } from "@/lib/build-constants";
 import { createBuild, updateBuild, deleteBuild, type BuildInput } from "@/lib/builds";
 import { decodeBuild } from "@/lib/skill-planner";
+import { SkillPlannerModal } from "@/app/db/skills/SkillPlannerModal";
 import { getErrorMessage } from "@/lib/errors";
 import { buttonClass, inputClass, inputBaseClass, selectClass } from "@/lib/ui";
 
@@ -109,6 +110,7 @@ export function BuildEditor({
   const [skillCode, setSkillCode] = useState<string | null>(initial?.skillCode ?? null);
   const [skillInput, setSkillInput] = useState(initial?.skillCode ?? "");
   const [skillErr, setSkillErr] = useState<string | null>(null);
+  const [skillModalOpen, setSkillModalOpen] = useState(false);
   // Slot cuyo item se está cambiando (buscador abierto). Se eleva aquí —no en la
   // fila— para que la ocupación de tocados lo trate como "libre" mientras se
   // cambia (así un tocado multi-slot desbloquea sus otras ranuras), y vuelva a
@@ -414,6 +416,32 @@ export function BuildEditor({
           <p className="text-xs text-ro-text-muted">{t("skillsHint")}</p>
         ) : (
           <>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSkillModalOpen(true)}
+                className={buttonClass("outline")}
+              >
+                {skillCode ? t("skillsEdit") : t("skillsConfigure")}
+              </button>
+              {skillCode && (
+                <>
+                  <span className="text-xs text-ro-text-muted">{t("skillCodeSummary", { n: skillCount })}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSkillCode(null);
+                      setSkillInput("");
+                      setSkillErr(null);
+                    }}
+                    className="text-xs text-ro-text-muted hover:text-ro-text"
+                  >
+                    {t("skillsClear")}
+                  </button>
+                </>
+              )}
+            </div>
+            {/* Alternativa: pegar un código exportado directamente. */}
             <input
               type="text"
               value={skillInput}
@@ -421,14 +449,23 @@ export function BuildEditor({
               placeholder={t("skillCodePlaceholder")}
               className={`${inputClass} font-mono text-xs`}
             />
-            {skillErr ? (
-              <p className="text-xs text-ro-red">{skillErr}</p>
-            ) : skillCode ? (
-              <p className="text-xs text-ro-text-muted">{t("skillCodeSummary", { n: skillCount })}</p>
-            ) : null}
+            {skillErr && <p className="text-xs text-ro-red">{skillErr}</p>}
           </>
         )}
       </div>
+
+      {skillModalOpen && jobId != null && (
+        <SkillPlannerModal
+          jobId={jobId}
+          initialCode={skillCode}
+          onSave={(code) => {
+            setSkillCode(code);
+            setSkillInput(code ?? "");
+            setSkillErr(null);
+          }}
+          onClose={() => setSkillModalOpen(false)}
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         <span className="text-sm font-semibold text-ro-text">{t("slotsLabel")}</span>
