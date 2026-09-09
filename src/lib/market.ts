@@ -21,7 +21,6 @@ import {
 import { db } from "@/db";
 import {
   deal,
-  item,
   itemOptionDef,
   listing,
   listingOption,
@@ -32,6 +31,7 @@ import {
   type WeaponType,
   type ListingType,
 } from "@/db/schema";
+import { getItem, getItems } from "@/lib/item-store";
 
 // Labels vía sortLabel(t, sort) en market-labels.ts (messages/es.json,
 // namespace market.sort.*) — este array solo fija el orden y los valores
@@ -133,9 +133,9 @@ function orderByFor(sort: MarketSort): SQL[] {
     case "price_desc":
       return [desc(listing.price), asc(listing.id)];
     case "name_asc":
-      return [asc(item.name), asc(listing.id)];
+      return [asc(listing.itemName), asc(listing.id)];
     case "name_desc":
-      return [desc(item.name), asc(listing.id)];
+      return [desc(listing.itemName), asc(listing.id)];
     case "newest":
     default:
       return [desc(listing.createdAt), asc(listing.id)];
@@ -170,13 +170,13 @@ function cursorWhereFor(sort: MarketSort, cursor: Cursor | null): SQL | undefine
       );
     case "name_asc":
       return or(
-        gt(item.name, cursor.name),
-        and(eq(item.name, cursor.name), gt(listing.id, cursor.id)),
+        gt(listing.itemName, cursor.name),
+        and(eq(listing.itemName, cursor.name), gt(listing.id, cursor.id)),
       );
     case "name_desc":
       return or(
-        lt(item.name, cursor.name),
-        and(eq(item.name, cursor.name), gt(listing.id, cursor.id)),
+        lt(listing.itemName, cursor.name),
+        and(eq(listing.itemName, cursor.name), gt(listing.id, cursor.id)),
       );
     case "newest":
     default:
@@ -263,13 +263,13 @@ export async function getListings(filters: MarketFilters) {
   if (isPriceSort) baseConditions.push(isNotNull(listing.price));
   if (filters.refineMin !== undefined) baseConditions.push(gte(listing.refineLevel, filters.refineMin));
   if (filters.refineMax !== undefined) baseConditions.push(lte(listing.refineLevel, filters.refineMax));
-  if (filters.q) baseConditions.push(ilike(item.name, `%${filters.q}%`));
-  if (hasCategory) baseConditions.push(inArray(item.category, filters.category!));
-  if (needsSlotFilter) baseConditions.push(inArray(item.slot, filters.slot!));
-  if (needsWeaponTypeFilter) baseConditions.push(inArray(item.weaponType, filters.weaponType!));
-  // Las ranuras son del item (Item.slotCount), no del listing.
-  if (filters.cardSlotsMin !== undefined) baseConditions.push(gte(item.slotCount, filters.cardSlotsMin));
-  if (filters.cardSlotsMax !== undefined) baseConditions.push(lte(item.slotCount, filters.cardSlotsMax));
+  if (filters.q) baseConditions.push(ilike(listing.itemName, `%${filters.q}%`));
+  if (hasCategory) baseConditions.push(inArray(listing.itemCategory, filters.category!));
+  if (needsSlotFilter) baseConditions.push(inArray(listing.itemSlot, filters.slot!));
+  if (needsWeaponTypeFilter) baseConditions.push(inArray(listing.itemWeaponType, filters.weaponType!));
+  // Las ranuras son del item (desnormalizadas en el listing como itemSlotCount).
+  if (filters.cardSlotsMin !== undefined) baseConditions.push(gte(listing.itemSlotCount, filters.cardSlotsMin));
+  if (filters.cardSlotsMax !== undefined) baseConditions.push(lte(listing.itemSlotCount, filters.cardSlotsMax));
   baseConditions.push(...optionConditions);
 
   // El listado pagina por cursor; el total (para "X de Y") cuenta lo mismo
@@ -278,9 +278,9 @@ export async function getListings(filters: MarketFilters) {
   const listWhere = and(...baseConditions, ...(cursorCondition ? [cursorCondition] : []));
   const countWhere = and(...baseConditions);
 
-  // `select` acotado (no fila completa de Item con description[] y restrictions
-  // JSON): la card del grid solo usa estos campos — el mayor ahorro de egress. El
-  // tooltip completo se pide aparte al hacer click (fetchDbItemDetail).
+  // Los items ya no viven en la BD: nombre/categoría/slots del item van
+  // desnormalizados en el propio Listing (para filtrar/ordenar/paginar en SQL) y
+  // el icono se resuelve en memoria por itemId (ver item-store). Sin JOIN a Item.
   const [rows, totalResult] = await Promise.all([
     db
       .select({
@@ -292,15 +292,13 @@ export async function getListings(filters: MarketFilters) {
         notes: listing.notes,
         createdAt: listing.createdAt, // para el cursor de paginación
         expiresAt: listing.expiresAt, // para el indicador de caducidad (reloj)
-        itemId: item.id,
-        itemName: item.name,
-        itemIconUrl: item.iconUrl,
-        itemSlotCount: item.slotCount,
+        itemId: listing.itemId,
+        itemName: listing.itemName,
+        itemSlotCount: listing.itemSlotCount,
         posterId: user.id,
         posterUsername: user.username,
       })
       .from(listing)
-      .innerJoin(item, eq(listing.itemId, item.id))
       .innerJoin(user, eq(listing.posterId, user.id))
       .where(listWhere)
       .orderBy(...orderByFor(filters.sort))
@@ -312,7 +310,6 @@ export async function getListings(filters: MarketFilters) {
       : db
           .select({ value: count() })
           .from(listing)
-          .innerJoin(item, eq(listing.itemId, item.id))
           .where(countWhere)
           .then((r) => r[0]?.value ?? 0),
   ]);
@@ -345,28 +342,30 @@ export async function getListings(filters: MarketFilters) {
     optionsByListing.set(o.listingId, list);
   }
 
-  // Cartas de la página, misma técnica que las options: una consulta con JOIN al
-  // item de la carta, agrupadas por listing en la forma { slotIndex, card }.
+  // Cartas de la página: solo la relación (listingId, slotIndex, cardItemId) sale
+  // de la BD; el nombre/icono de cada carta se resuelve en memoria (item-store).
   type CardRow = { slotIndex: number; card: { id: string; name: string; iconUrl: string } };
-  const cardRows =
+  const cardLinks =
     pageIds.length > 0
       ? await db
           .select({
             listingId: listingCard.listingId,
             slotIndex: listingCard.slotIndex,
-            cardId: item.id,
-            cardName: item.name,
-            cardIconUrl: item.iconUrl,
+            cardItemId: listingCard.cardItemId,
           })
           .from(listingCard)
-          .innerJoin(item, eq(listingCard.cardItemId, item.id))
           .where(inArray(listingCard.listingId, pageIds))
           .orderBy(asc(listingCard.slotIndex))
       : [];
+  const cardItems = getItems(cardLinks.map((c) => c.cardItemId));
   const cardsByListing = new Map<string, CardRow[]>();
-  for (const c of cardRows) {
+  for (const c of cardLinks) {
+    const ci = cardItems.get(c.cardItemId);
     const list = cardsByListing.get(c.listingId) ?? [];
-    list.push({ slotIndex: c.slotIndex, card: { id: c.cardId, name: c.cardName, iconUrl: c.cardIconUrl } });
+    list.push({
+      slotIndex: c.slotIndex,
+      card: { id: c.cardItemId, name: ci?.name ?? c.cardItemId, iconUrl: ci?.iconUrl ?? "" },
+    });
     cardsByListing.set(c.listingId, list);
   }
 
@@ -380,7 +379,7 @@ export async function getListings(filters: MarketFilters) {
     notes: l.notes,
     createdAt: l.createdAt,
     expiresAt: l.expiresAt,
-    item: { id: l.itemId, name: l.itemName, iconUrl: l.itemIconUrl, slotCount: l.itemSlotCount },
+    item: { id: l.itemId, name: l.itemName, iconUrl: getItem(l.itemId)?.iconUrl ?? "", slotCount: l.itemSlotCount },
     poster: { id: l.posterId, username: l.posterUsername },
     options: optionsByListing.get(l.id) ?? [],
     cards: cardsByListing.get(l.id) ?? [],
