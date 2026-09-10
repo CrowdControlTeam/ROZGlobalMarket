@@ -86,7 +86,8 @@
       "label": "Secciones",
       "market": "Mercado",
       "builds": "Builds",
-      "db": "DB"
+      "db": "DB",
+      "expand": "Mostrar pestañas de {section}"
     },
     "account": {
       "title": "Tu cuenta",

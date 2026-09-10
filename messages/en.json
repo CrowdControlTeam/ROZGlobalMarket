@@ -86,7 +86,8 @@
       "label": "Sections",
       "market": "Market",
       "builds": "Builds",
-      "db": "DB"
+      "db": "DB",
+      "expand": "Show {section} tabs"
     },
     "account": {
       "title": "Your account",
