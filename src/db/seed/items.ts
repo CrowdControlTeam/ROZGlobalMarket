@@ -131,6 +131,15 @@ runSeed(async () => {
   const tradeableCount = rows.filter((r) => r.tradeable).length;
   console.log(`Items en el catálogo: ${rows.length} | comerciables: ${tradeableCount}`);
 
+  // Solo regenerar el bundle (sin tocar la BD): útil para actualizar
+  // item-catalog.json sin una BD levantada (p. ej. tras una re-extracción).
+  // Uso: BUNDLE_ONLY=1 npm run import:items
+  if (process.env.BUNDLE_ONLY) {
+    fs.writeFileSync("src/data/item-catalog.json", JSON.stringify(rows));
+    console.log(`Catálogo completo (bundle only): ${rows.length} items → src/data/item-catalog.json`);
+    return;
+  }
+
   // 1) Limpieza de referencias a items que ya no están en el catálogo (antes lo
   //    hacían las FKs: required/restrict borra, Deal.offeredItemId opcional → null).
   const [delListings, delCards, delEntries] = await Promise.all([
