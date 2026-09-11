@@ -16,6 +16,7 @@
         "gear": { "term": "Sum_GearVCTReduc", "desc": "Sum of Variable Cast Time reductions from gear and cards (e.g. Ghost Fire, Kathryne Keyron Card, Isilla Card)." },
         "skill": { "term": "Sum_SkillVCTReduc", "desc": "Sum of Variable Cast Time reductions from skills and buffs (e.g. Magic Strings, Suffragium, 16th Night) and some items that reduce specific skills' VCT (Imp Card, Siroma Card, Cylinder Hairband, Autumn Headband)." }
       },
+      "help": "Help",
       "reset": {
         "section": "Reset section",
         "all": "Reset all"

@@ -130,28 +130,18 @@ export function VctCalculator() {
       <section className="mb-6 rounded-lg border border-ro-panel-border bg-ro-panel/50 p-4">
         <div className="flex items-center gap-1.5">
           <h2 className="font-heading text-sm text-ro-text">{t("formula.title")}</h2>
-          <button
-            type="button"
-            aria-label={t("formula.legend")}
-            className="group relative inline-flex text-ro-text-muted transition-colors hover:text-ro-text focus:text-ro-text focus:outline-none"
-          >
-            <HelpCircle size={15} aria-hidden />
-            <span
-              role="tooltip"
-              className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-80 max-w-[85vw] rounded-md border border-ro-panel-border bg-ro-panel p-3 text-left text-xs font-normal shadow-lg group-hover:block group-focus-within:block"
-            >
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-ro-text-muted">
-                {t("formula.legend")}
-              </span>
-              {(["baseVct", "flat", "gear", "skill"] as const).map((k) => (
-                <span key={k} className="mt-1.5 block text-ro-text-muted first:mt-0">
-                  <span className="font-semibold text-ro-text">{t(`legend.${k}.term`)}</span>
-                  {" — "}
-                  {t(`legend.${k}.desc`)}
-                </span>
-              ))}
+          <HelpTip label={t("formula.legend")}>
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-ro-text-muted">
+              {t("formula.legend")}
             </span>
-          </button>
+            {(["baseVct", "flat", "gear", "skill"] as const).map((k) => (
+              <span key={k} className="mt-1.5 block text-ro-text-muted first:mt-0">
+                <span className="font-semibold text-ro-text">{t(`legend.${k}.term`)}</span>
+                {" — "}
+                {t(`legend.${k}.desc`)}
+              </span>
+            ))}
+          </HelpTip>
         </div>
         <div className="mt-2 overflow-x-auto">
           <code className="block whitespace-nowrap text-sm text-ro-text">{FORMULA}</code>
@@ -161,9 +151,16 @@ export function VctCalculator() {
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
         {/* Secciones (inputs) */}
         <div className="flex flex-col gap-4">
-          {/* 1) Skill y cast base */}
-          <Section title={t("section.base.title")} onReset={resetBase} resetLabel={t("reset.section")}>
-            <div className="grid gap-3 sm:grid-cols-3">
+          {/* 1) Skill y cast base — compacta: controles en una fila y la
+              explicación tras un "?" en la cabecera. */}
+          <Section
+            title={t("section.base.title")}
+            help={t("section.base.hint")}
+            helpLabel={t("help")}
+            onReset={resetBase}
+            resetLabel={t("reset.section")}
+          >
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className={labelClass}>{t("field.job")}</label>
                 <select
@@ -219,38 +216,35 @@ export function VctCalculator() {
                   ))}
                 </select>
               </div>
-            </div>
-
-            <div className="mt-3 max-w-[12rem]">
-              <label className={labelClass}>{t("field.sumFlat")}</label>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={sumFlat}
-                  onChange={(e) => setSumFlat(e.target.value)}
-                  placeholder="0"
-                  disabled={!hasSkill}
-                  className={`w-24 text-right ${inputBaseClass} disabled:opacity-40`}
-                />
-                <span className="text-sm text-ro-text-muted">s</span>
+              <div>
+                <label className={labelClass}>{t("field.sumFlat")}</label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={sumFlat}
+                    onChange={(e) => setSumFlat(e.target.value)}
+                    placeholder="0"
+                    disabled={!hasSkill}
+                    className={`w-full text-right ${inputBaseClass} disabled:opacity-40`}
+                  />
+                  <span className="text-sm text-ro-text-muted">s</span>
+                </div>
               </div>
             </div>
 
-            <div className="mt-3 border-t border-ro-panel-border pt-3 text-sm">
-              {hasSkill ? (
-                <div className="flex flex-wrap gap-x-6 gap-y-1">
-                  <ResultLine label={t("field.baseVct")} value={`${r3(baseVctSec ?? 0)} s`} />
-                  <ResultLine
-                    label={t("field.reducedBase")}
-                    value={`${r3(result.base.reducedBaseSec ?? 0)} s`}
-                    strong
-                  />
-                </div>
-              ) : (
-                <p className="text-ro-text-muted">{t("section.base.hint")}</p>
-              )}
-            </div>
+            {/* Resultado base: solo cuando hay skill (sin skill, el "?" explica
+                que el cálculo es solo en %). */}
+            {hasSkill && (
+              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 border-t border-ro-panel-border pt-3 text-sm">
+                <ResultLine label={t("field.baseVct")} value={`${r3(baseVctSec ?? 0)} s`} />
+                <ResultLine
+                  label={t("field.reducedBase")}
+                  value={`${r3(result.base.reducedBaseSec ?? 0)} s`}
+                  strong
+                />
+              </div>
+            )}
           </Section>
 
           {/* 2) Stats */}
@@ -324,15 +318,39 @@ export function VctCalculator() {
   );
 }
 
-// Card de sección (mismo estilo que las secciones del planner). Con un botón
-// opcional para resetear solo esa sección.
+// Icono "?" con la explicación en un tooltip (hover/foco). Mismo patrón que
+// ExpiryIndicator; se usa en la fórmula (leyenda) y en cabeceras de sección.
+function HelpTip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className="group relative inline-flex text-ro-text-muted transition-colors hover:text-ro-text focus:text-ro-text focus:outline-none"
+    >
+      <HelpCircle size={15} aria-hidden />
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-80 max-w-[85vw] rounded-md border border-ro-panel-border bg-ro-panel p-3 text-left text-xs font-normal leading-relaxed text-ro-text shadow-lg group-hover:block group-focus-within:block"
+      >
+        {children}
+      </span>
+    </button>
+  );
+}
+
+// Card de sección (mismo estilo que las secciones del planner). Cabecera con un
+// "?" de ayuda opcional (a la izquierda) y un botón de reset opcional (derecha).
 function Section({
   title,
+  help,
+  helpLabel,
   onReset,
   resetLabel,
   children,
 }: {
   title: string;
+  help?: React.ReactNode;
+  helpLabel?: string;
   onReset?: () => void;
   resetLabel?: string;
   children: React.ReactNode;
@@ -340,7 +358,10 @@ function Section({
   return (
     <section className="rounded-lg border-2 border-ro-panel-border bg-ro-panel/50 p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="font-heading text-sm text-ro-text">{title}</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="font-heading text-sm text-ro-text">{title}</h3>
+          {help && <HelpTip label={helpLabel ?? ""}>{help}</HelpTip>}
+        </div>
         {onReset && (
           <button
             type="button"

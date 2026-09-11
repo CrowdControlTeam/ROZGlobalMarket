@@ -16,6 +16,7 @@
         "gear": { "term": "Sum_GearVCTReduc", "desc": "Suma de reducciones de VCT de equipo y cartas (p. ej. Ghost Fire, Kathryne Keyron Card, Isilla Card)." },
         "skill": { "term": "Sum_SkillVCTReduc", "desc": "Suma de reducciones de VCT de skills y buffs (p. ej. Magic Strings, Suffragium, 16th Night) y algunos items que reducen el VCT de skills concretas (Imp Card, Siroma Card, Cylinder Hairband, Autumn Headband)." }
       },
+      "help": "Ayuda",
       "reset": {
         "section": "Resetear sección",
         "all": "Resetear todo"
