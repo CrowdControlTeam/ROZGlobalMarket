@@ -1,12 +1,11 @@
-import type { ItemCategory, EquipSlot, WeaponType } from "@/db/schema";
-import catalogData from "@/data/catalog-search.json";
+import type { ItemCategory, EquipSlot, WeaponType } from "@/db/enums";
+import { getAllItems } from "@/lib/item-store";
 
-// Catálogo de items recortado a los campos de búsqueda, empaquetado con la app
-// (lo genera prisma/importItems.mjs desde el mismo catálogo que va a la BD) y
-// cargado en memoria. Así el autocompletado (searchItems) y los candidatos del
-// reconocimiento (item-recognition.ts) no pegan a la BD en cada tecla — solo
-// importa cuando el servidor sirve una versión de RO global con muchos jugadores
-// lejos de la región única de Neon. Es server-side: el JSON nunca se expone.
+// Vista de BÚSQUEDA del catálogo, derivada del catálogo completo en memoria
+// (item-store): solo items COMERCIABLES, con el sufijo de ranuras en el nombre
+// ("Coat[1]") para distinguir variantes con/sin ranuras en el autocompletado y el
+// reconocimiento por imagen. Antes era un bundle aparte (catalog-search.json),
+// ahora se computa del mismo catálogo, sin duplicar datos. Es server-side.
 export type CatalogItem = {
   id: string;
   name: string;
@@ -26,7 +25,21 @@ export type CatalogItem = {
   cardSlot?: string | null;
 };
 
-const CATALOG = catalogData as unknown as CatalogItem[];
+const CATALOG: CatalogItem[] = getAllItems()
+  .filter((i) => i.tradeable)
+  .map((i) => ({
+    id: i.id,
+    // El nombre lleva el sufijo de ranuras ("Coat[1]") para distinguir en la
+    // búsqueda las variantes con/sin ranuras del mismo item.
+    name: (i.slotCount ?? 0) > 0 ? `${i.name}[${i.slotCount}]` : i.name,
+    iconUrl: i.iconUrl,
+    category: i.category,
+    slot: i.slot,
+    weaponType: i.weaponType,
+    slotCount: i.slotCount,
+    position: i.position,
+    cardSlot: i.cardSlot,
+  }));
 
 // El reconocimiento por captura necesita todo el catálogo para el fuzzy-match.
 export function getAllCatalogItems(): CatalogItem[] {

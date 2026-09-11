@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { item as itemTable, user as userTable } from "@/db/schema";
+import { user as userTable } from "@/db/schema";
+import { getItem } from "@/lib/item-store";
 import { requireSession } from "@/lib/guard";
 import { getItemOptionGroup, loadMagicalWeaponTypes, isOptionsFeatureAvailable } from "@/lib/item-options";
 import { buildOptionSelectionsFromDetected, MAX_OPTION_SLOTS } from "@/lib/item-options-constants";
@@ -38,7 +39,7 @@ export async function PublishSlot({
 
   // Precarga desde una pieza de build.
   await requireSession();
-  const itemRow = await db.query.item.findFirst({ where: eq(itemTable.id, itemId) });
+  const itemRow = getItem(itemId); // item resuelto en memoria (item-store)
   if (!itemRow) {
     const recognitionEnabled = await isImageRecognitionAvailable();
     return <PublishModal recognitionEnabled={recognitionEnabled} initialType={initialType} />;

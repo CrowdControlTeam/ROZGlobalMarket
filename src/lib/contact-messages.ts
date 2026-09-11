@@ -4,7 +4,8 @@ import { z } from "zod";
 import { getTranslations } from "next-intl/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { item as itemTable, user } from "@/db/schema";
+import { user } from "@/db/schema";
+import { getItem } from "@/lib/item-store";
 import { requireSession } from "@/lib/guard";
 import { sendDirectMessage, isDmFeatureAvailable } from "@/lib/discord-bot";
 import { listingItemDetailFields } from "@/lib/discord-item-fields";
@@ -50,12 +51,9 @@ export async function sendContactMessage(formData: FormData) {
     throw new Error(t("cannotMessageSelf"));
   }
 
-  const [recipientRows, itemRows] = await Promise.all([
-    db.select().from(user).where(eq(user.id, parsed.data.recipientId)).limit(1),
-    db.select().from(itemTable).where(eq(itemTable.id, parsed.data.itemId)).limit(1),
-  ]);
+  const recipientRows = await db.select().from(user).where(eq(user.id, parsed.data.recipientId)).limit(1);
   const recipient = recipientRows[0] ?? null;
-  const item = itemRows[0] ?? null;
+  const item = getItem(parsed.data.itemId); // item resuelto en memoria (item-store)
   if (!recipient) throw new Error(t("userNotFound"));
   if (!item) throw new Error(t("itemNotFound"));
 

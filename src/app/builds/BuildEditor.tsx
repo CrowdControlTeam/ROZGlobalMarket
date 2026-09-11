@@ -26,6 +26,8 @@ import {
   MAX_BUILD_NOTES_LENGTH,
 } from "@/lib/build-constants";
 import { createBuild, updateBuild, deleteBuild, type BuildInput } from "@/lib/builds";
+import { decodeBuild } from "@/lib/skill-planner";
+import { SkillPlannerModal } from "@/app/db/skills/SkillPlannerModal";
 import { getErrorMessage } from "@/lib/errors";
 import { buttonClass, inputClass, inputBaseClass, selectClass } from "@/lib/ui";
 
@@ -78,6 +80,7 @@ export type BuildEditorInitial = {
   tags: BuildTag[];
   notes: string | null;
   slots: Partial<Record<BuildSlot, SlotState>>;
+  skillCode: string | null;
 };
 
 export function BuildEditor({
@@ -101,6 +104,13 @@ export function BuildEditor({
   const [tags, setTags] = useState<BuildTag[]>(initial?.tags ?? []);
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [slots, setSlots] = useState<Partial<Record<BuildSlot, SlotState>>>(initial?.slots ?? {});
+  // Código de skills (opcional) exportado del planner; se limpia al cambiar de
+  // clase (el código es específico de la clase). La configuración inline (modal)
+  // llega en una fase posterior; de momento se pega el código exportado.
+  const [skillCode, setSkillCode] = useState<string | null>(initial?.skillCode ?? null);
+  const [skillInput, setSkillInput] = useState(initial?.skillCode ?? "");
+  const [skillErr, setSkillErr] = useState<string | null>(null);
+  const [skillModalOpen, setSkillModalOpen] = useState(false);
   // Slot cuyo item se está cambiando (buscador abierto). Se eleva aquí —no en la
   // fila— para que la ocupación de tocados lo trate como "libre" mientras se
   // cambia (así un tocado multi-slot desbloquea sus otras ranuras), y vuelva a
@@ -112,12 +122,44 @@ export function BuildEditor({
   function toggleTag(tag: BuildTag) {
     setTags((prev) => (prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]));
   }
+  // Valida el código de skills pegado: debe decodificar y ser de la misma clase.
+  function applySkillCode(raw: string) {
+    setSkillInput(raw);
+    const code = raw.trim();
+    if (!code) {
+      setSkillCode(null);
+      setSkillErr(null);
+      return;
+    }
+    const decoded = decodeBuild(code);
+    if (!decoded) {
+      setSkillCode(null);
+      setSkillErr(t("skillCodeInvalid"));
+    } else if (jobId != null && decoded.jobId !== jobId) {
+      setSkillCode(null);
+      setSkillErr(t("skillCodeWrongClass"));
+    } else {
+      setSkillCode(code);
+      setSkillErr(null);
+    }
+  }
+  const skillCount = (() => {
+    if (!skillCode) return 0;
+    const d = decodeBuild(skillCode);
+    return d ? Object.values(d.levels).filter((v) => v > 0).length : 0;
+  })();
   // Dual wield solo lo permiten ciertas clases (Assassin/Ninja) en la off-hand.
   // Si se cambia a una clase que no, se vacía un arma que hubiera quedado en la
   // off-hand (un escudo se conserva); así no queda un estado que el servidor
   // rechazaría al guardar.
   function handleJobChange(newJobId: number | null) {
     setJobId(newJobId);
+    // El código de skills es específico de la clase → se limpia al cambiarla.
+    if (newJobId !== jobId) {
+      setSkillCode(null);
+      setSkillInput("");
+      setSkillErr(null);
+    }
     if (!isDualWieldJob(newJobId)) {
       setSlots((prev) => {
         const s = prev.SHIELD;
@@ -250,6 +292,7 @@ export function BuildEditor({
       jobId,
       tags,
       notes: notes.trim() || null,
+      skillCode,
       entries: BUILD_SLOTS.flatMap((slot) => {
         const s = slots[slot];
         if (!s) return [];
@@ -364,6 +407,65 @@ export function BuildEditor({
           className={`${inputClass} resize-y`}
         />
       </label>
+
+      {/* Skills (opcional): por ahora se pega el código exportado del planner;
+          la configuración inline (modal) y la preview llegan en fases siguientes. */}
+      <div className="flex flex-col gap-1">
+        <span className="text-sm font-semibold text-ro-text">{t("skillsLabel")}</span>
+        {jobId === null ? (
+          <p className="text-xs text-ro-text-muted">{t("skillsHint")}</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSkillModalOpen(true)}
+                className={buttonClass("outline")}
+              >
+                {skillCode ? t("skillsEdit") : t("skillsConfigure")}
+              </button>
+              {skillCode && (
+                <>
+                  <span className="text-xs text-ro-text-muted">{t("skillCodeSummary", { n: skillCount })}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSkillCode(null);
+                      setSkillInput("");
+                      setSkillErr(null);
+                    }}
+                    className="text-xs text-ro-text-muted hover:text-ro-text"
+                  >
+                    {t("skillsClear")}
+                  </button>
+                </>
+              )}
+            </div>
+            {/* Alternativa: pegar un código exportado directamente. */}
+            <input
+              type="text"
+              value={skillInput}
+              onChange={(e) => applySkillCode(e.target.value)}
+              placeholder={t("skillCodePlaceholder")}
+              className={`${inputClass} font-mono text-xs`}
+            />
+            {skillErr && <p className="text-xs text-ro-red">{skillErr}</p>}
+          </>
+        )}
+      </div>
+
+      {skillModalOpen && jobId != null && (
+        <SkillPlannerModal
+          jobId={jobId}
+          initialCode={skillCode}
+          onSave={(code) => {
+            setSkillCode(code);
+            setSkillInput(code ?? "");
+            setSkillErr(null);
+          }}
+          onClose={() => setSkillModalOpen(false)}
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         <span className="text-sm font-semibold text-ro-text">{t("slotsLabel")}</span>

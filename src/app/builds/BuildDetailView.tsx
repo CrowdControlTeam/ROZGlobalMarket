@@ -11,6 +11,7 @@ import { parsePositions, POSITION_TO_SLOT, PAPERDOLL_LEFT, PAPERDOLL_RIGHT } fro
 import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { LISTING_TYPE_BADGE_CLASS } from "@/lib/market-labels";
 import { ItemIcon } from "@/components/ItemIcon";
+import { SkillTreePreview } from "@/app/db/skills/SkillTreePreview";
 import { buttonClass } from "@/lib/ui";
 import type { getBuild } from "@/lib/builds";
 
@@ -263,6 +264,13 @@ export function BuildDetailView({
           );
         })}
       </div>
+
+      {build.skillCode && (
+        <div className="mt-6">
+          <h3 className="mb-3 font-heading text-sm text-ro-text">{t("detail.skills")}</h3>
+          <SkillTreePreview code={build.skillCode} />
+        </div>
+      )}
     </div>
   );
 }

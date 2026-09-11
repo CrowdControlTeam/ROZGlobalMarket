@@ -1,10 +1,9 @@
-import { and, asc, count, eq, ilike, inArray } from "drizzle-orm";
-import { db } from "@/db";
-import { item, type ItemCategory } from "@/db/schema";
+import type { ItemCategory } from "@/db/enums";
 import { requireSession } from "@/lib/guard";
+import { getAllItems, getItem } from "@/lib/item-store";
 
-// Página DB → Items. Consulta la tabla Item con búsqueda por nombre + filtro de
-// categoría, paginada.
+// Página DB → Items. Búsqueda por nombre + filtro de categoría, paginada, sobre
+// el catálogo completo en memoria (item-store) — los items no viven en la BD.
 export const DB_ITEMS_PAGE_SIZE = 48;
 
 export type DbItemCard = {
@@ -25,28 +24,18 @@ export async function searchDbItems({
   page: number;
 }) {
   await requireSession();
-  const conditions = [];
-  if (q && q.trim()) conditions.push(ilike(item.name, `%${q.trim()}%`));
-  if (categories && categories.length > 0) conditions.push(inArray(item.category, categories));
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const query = q?.trim().toLowerCase();
+  const cats = categories && categories.length > 0 ? new Set(categories) : null;
+  const matches = getAllItems().filter(
+    (i) => (!query || i.name.toLowerCase().includes(query)) && (!cats || cats.has(i.category)),
+  );
+  matches.sort((a, b) => a.name.localeCompare(b.name));
 
-  const [items, totalResult] = await Promise.all([
-    db
-      .select({
-        id: item.id,
-        name: item.name,
-        iconUrl: item.iconUrl,
-        category: item.category,
-        slotCount: item.slotCount,
-      })
-      .from(item)
-      .where(where)
-      .orderBy(asc(item.name))
-      .limit(DB_ITEMS_PAGE_SIZE)
-      .offset((page - 1) * DB_ITEMS_PAGE_SIZE),
-    db.select({ value: count() }).from(item).where(where),
-  ]);
-  const total = totalResult[0]?.value ?? 0;
+  const total = matches.length;
+  const start = (page - 1) * DB_ITEMS_PAGE_SIZE;
+  const items: DbItemCard[] = matches
+    .slice(start, start + DB_ITEMS_PAGE_SIZE)
+    .map((i) => ({ id: i.id, name: i.name, iconUrl: i.iconUrl, category: i.category, slotCount: i.slotCount }));
 
   return {
     items,
@@ -60,8 +49,7 @@ export async function searchDbItems({
 // con colores + stats). Se pide al hacer click, no se manda todo en el grid.
 export async function getDbItemDetail(id: string) {
   await requireSession();
-  const rows = await db.select().from(item).where(eq(item.id, id)).limit(1);
-  return rows[0] ?? null;
+  return getItem(id) ?? null;
 }
 
 export type DbItemDetail = NonNullable<Awaited<ReturnType<typeof getDbItemDetail>>>;

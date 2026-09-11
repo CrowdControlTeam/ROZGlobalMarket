@@ -1,4 +1,68 @@
 {
+  "tools": {
+    "nav": {
+      "vct": "VCT"
+    },
+    "vct": {
+      "title": "VCT Calculator",
+      "subtitle": "Compute a skill's Variable Casting Time (VCT), or the reduction percentage. Each group of the formula has its own result and they combine into the global one.",
+      "formula": {
+        "title": "Formula",
+        "legend": "Legend"
+      },
+      "legend": {
+        "baseVct": { "term": "BaseVCT", "desc": "Base Variable Cast Time of a skill." },
+        "flat": { "term": "Sum_VCT", "desc": "Sum of effects that directly subtract from Variable Cast Time (e.g. Shield Ring)." },
+        "gear": { "term": "Sum_GearVCTReduc", "desc": "Sum of Variable Cast Time reductions from gear and cards (e.g. Ghost Fire, Kathryne Keyron Card, Isilla Card)." },
+        "skill": { "term": "Sum_SkillVCTReduc", "desc": "Sum of Variable Cast Time reductions from skills and buffs (e.g. Magic Strings, Suffragium, 16th Night) and some items that reduce specific skills' VCT (Imp Card, Siroma Card, Cylinder Hairband, Autumn Headband)." }
+      },
+      "help": "Help",
+      "reset": {
+        "section": "Reset section",
+        "all": "Reset all"
+      },
+      "section": {
+        "base": {
+          "title": "Skill and base cast",
+          "hint": "With no skill selected only the percentages are computed. Pick a skill to get the time in seconds."
+        },
+        "stat": { "title": "Stats (DEX / INT)" },
+        "gear": { "title": "Gear and card reduction" },
+        "skillred": { "title": "Skill and buff reduction" }
+      },
+      "field": {
+        "job": "Job",
+        "jobPlaceholder": "Choose a job…",
+        "firstJobs": "1st jobs",
+        "secondJobs": "2nd jobs",
+        "skill": "Skill (optional)",
+        "skillNone": "No skill (% only)",
+        "level": "Level",
+        "baseVct": "Base cast (BaseVCT)",
+        "reducedBase": "After flat reduction",
+        "sumFlat": "Flat reduction (Sum_VCT)",
+        "dex": "DEX",
+        "int": "INT"
+      },
+      "rows": {
+        "add": "Add",
+        "remove": "Remove",
+        "namePlaceholder": "Source (optional)",
+        "valueLabel": "Reduction %",
+        "sum": "Sum"
+      },
+      "result": {
+        "title": "Global result",
+        "reduction": "Reduction",
+        "remaining": "Remaining VCT",
+        "sectionCast": "VCT (this section only)",
+        "totalReduction": "Total VCT reduction",
+        "totalRemaining": "Remaining VCT",
+        "finalCast": "Final VCT",
+        "noSkill": "Pick a skill to see the final VCT in seconds."
+      }
+    }
+  },
   "db": {
     "nav": {
       "items": "Items",
@@ -23,6 +87,8 @@
       "firstPoints": "1st points",
       "secondPoints": "2nd points",
       "reset": "Reset",
+      "plannerModalTitle": "Skill plan",
+      "applyPlan": "Save plan",
       "emptyHint": "Choose a job to start planning its skills.",
       "selectHint": "Select a skill to see its details.",
       "level": "Level",
@@ -37,8 +103,9 @@
         "hits": "Hits",
         "area": "Area",
         "cast": "Cast",
+        "fct": "FCT",
+        "vct": "VCT",
         "delay": "Delay",
-        "cooldown": "Cooldown",
         "hp": "HP",
         "zeny": "Zeny",
         "spirit": "{n, plural, one {# sphere} other {# spheres}}",
@@ -84,7 +151,9 @@
       "label": "Sections",
       "market": "Market",
       "builds": "Builds",
-      "db": "DB"
+      "db": "DB",
+      "tools": "Tools",
+      "expand": "Show {section} tabs"
     },
     "account": {
       "title": "Your account",
@@ -224,6 +293,7 @@
     "buildLimitReached": "You've reached the maximum number of builds ({max})",
     "buildNeedTag": "Pick at least one tag (PvP/PvE)",
     "buildInvalidJob": "Invalid class",
+    "buildInvalidSkillCode": "The skill code is invalid or doesn't match the build's class",
     "buildItemSlotMismatch": "The item doesn't match this slot",
     "cardSlotMismatch": "The card doesn't fit this equipment type",
     "buildTooManyCards": "This item doesn't support that many cards"
@@ -261,8 +331,8 @@
         "heading": "Listings by type and status",
         "closed": "Closed"
       },
-      "tradeOffers": {
-        "heading": "Trade offers by status"
+      "offers": {
+        "heading": "Offers by status"
       },
       "rankings": {
         "topPosters": "Who posts the most",
@@ -810,6 +880,15 @@
       "secondJobs": "2nd classes",
       "tagsLabel": "Tags",
       "notesLabel": "Notes",
+      "skillsLabel": "Skills (optional)",
+      "skillsHint": "Pick a class first to add the skill plan.",
+      "skillsConfigure": "Configure skills",
+      "skillsEdit": "Edit skills",
+      "skillsClear": "Remove",
+      "skillCodePlaceholder": "Paste the exported skill planner code here",
+      "skillCodeInvalid": "Invalid skill code",
+      "skillCodeWrongClass": "The code is for a different class than the build",
+      "skillCodeSummary": "Skill plan added ({n} skills)",
       "notesPlaceholder": "Build details, synergies, alternatives…",
       "slotsLabel": "Pieces",
       "refine": "Refine",
@@ -830,6 +909,7 @@
       "searchMarket": "Search the market",
       "searchAllMarket": "Search all in the market",
       "publishItem": "Publish on the market",
+      "skills": "Skills",
       "avail": {
         "SALE": "{n, plural, one {# sale} other {# sales}}",
         "BUY": "{n, plural, one {# buy order} other {# buy orders}}",

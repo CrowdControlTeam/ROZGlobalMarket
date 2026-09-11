@@ -9,14 +9,14 @@ import {
   buildEntry,
   buildEntryOption,
   buildEntryCard,
-  item as itemTable,
   listing,
 } from "@/db/schema";
-import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES, ItemCategory, type ListingType } from "@/db/enums";
+import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES, ItemCategory, type EquipSlot, type ListingType, type WeaponType } from "@/db/enums";
+import { getItem, getItems } from "@/lib/item-store";
 import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { loadMaxRefineLevel } from "@/lib/refine";
-import { getJob } from "@/lib/skill-planner";
+import { getJob, decodeBuild } from "@/lib/skill-planner";
 import { isTwoHandWeapon } from "@/lib/item-slots";
 import { loadMagicalWeaponTypes, getItemOptionGroup, validateOptions } from "@/lib/item-options";
 import {
@@ -30,20 +30,33 @@ import {
 } from "@/lib/build-constants";
 import { revalidatePath } from "next/cache";
 
-const itemCols = { id: true, name: true, iconUrl: true, slotCount: true, position: true } as const;
 const ownerCols = { id: true, username: true } as const;
+
+// El item de una pieza de build (y de sus cartas) se resuelve en memoria
+// (item-store) por id — los items no viven en la BD. Se proyecta a lo que usa la
+// vista (sin description[], que no se manda al cliente).
+type BuildPieceItem = { id: string; name: string; iconUrl: string; slotCount: number; position: string | null };
+function pieceItem(id: string): BuildPieceItem {
+  const it = getItem(id);
+  return { id, name: it?.name ?? id, iconUrl: it?.iconUrl ?? "", slotCount: it?.slotCount ?? 0, position: it?.position ?? null };
+}
+// Para editar, el editor recomputa el grupo de options y valida slots, así que
+// además necesita category/slot/weaponType.
+type EditPieceItem = BuildPieceItem & { category: ItemCategory; slot: EquipSlot | null; weaponType: WeaponType | null };
+function editPieceItem(id: string): EditPieceItem {
+  const it = getItem(id);
+  return { ...pieceItem(id), category: it?.category ?? ItemCategory.ETC, slot: it?.slot ?? null, weaponType: it?.weaponType ?? null };
+}
 
 // TODAS las builds (de todos los usuarios) para la página de la comunidad, con
 // dueño y piezas (solo el item; options/cartas no hacen falta en el listado).
 export async function listBuilds() {
   await requireSession();
-  return db.query.build.findMany({
+  const rows = await db.query.build.findMany({
     orderBy: desc(build.updatedAt),
-    with: {
-      owner: { columns: ownerCols },
-      entries: { with: { item: { columns: itemCols } } },
-    },
+    with: { owner: { columns: ownerCols }, entries: true },
   });
+  return rows.map((b) => ({ ...b, entries: b.entries.map((e) => ({ ...e, item: pieceItem(e.itemId) })) }));
 }
 
 // TODAS las builds con el detalle completo (item + options + cartas), para el
@@ -51,40 +64,53 @@ export async function listBuilds() {
 // otra ida al servidor. Misma forma de pieza que getBuild.
 export async function listBuildsDetailed() {
   await requireSession();
-  return db.query.build.findMany({
+  const rows = await db.query.build.findMany({
     orderBy: desc(build.updatedAt),
     with: {
       owner: { columns: ownerCols },
       entries: {
         with: {
-          item: { columns: itemCols },
           options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
-          cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
+          cards: { orderBy: (c) => asc(c.slotIndex) },
         },
       },
     },
   });
+  return rows.map((b) => ({
+    ...b,
+    entries: b.entries.map((e) => ({
+      ...e,
+      item: pieceItem(e.itemId),
+      cards: e.cards.map((c) => ({ ...c, card: pieceItem(c.cardItemId) })),
+    })),
+  }));
 }
 
 // Una build concreta para el DETALLE — visible para cualquiera (logueado). Las
 // piezas traen item + options (con su def) + cartas (con el item de la carta).
 export async function getBuild(id: string) {
   await requireSession();
-  return (
-    (await db.query.build.findFirst({
-      where: eq(build.id, id),
-      with: {
-        owner: { columns: ownerCols },
-        entries: {
-          with: {
-            item: { columns: itemCols },
-            options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
-            cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
-          },
+  const row = await db.query.build.findFirst({
+    where: eq(build.id, id),
+    with: {
+      owner: { columns: ownerCols },
+      entries: {
+        with: {
+          options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+          cards: { orderBy: (c) => asc(c.slotIndex) },
         },
       },
-    })) ?? null
-  );
+    },
+  });
+  if (!row) return null;
+  return {
+    ...row,
+    entries: row.entries.map((e) => ({
+      ...e,
+      item: pieceItem(e.itemId),
+      cards: e.cards.map((c) => ({ ...c, card: pieceItem(c.cardItemId) })),
+    })),
+  };
 }
 
 // Una build concreta para EDITAR — solo del propietario (null si no lo es). El
@@ -97,18 +123,23 @@ export async function getMyBuild(id: string) {
     with: {
       entries: {
         with: {
-          item: {
-            columns: { id: true, name: true, iconUrl: true, slotCount: true, category: true, slot: true, weaponType: true, position: true },
-          },
           options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
-          cards: { with: { card: { columns: itemCols } }, orderBy: (c) => asc(c.slotIndex) },
+          cards: { orderBy: (c) => asc(c.slotIndex) },
         },
       },
     },
   });
   if (!row) return null;
   if (row.ownerId !== session.user.discordId) return null;
-  return row;
+  // El item de la pieza trae además category/slot/weaponType para el editor.
+  return {
+    ...row,
+    entries: row.entries.map((e) => ({
+      ...e,
+      item: editPieceItem(e.itemId),
+      cards: e.cards.map((c) => ({ ...c, card: pieceItem(c.cardItemId) })),
+    })),
+  };
 }
 
 // Disponibilidad en el mercado de los items de una build: nº de publicaciones
@@ -176,6 +207,8 @@ const buildInputSchema = z.object({
   tags: z.array(z.enum(BUILD_TAG_VALUES)),
   notes: z.string().max(MAX_BUILD_NOTES_LENGTH).nullish(),
   entries: z.array(entrySchema),
+  // Código exportado del skill planner (opcional). Se valida contra la clase.
+  skillCode: z.string().max(2048).nullish(),
 });
 
 export type BuildInput = z.infer<typeof buildInputSchema>;
@@ -190,6 +223,16 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
   const data = parsed.data;
 
   if (!getJob(data.jobId)) throw new Error(t("buildInvalidJob"));
+
+  // Código de skills (opcional): debe decodificar y ser de la MISMA clase que la
+  // build. Se guarda el código tal cual (compacto/versionado); el detalle lo
+  // decodifica para la preview.
+  let skillCode: string | null = null;
+  if (data.skillCode) {
+    const decoded = decodeBuild(data.skillCode);
+    if (!decoded || decoded.jobId !== data.jobId) throw new Error(t("buildInvalidSkillCode"));
+    skillCode = data.skillCode;
+  }
 
   const tags = Array.from(new Set(data.tags));
   if (tags.length === 0) throw new Error(t("buildNeedTag"));
@@ -206,18 +249,8 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
     const itemIds = [...new Set(entries.map((e) => e.itemId))];
     const cardIds = [...new Set(entries.flatMap((e) => e.cards.map((c) => c.cardItemId)))];
     const allIds = [...new Set([...itemIds, ...cardIds])];
-    const rows = await db
-      .select({
-        id: itemTable.id,
-        category: itemTable.category,
-        slot: itemTable.slot,
-        weaponType: itemTable.weaponType,
-        slotCount: itemTable.slotCount,
-        position: itemTable.position,
-      })
-      .from(itemTable)
-      .where(inArray(itemTable.id, allIds));
-    const byId = new Map(rows.map((r) => [r.id, r]));
+    // Items/cartas resueltos en memoria (item-store), no desde la BD.
+    const byId = getItems(allIds);
 
     for (const e of entries) {
       const it = byId.get(e.itemId);
@@ -270,7 +303,7 @@ async function parseBuildInput(input: unknown, t: Awaited<ReturnType<typeof getT
   }
 
   const notes = data.notes?.trim() || null;
-  return { name: data.name, jobId: data.jobId, tags, notes, entries };
+  return { name: data.name, jobId: data.jobId, tags, notes, entries, skillCode };
 }
 
 // Inserta las piezas de una build (una a una para enlazar options/cartas por id).
@@ -311,7 +344,7 @@ export async function createBuild(input: unknown) {
   const created = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(build)
-      .values({ ownerId: me, name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes })
+      .values({ ownerId: me, name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes, skillCode: data.skillCode })
       .returning();
     await insertEntries(tx, row.id, data.entries);
     return row;
@@ -334,7 +367,7 @@ export async function updateBuild(id: string, input: unknown) {
   await db.transaction(async (tx) => {
     await tx
       .update(build)
-      .set({ name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes })
+      .set({ name: data.name, jobId: data.jobId, tags: data.tags, notes: data.notes, skillCode: data.skillCode })
       .where(eq(build.id, id));
     // Piezas: se borran y se recrean (más simple que un diff; ≤10 piezas). Las
     // options/cartas caen en cascada al borrar las entries.

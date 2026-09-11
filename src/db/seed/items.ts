@@ -16,8 +16,8 @@
 // (game-style card); copied to public/ from the extractor separately.
 
 import fs from "node:fs";
-import { count, eq, notInArray } from "drizzle-orm";
-import { buildEntry, buildEntryCard, item, listing, type EquipSlot, type ItemCategory, type WeaponType } from "../schema";
+import { and, eq, isNotNull, notInArray } from "drizzle-orm";
+import { buildEntry, buildEntryCard, deal, listing, type EquipSlot, type ItemCategory, type WeaponType } from "../schema";
 import { db, runSeed } from "./client";
 
 const SRC = process.argv[2] ?? "E:/Proyectos/Git/ROZDataBaseExtractor/server/output/items.json";
@@ -49,9 +49,41 @@ const weaponTypeOf = (i: RawItem): WeaponType | null =>
   i.category === "Weapon" ? (WEAPON_SUBTYPE_MAP[i.subType] ?? null) : null;
 const tradeableOf = (i: RawItem): boolean => !(i.move && i.move.trade === false);
 
-type ItemRow = typeof item.$inferInsert;
+// La forma del registro completo de item que va al bundle en memoria (item-store
+// FullItem). La tabla Item ya no existe en la BD: los items viven solo aquí.
+type CatalogRow = {
+  id: string;
+  name: string;
+  unidentifiedName: string | null;
+  description: string[];
+  category: ItemCategory;
+  categorySource: string | null;
+  slot: EquipSlot | null;
+  weaponType: WeaponType | null;
+  subType: string | null;
+  itemType: string | null;
+  slotCount: number;
+  cardSlot: string | null;
+  position: string | null;
+  iconUrl: string;
+  tradeable: boolean;
+  restrictions: Record<string, boolean> | null;
+  costume: boolean;
+  attack: number | null;
+  defense: number | null;
+  weight: number | null;
+  weaponLevel: number | null;
+  armorLevel: number | null;
+  requiredLevel: number | null;
+  jobs: string | null;
+  element: string | null;
+  classNum: number | null;
+  effectId: number | null;
+  cooldown: string | null;
+  petTarget: string | null;
+};
 
-function toRow(i: RawItem): ItemRow {
+function toRow(i: RawItem): CatalogRow {
   const category = CATEGORY_MAP[i.category];
   if (!category) throw new Error(`Categoría sin mapear: ${i.category} (id ${i.id})`);
   return {
@@ -84,79 +116,67 @@ function toRow(i: RawItem): ItemRow {
     effectId: i.effectId ?? null,
     cooldown: i.cooldown != null ? String(i.cooldown) : null,
     petTarget: i.petTarget ?? null,
-    updatedAt: new Date(),
   };
 }
 
 runSeed(async () => {
   const items: RawItem[] = JSON.parse(fs.readFileSync(SRC, "utf8"));
   const rows = items.map(toRow);
+  const validIds = [...new Set(rows.map((r) => r.id))];
 
-  // Idempotent, FK-safe replacement (the new DB is the truth; anything missing
-  // disappears). Items are NOT wiped and recreated, because the ones that still
-  // exist may be referenced by listings/BiS/deals; so UPSERT, then delete only the
-  // ones that are gone:
-  const validIds = [...new Set(rows.map((r) => r.id as string))];
+  // La tabla Item ya no existe: los items viven solo en el bundle en memoria. Este
+  // script (a) regenera el bundle y (b) mantiene la integridad referencial que
+  // antes garantizaban las FKs, que ahora se gestiona en la app.
 
-  // Diff against what was there, to report the impact of the update.
-  const existingIds = new Set((await db.select({ id: item.id }).from(item)).map((i) => i.id));
-  const newIdSet = new Set(validIds);
-  const createdCount = validIds.filter((id) => !existingIds.has(id)).length;
-  const matchedCount = validIds.filter((id) => existingIds.has(id)).length;
-  const deletedCount = [...existingIds].filter((id) => !newIdSet.has(id)).length;
+  const tradeableCount = rows.filter((r) => r.tradeable).length;
+  console.log(`Items en el catálogo: ${rows.length} | comerciables: ${tradeableCount}`);
 
-  // 1) Clean up references to items that disappear (todas con FK required/restrict:
-  //    Listing.itemId, BuildEntry.itemId, BuildEntryCard.cardItemId; Deal
-  //    .offeredItemId es opcional → SetNull, no hace falta borrarlo aquí).
-  await db.delete(listing).where(notInArray(listing.itemId, validIds));
-  await db.delete(buildEntryCard).where(notInArray(buildEntryCard.cardItemId, validIds));
-  await db.delete(buildEntry).where(notInArray(buildEntry.itemId, validIds));
-
-  // 2) Upsert every item (updates the existing ones, creates the new ones), in
-  //    parallel chunks. Drizzle has no bulk upsert with per-row data, so it's done
-  //    one row at a time (onConflictDoUpdate by id).
-  const CHUNK = 100;
-  for (let n = 0; n < rows.length; n += CHUNK) {
-    await Promise.all(
-      // set: r rewrites every column of the existing item to the file's value
-      // (includes id = same value, a no-op) — the source is the truth.
-      rows.slice(n, n + CHUNK).map((r) =>
-        db.insert(item).values(r).onConflictDoUpdate({ target: item.id, set: r }),
-      ),
-    );
+  // Solo regenerar el bundle (sin tocar la BD): útil para actualizar
+  // item-catalog.json sin una BD levantada (p. ej. tras una re-extracción).
+  // Uso: BUNDLE_ONLY=1 npm run import:items
+  if (process.env.BUNDLE_ONLY) {
+    fs.writeFileSync("src/data/item-catalog.json", JSON.stringify(rows));
+    console.log(`Catálogo completo (bundle only): ${rows.length} items → src/data/item-catalog.json`);
+    return;
   }
 
-  // 3) Delete the items that are gone (their references were already cleaned up).
-  await db.delete(item).where(notInArray(item.id, validIds));
+  // 1) Limpieza de referencias a items que ya no están en el catálogo (antes lo
+  //    hacían las FKs: required/restrict borra, Deal.offeredItemId opcional → null).
+  const [delListings, delCards, delEntries] = await Promise.all([
+    db.delete(listing).where(notInArray(listing.itemId, validIds)),
+    db.delete(buildEntryCard).where(notInArray(buildEntryCard.cardItemId, validIds)),
+    db.delete(buildEntry).where(notInArray(buildEntry.itemId, validIds)),
+  ]);
+  await db
+    .update(deal)
+    .set({ offeredItemId: null })
+    .where(and(isNotNull(deal.offeredItemId), notInArray(deal.offeredItemId, validIds)));
+  const removedRefs = (delListings.rowCount ?? 0) + (delCards.rowCount ?? 0) + (delEntries.rowCount ?? 0);
+  if (removedRefs > 0) console.log(`Referencias colgantes limpiadas: ${removedRefs}`);
 
-  const [{ total } = { total: 0 }] = await db.select({ total: count() }).from(item);
-  const [{ tradeable } = { tradeable: 0 }] = await db
-    .select({ tradeable: count() })
-    .from(item)
-    .where(eq(item.tradeable, true));
-  console.log(`Items importados: ${total} | comerciables: ${tradeable}`);
-  console.log(
-    `Cambios: ${createdCount} nuevos | ${matchedCount} existentes re-sincronizados | ${deletedCount} borrados`,
-  );
+  // 2) Re-sincroniza los campos de item desnormalizados en los listings (nombre/
+  //    categoría/slots que el grid del mercado usa para filtrar/ordenar/paginar en
+  //    SQL) desde el catálogo nuevo — solo los items que tienen publicaciones.
+  const rowsById = new Map(rows.map((r) => [r.id, r]));
+  const listed = await db.selectDistinct({ itemId: listing.itemId }).from(listing);
+  for (const { itemId } of listed) {
+    const r = rowsById.get(itemId);
+    if (!r) continue; // ya limpiado arriba
+    await db
+      .update(listing)
+      .set({
+        itemName: r.name,
+        itemCategory: r.category,
+        itemSlot: r.slot,
+        itemWeaponType: r.weaponType,
+        itemSlotCount: r.slotCount,
+      })
+      .where(eq(listing.itemId, itemId));
+  }
 
-  // Search bundle shipped with the app (TRADEABLE only): used by the publish
-  // autocomplete and the image-recognition match (by name + slotCount). See
-  // src/lib/item-catalog.ts.
-  const bundle = rows
-    .filter((r) => r.tradeable)
-    .map((r) => ({
-      id: r.id,
-      // The name carries the slot suffix ("Coat[1]") to tell apart, in the search,
-      // the with/without-slots variants of the same item.
-      name: (r.slotCount ?? 0) > 0 ? `${r.name}[${r.slotCount}]` : r.name,
-      iconUrl: r.iconUrl,
-      category: r.category,
-      slot: r.slot,
-      weaponType: r.weaponType,
-      slotCount: r.slotCount,
-      position: r.position ?? null,
-      cardSlot: r.cardSlot ?? null,
-    }));
-  fs.writeFileSync("src/data/catalog-search.json", JSON.stringify(bundle));
-  console.log(`Bundle comerciable: ${bundle.length} items → src/data/catalog-search.json`);
+  // 3) Bundle completo empaquetado con la app: el registro completo de cada item,
+  //    cargado en memoria (item-store) — los items son datos estáticos de
+  //    referencia, se importan aquí y nunca se mutan en runtime.
+  fs.writeFileSync("src/data/item-catalog.json", JSON.stringify(rows));
+  console.log(`Catálogo completo: ${rows.length} items → src/data/item-catalog.json`);
 });

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, Plus } from "lucide-react";
 import type { BuildTag, ListingType } from "@/db/enums";
@@ -35,7 +36,11 @@ export function BuildsBrowser({
   const t = useTranslations("builds");
   const tTag = useTranslations("builds.tags");
 
-  const [tab, setTab] = useState<Tab>("all");
+  // La pestaña vive en la URL (?tab=mine) para poder enlazarla directamente desde
+  // el menú del header y compartirla; "all" es el valor por defecto (sin query).
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab: Tab = searchParams.get("tab") === "mine" ? "mine" : "all";
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fJob, setFJob] = useState<string>("");
   const [fTag, setFTag] = useState<BuildTag | "">("");
@@ -59,8 +64,8 @@ export function BuildsBrowser({
   const selected = selectedId ? builds.find((b) => b.id === selectedId) ?? null : null;
 
   function switchTab(next: Tab) {
-    setTab(next);
     setSelectedId(null);
+    router.replace(next === "mine" ? "/builds?tab=mine" : "/builds", { scroll: false });
   }
 
   return (

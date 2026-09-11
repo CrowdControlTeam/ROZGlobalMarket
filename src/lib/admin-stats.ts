@@ -3,6 +3,7 @@
 import { count, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { deal, listing, user, type ListingType, type ListingStatus, type DealStatus } from "@/db/schema";
+import { getItem } from "@/lib/item-store";
 import { requireAdmin } from "@/lib/admin-guard";
 import type { StatsPeriod } from "@/lib/admin-stats-constants";
 
@@ -55,7 +56,6 @@ export async function getMarketStats(period: StatsPeriod = "7d") {
       columns: { type: true, status: true, posterId: true, itemId: true },
       with: {
         poster: { columns: { username: true } },
-        item: { columns: { name: true } },
       },
     }),
     // updatedAt (no createdAt): lo que interesa de un trato es cuándo se resolvió
@@ -69,7 +69,6 @@ export async function getMarketStats(period: StatsPeriod = "7d") {
           columns: { type: true, posterId: true, itemId: true },
           with: {
             poster: { columns: { username: true } },
-            item: { columns: { name: true } },
           },
         },
       },
@@ -90,23 +89,22 @@ export async function getMarketStats(period: StatsPeriod = "7d") {
     posterIds.add(l.posterId);
   }
 
-  // Estados de las ofertas de intercambio (ahora Deal sobre listings TRADE).
-  const tradeOffersByStatus: Record<DealStatus, number> = {
+  // Estados de TODAS las ofertas (Deal): reservas/pujas de venta-compra, ofertas
+  // de intercambio y reclamaciones de regalo — cualquier tipo de listing.
+  const offersByStatus: Record<DealStatus, number> = {
     PENDING: 0,
     ACCEPTED: 0,
     REJECTED: 0,
     CANCELLED: 0,
   };
-  for (const d of deals) {
-    if (d.listing.type === "TRADE") tradeOffersByStatus[d.status]++;
-  }
+  for (const d of deals) offersByStatus[d.status]++;
 
   // --- Rankings ---
   const topPostersMap = new Map<string, UserTotal>();
   const topListedItemsMap = new Map<string, ItemTotal>();
   for (const l of listings) {
     addTotal(topPostersMap, l.posterId, l.poster.username, 1);
-    addItemTotal(topListedItemsMap, l.itemId, l.item.name, 1);
+    addItemTotal(topListedItemsMap, l.itemId, (getItem(l.itemId)?.name ?? l.itemId), 1);
   }
 
   // Dinero movido + ganadores/gastadores + items más comerciados, a partir de
@@ -146,7 +144,7 @@ export async function getMarketStats(period: StatsPeriod = "7d") {
     const buyerName = l.type === "SALE" ? d.user.username : l.poster.username;
     addTotal(earnersMap, sellerId, sellerName, amount);
     addTotal(spendersMap, buyerId, buyerName, amount);
-    addItemTotal(topPurchasedItemsMap, l.itemId, l.item.name, d.quantity);
+    addItemTotal(topPurchasedItemsMap, l.itemId, (getItem(l.itemId)?.name ?? l.itemId), d.quantity);
   }
 
   return {
@@ -155,7 +153,7 @@ export async function getMarketStats(period: StatsPeriod = "7d") {
     totals: {
       listingsByTypeStatus,
       zenyMoved,
-      tradeOffersByStatus,
+      offersByStatus,
       giftsSent,
       postersCount: posterIds.size,
       totalUsers,

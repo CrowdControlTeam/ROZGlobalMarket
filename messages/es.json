@@ -1,4 +1,68 @@
 {
+  "tools": {
+    "nav": {
+      "vct": "VCT"
+    },
+    "vct": {
+      "title": "Calculadora de VCT",
+      "subtitle": "Calcula el Variable Casting Time (VCT) de una skill, o el porcentaje de reducción. Cada sección de la fórmula tiene su propio resultado y se combinan en el global.",
+      "formula": {
+        "title": "Fórmula",
+        "legend": "Leyenda"
+      },
+      "legend": {
+        "baseVct": { "term": "BaseVCT", "desc": "Variable Cast Time base de la skill." },
+        "flat": { "term": "Sum_VCT", "desc": "Suma de efectos que restan directamente del Variable Cast Time (p. ej. Shield Ring)." },
+        "gear": { "term": "Sum_GearVCTReduc", "desc": "Suma de reducciones de VCT de equipo y cartas (p. ej. Ghost Fire, Kathryne Keyron Card, Isilla Card)." },
+        "skill": { "term": "Sum_SkillVCTReduc", "desc": "Suma de reducciones de VCT de skills y buffs (p. ej. Magic Strings, Suffragium, 16th Night) y algunos items que reducen el VCT de skills concretas (Imp Card, Siroma Card, Cylinder Hairband, Autumn Headband)." }
+      },
+      "help": "Ayuda",
+      "reset": {
+        "section": "Resetear sección",
+        "all": "Resetear todo"
+      },
+      "section": {
+        "base": {
+          "title": "Skill y cast base",
+          "hint": "Sin skill seleccionada solo se calculan los porcentajes. Elige una skill para obtener el tiempo en segundos."
+        },
+        "stat": { "title": "Stats (DEX / INT)" },
+        "gear": { "title": "Reducción por equipo y cartas" },
+        "skillred": { "title": "Reducción por skills y buffs" }
+      },
+      "field": {
+        "job": "Job",
+        "jobPlaceholder": "Elige un job…",
+        "firstJobs": "1st jobs",
+        "secondJobs": "2nd jobs",
+        "skill": "Skill (opcional)",
+        "skillNone": "Sin skill (solo %)",
+        "level": "Nivel",
+        "baseVct": "Cast base (BaseVCT)",
+        "reducedBase": "Tras reducción plana",
+        "sumFlat": "Reducción plana (Sum_VCT)",
+        "dex": "DEX",
+        "int": "INT"
+      },
+      "rows": {
+        "add": "Añadir",
+        "remove": "Quitar",
+        "namePlaceholder": "Fuente (opcional)",
+        "valueLabel": "Reducción %",
+        "sum": "Suma"
+      },
+      "result": {
+        "title": "Resultado global",
+        "reduction": "Reducción",
+        "remaining": "VCT restante",
+        "sectionCast": "VCT (solo esta sección)",
+        "totalReduction": "Reducción total de VCT",
+        "totalRemaining": "VCT restante",
+        "finalCast": "VCT final",
+        "noSkill": "Elige una skill para ver el VCT final en segundos."
+      }
+    }
+  },
   "db": {
     "nav": {
       "items": "Items",
@@ -23,6 +87,8 @@
       "firstPoints": "Puntos 1ª",
       "secondPoints": "Puntos 2ª",
       "reset": "Reiniciar",
+      "plannerModalTitle": "Plan de skills",
+      "applyPlan": "Guardar plan",
       "emptyHint": "Elige un job para empezar a planificar sus skills.",
       "selectHint": "Selecciona una skill para ver su información.",
       "level": "Nivel",
@@ -37,8 +103,9 @@
         "hits": "Golpes",
         "area": "Área",
         "cast": "Cast",
+        "fct": "FCT",
+        "vct": "VCT",
         "delay": "Delay",
-        "cooldown": "Cooldown",
         "hp": "HP",
         "zeny": "Zeny",
         "spirit": "{n, plural, one {# esfera} other {# esferas}}",
@@ -84,7 +151,9 @@
       "label": "Secciones",
       "market": "Mercado",
       "builds": "Builds",
-      "db": "DB"
+      "db": "DB",
+      "tools": "Tools",
+      "expand": "Mostrar pestañas de {section}"
     },
     "account": {
       "title": "Tu cuenta",
@@ -224,6 +293,7 @@
     "buildLimitReached": "Has alcanzado el máximo de builds ({max})",
     "buildNeedTag": "Selecciona al menos una etiqueta (PvP/PvE)",
     "buildInvalidJob": "Clase no válida",
+    "buildInvalidSkillCode": "El código de skills no es válido o no corresponde a la clase de la build",
     "buildItemSlotMismatch": "El item no corresponde a este slot",
     "cardSlotMismatch": "La carta no encaja en este tipo de equipo",
     "buildTooManyCards": "Este item no admite tantas cartas"
@@ -261,8 +331,8 @@
         "heading": "Publicaciones por tipo y estado",
         "closed": "Cerrada"
       },
-      "tradeOffers": {
-        "heading": "Ofertas de intercambio por estado"
+      "offers": {
+        "heading": "Ofertas por estado"
       },
       "rankings": {
         "topPosters": "Quién más publica",
@@ -810,6 +880,15 @@
       "secondJobs": "Clases 2ª",
       "tagsLabel": "Etiquetas",
       "notesLabel": "Notas",
+      "skillsLabel": "Skills (opcional)",
+      "skillsHint": "Elige una clase primero para añadir el plan de skills.",
+      "skillsConfigure": "Configurar skills",
+      "skillsEdit": "Editar skills",
+      "skillsClear": "Quitar",
+      "skillCodePlaceholder": "Pega aquí el código exportado del planner de skills",
+      "skillCodeInvalid": "Código de skills no válido",
+      "skillCodeWrongClass": "El código es de otra clase distinta a la de la build",
+      "skillCodeSummary": "Plan de skills añadido ({n} skills)",
       "notesPlaceholder": "Detalles de la build, sinergias, alternativas…",
       "slotsLabel": "Piezas",
       "refine": "Refino",
@@ -830,6 +909,7 @@
       "searchMarket": "Buscar en el mercado",
       "searchAllMarket": "Buscar todo en el mercado",
       "publishItem": "Publicar en el mercado",
+      "skills": "Skills",
       "avail": {
         "SALE": "{n, plural, one {# venta} other {# ventas}}",
         "BUY": "{n, plural, one {# compra} other {# compras}}",

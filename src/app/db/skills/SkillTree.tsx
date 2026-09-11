@@ -43,6 +43,7 @@ export function SkillTree({
   onSelect,
   onWheel,
   onHover,
+  readOnly = false,
 }: {
   tree: TreeView;
   levels: Levels;
@@ -54,6 +55,9 @@ export function SkillTree({
   onSelect: (id: number) => void;
   onWheel: (id: number, delta: number) => void;
   onHover: (id: number | null) => void;
+  // Preview de solo lectura (detalle de build): sin rueda (no secuestra el scroll
+  // de la página) ni click; el tooltip al pasar el ratón se mantiene.
+  readOnly?: boolean;
 }) {
   // Rueda: listener nativo no-pasivo (React lo registra passive → preventDefault
   // no frenaría el scroll de página). Resuelve la celda por data-skill-id.
@@ -63,6 +67,7 @@ export function SkillTree({
   });
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (readOnly) return; // preview: la rueda no debe cambiar niveles ni frenar el scroll
     const el = containerRef.current;
     if (!el) return;
     function handler(e: WheelEvent) {
@@ -73,7 +78,7 @@ export function SkillTree({
     }
     el.addEventListener("wheel", handler, { passive: false });
     return () => el.removeEventListener("wheel", handler);
-  }, []);
+  }, [readOnly]);
 
   const [hover, setHover] = useState<{ id: number; x: number; y: number } | null>(null);
 
@@ -133,7 +138,7 @@ export function SkillTree({
             title={skill.name}
             data-skill-id={cell.id}
             data-pre={skill.pre ? "1" : "0"}
-            onClick={() => onSelect(cell.id)}
+            onClick={readOnly ? undefined : () => onSelect(cell.id)}
             onMouseEnter={(e) => {
               setHover({ id: cell.id, x: e.clientX, y: e.clientY });
               onHover(cell.id);

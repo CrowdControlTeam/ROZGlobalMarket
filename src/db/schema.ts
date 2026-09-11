@@ -1,4 +1,4 @@
-import { pgTable, varchar, timestamp, text, integer, index, foreignKey, uniqueIndex, boolean, jsonb, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, varchar, timestamp, text, integer, index, foreignKey, uniqueIndex, boolean, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { createId } from "../lib/id"
 import {
@@ -62,17 +62,28 @@ export const listing = pgTable("Listing", {
 	// updatedAt: Prisma filled this client-side (@updatedAt); the DB has no default
 	// or trigger, so Drizzle sets it on insert and update (same for the other tables
 	// with updatedAt).
+	// Denormalized item fields: the market grid filters, sorts and keyset-paginates
+	// by these in SQL. Items live in memory (see item-store), not the DB, so these
+	// are copied onto the listing at write time and refreshed by the item import if
+	// the item changes. Everything else about the item (icon, full record) is
+	// resolved from memory by itemId — these columns are ONLY what the grid queries.
+	// Defaults exist so ADD COLUMN is clean on existing rows; the app always sets
+	// real values on write (see createListing/updateListing).
+	itemName: text().default('').notNull(),
+	itemCategory: itemCategory().default('ETC').notNull(),
+	itemSlot: equipSlot(),
+	itemWeaponType: weaponType(),
+	itemSlotCount: integer().default(0).notNull(),
 }, (table) => [
 	index("Listing_price_idx").using("btree", table.price.asc().nullsLast().op("int4_ops")),
+	// Orden por nombre del grid (name_asc/desc) con paginación keyset por (itemName, id).
+	index("Listing_itemName_idx").using("btree", table.itemName.asc().nullsLast().op("text_ops")),
 	index("Listing_status_createdAt_idx").using("btree", table.status.asc().nullsLast().op("timestamp_ops"), table.createdAt.asc().nullsLast().op("timestamp_ops")),
 	// Sirve tanto al filtro del mercado (status='ACTIVE' AND expiresAt > now())
 	// como al barrido del cron (status='ACTIVE' AND expiresAt <= now()).
 	index("Listing_status_expiresAt_idx").using("btree", table.status.asc().nullsLast().op("enum_ops"), table.expiresAt.asc().nullsLast().op("timestamp_ops")),
-	foreignKey({
-			columns: [table.itemId],
-			foreignColumns: [item.id],
-			name: "Listing_itemId_fkey"
-		}).onUpdate("cascade").onDelete("restrict"),
+	// itemId es texto plano sin FK: los items viven en memoria (item-store), no en
+	// la BD. La integridad se gestiona en la app (ver import:items).
 	foreignKey({
 			columns: [table.posterId],
 			foreignColumns: [user.id],
@@ -116,11 +127,7 @@ export const listingCard = pgTable("ListingCard", {
 			foreignColumns: [listing.id],
 			name: "ListingCard_listingId_fkey"
 		}).onUpdate("cascade").onDelete("cascade"),
-	foreignKey({
-			columns: [table.cardItemId],
-			foreignColumns: [item.id],
-			name: "ListingCard_cardItemId_fkey"
-		}).onUpdate("cascade").onDelete("restrict"),
+	// cardItemId sin FK (item en memoria).
 ]);
 
 export const itemOptionDef = pgTable("ItemOptionDef", {
@@ -193,11 +200,7 @@ export const deal = pgTable("Deal", {
 			foreignColumns: [user.id],
 			name: "Deal_userId_fkey"
 		}).onUpdate("cascade").onDelete("restrict"),
-	foreignKey({
-			columns: [table.offeredItemId],
-			foreignColumns: [item.id],
-			name: "Deal_offeredItemId_fkey"
-		}).onUpdate("cascade").onDelete("set null"),
+	// offeredItemId sin FK (item en memoria; el import lo pone a null si el item desaparece).
 ]);
 
 export const savedSearch = pgTable("SavedSearch", {
@@ -217,43 +220,9 @@ export const savedSearch = pgTable("SavedSearch", {
 		}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
-export const item = pgTable("Item", {
-	id: text().notNull(),
-	name: text().notNull(),
-	category: itemCategory().notNull(),
-	slot: equipSlot(),
-	iconUrl: text().notNull(),
-	importedAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
-	weaponType: weaponType(),
-	armorLevel: integer(),
-	attack: integer(),
-	cardSlot: text(),
-	categorySource: text(),
-	classNum: integer(),
-	cooldown: text(),
-	costume: boolean().default(false).notNull(),
-	defense: integer(),
-	effectId: integer(),
-	element: text(),
-	itemType: text(),
-	jobs: text(),
-	petTarget: text(),
-	position: text(),
-	requiredLevel: integer(),
-	restrictions: jsonb(),
-	slotCount: integer().default(0).notNull(),
-	subType: text(),
-	tradeable: boolean().default(true).notNull(),
-	unidentifiedName: text(),
-	weaponLevel: integer(),
-	weight: integer(),
-	description: text().array().default([]).notNull(),
-}, (table) => [
-	index("Item_category_slot_idx").using("btree", table.category.asc().nullsLast().op("enum_ops"), table.slot.asc().nullsLast().op("enum_ops")),
-	index("Item_name_idx").using("btree", table.name.asc().nullsLast().op("text_ops")),
-	index("Item_tradeable_idx").using("btree", table.tradeable.asc().nullsLast().op("bool_ops")),
-]);
+// La tabla Item fue eliminada: los items son datos estáticos de referencia que
+// viven en memoria (src/data/item-catalog.json, ver src/lib/item-store.ts). Las
+// columnas itemId/cardItemId/offeredItemId son texto plano sin FK.
 
 // Build de un usuario: nombre, clase (jobId = id del job en skill-planner.json,
 // misma fuente que el planner; sin FK a una tabla), etiquetas (≥1 PvP/PvE) y
@@ -265,6 +234,10 @@ export const build = pgTable("Build", {
 	jobId: integer().notNull(),
 	tags: buildTag().array().default([]).notNull(),
 	notes: text(),
+	// Código exportado del skill planner (base64url; ver encodeBuild/decodeBuild).
+	// Opcional: null = la build no lleva plan de skills. Su jobId codificado debe
+	// coincidir con `jobId` (se valida al guardar).
+	skillCode: text(),
 	createdAt: timestamp({ precision: 3, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp({ precision: 3, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 }, (table) => [
@@ -291,11 +264,7 @@ export const buildEntry = pgTable("BuildEntry", {
 			foreignColumns: [build.id],
 			name: "BuildEntry_buildId_fkey"
 		}).onUpdate("cascade").onDelete("cascade"),
-	foreignKey({
-			columns: [table.itemId],
-			foreignColumns: [item.id],
-			name: "BuildEntry_itemId_fkey"
-		}).onUpdate("cascade").onDelete("restrict"),
+	// itemId sin FK (item en memoria).
 ]);
 
 // Options aleatorias de una pieza de la build (mismo patrón que ListingOption).
@@ -333,11 +302,7 @@ export const buildEntryCard = pgTable("BuildEntryCard", {
 			foreignColumns: [buildEntry.id],
 			name: "BuildEntryCard_entryId_fkey"
 		}).onUpdate("cascade").onDelete("cascade"),
-	foreignKey({
-			columns: [table.cardItemId],
-			foreignColumns: [item.id],
-			name: "BuildEntryCard_cardItemId_fkey"
-		}).onUpdate("cascade").onDelete("restrict"),
+	// cardItemId sin FK (item en memoria).
 ]);
 
 // Enums (value + type): they live in ./enums (client-safe) and are re-exported
@@ -356,7 +321,6 @@ export {
 } from "./enums";
 
 // Model row types (equivalent to the types Prisma used to generate).
-export type Item = typeof item.$inferSelect;
 export type ItemOptionDef = typeof itemOptionDef.$inferSelect;
 export type Listing = typeof listing.$inferSelect;
 export type ListingOption = typeof listingOption.$inferSelect;

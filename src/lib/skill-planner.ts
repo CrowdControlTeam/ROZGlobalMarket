@@ -20,10 +20,11 @@ export type SkillStats = {
   range?: number;
   splash?: number | number[];
   hits?: number | number[];
-  castVar?: number | number[]; // cast variable (ms)
-  castFixed?: number; // cast fijo (ms)
-  afterCast?: number; // delay tras cast (ms)
-  cooldown?: number; // ms
+  castVar?: number | number[]; // cast variable (ms), por nivel o escalar
+  castFixed?: number | number[]; // cast fijo (ms), por nivel o escalar
+  // Retraso tras el cast (ms), por nivel o escalar. En ROZ es el retraso que
+  // realmente cuenta entre lanzamientos (el `cooldown` de Renewal no aplica).
+  afterCast?: number | number[];
   cost?: {
     hp?: number | number[];
     zeny?: number | number[];
@@ -59,13 +60,27 @@ export function getSkill(id: number): Skill | undefined {
   return SKILL_DATA.skills[String(id)];
 }
 
+// SuperNovice es especial: un único job en el selector cuyo árbol combina las
+// skills base (SuperNovice) con las "expandidas" (SuperNovice2), estas últimas
+// mostradas como una sección "2nd" que se desbloquea al llegar a nivel base 99.
+// Ambas secciones comparten UN SOLO pool de 99 puntos (no dos pools separados
+// como los jobs normales). Ver buildTrees/buildCtx/isValid.
+const SUPERNOVICE_ID = 23;
+const SUPERNOVICE2_ID = 4190;
+const SUPERNOVICE_POOL = 99;
+const isSuperNovice = (jobId: number | null) => jobId === SUPERNOVICE_ID || jobId === SUPERNOVICE2_ID;
+
 // Jobs seleccionables para el selector: 1st ordenados por ID; 2nd ordenados
 // según su padre (mismo orden que los 1st, o sea por parentId) y, dentro del
 // mismo padre, por ID. Así Swordman (1º de 1st) trae Knight y Crusader al frente
 // de los 2nd.
 export function selectableJobs() {
   return {
-    first: SKILL_DATA.jobs.filter((j) => j.tier === "first").sort((a, b) => a.id - b.id),
+    // SuperNovice2 no es seleccionable por separado: aparece dentro del árbol de
+    // SuperNovice (ver buildTrees), así que se excluye de la lista.
+    first: SKILL_DATA.jobs
+      .filter((j) => j.tier === "first" && j.id !== SUPERNOVICE2_ID)
+      .sort((a, b) => a.id - b.id),
     second: SKILL_DATA.jobs
       .filter((j) => j.tier === "second")
       .sort((a, b) => (a.parentId ?? 0) - (b.parentId ?? 0) || a.id - b.id),
@@ -86,6 +101,16 @@ export type TreeView = { job: Job; tier: "first" | "second"; cells: Cell[] };
 
 export function buildTrees(selectedJobId: number | null): TreeView[] {
   if (selectedJobId == null) return [];
+  // SuperNovice: árbol combinado base (first) + expandidas de SuperNovice2 (2nd).
+  if (isSuperNovice(selectedJobId)) {
+    const base = getJob(SUPERNOVICE_ID);
+    const adv = getJob(SUPERNOVICE2_ID);
+    if (!base || !adv) return [];
+    return [
+      { job: base, tier: "first", cells: [...base.cells, ...SKILL_DATA.noviceCells] },
+      { job: adv, tier: "second", cells: adv.cells },
+    ];
+  }
   const job = getJob(selectedJobId);
   if (!job) return [];
   if (job.tier === "first") {
@@ -106,6 +131,9 @@ export type PlannerCtx = {
   editableIds: number[];
   P1: number; // pool 1st (solo skills de 1st)
   P2: number; // pool 2nd (skills de 2nd o de 1st)
+  // SuperNovice: un único pool compartido entre ambas secciones (base + 2nd) en
+  // vez de P1/P2 separados. Si está definido, isValid/UI usan este total.
+  sharedPool?: number;
 };
 
 export function buildCtx(selectedJobId: number | null): PlannerCtx {
@@ -124,7 +152,8 @@ export function buildCtx(selectedJobId: number | null): PlannerCtx {
       if (s && !s.pre) editableIds.push(cell.id);
     }
   }
-  return { bySkill, editableIds, P1, P2 };
+  const sharedPool = isSuperNovice(selectedJobId) ? SUPERNOVICE_POOL : undefined;
+  return { bySkill, editableIds, P1, P2, sharedPool };
 }
 
 // Prereqs de una skill EN el árbol donde se muestra (por job; fallback plano).
@@ -251,11 +280,13 @@ export function poolUsage(levels: Levels, ctx: PlannerCtx) {
   const pool1stUsed = Math.min(s1, ctx.P1);
   const overflow = Math.max(0, s1 - ctx.P1);
   const pool2ndUsed = s2 + overflow;
-  return { s1, s2, pool1stUsed, pool2ndUsed };
+  return { s1, s2, pool1stUsed, pool2ndUsed, total: s1 + s2 };
 }
 
 export function isValid(levels: Levels, ctx: PlannerCtx): boolean {
   const u = poolUsage(levels, ctx);
+  // Pool compartido (SuperNovice): un único presupuesto para ambas secciones.
+  if (ctx.sharedPool != null) return u.total <= ctx.sharedPool;
   return u.pool1stUsed <= ctx.P1 && u.pool2ndUsed <= ctx.P2;
 }
 
