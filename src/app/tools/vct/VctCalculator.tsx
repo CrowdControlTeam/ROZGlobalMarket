@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { RotateCcw } from "lucide-react";
+import { HelpCircle, RotateCcw } from "lucide-react";
 import { selectableJobs } from "@/lib/skill-planner";
 import { baseVctMs, computeVct, jobVctSkills, type SectionResult } from "@/lib/vct";
 import { buttonClass, inputBaseClass, inputClass, labelClass, selectClass } from "@/lib/ui";
@@ -124,24 +124,38 @@ export function VctCalculator() {
         </button>
       </header>
 
-      {/* Fórmula + leyenda: para que se entienda cómo se calcula. */}
+      {/* Fórmula: compacta. La leyenda de sus términos va detrás de un icono "?"
+          que la muestra al pasar el ratón (o al enfocar con teclado), para no
+          ocupar espacio. Mismo patrón de tooltip que ExpiryIndicator. */}
       <section className="mb-6 rounded-lg border border-ro-panel-border bg-ro-panel/50 p-4">
-        <h2 className="font-heading text-sm text-ro-text">{t("formula.title")}</h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="font-heading text-sm text-ro-text">{t("formula.title")}</h2>
+          <button
+            type="button"
+            aria-label={t("formula.legend")}
+            className="group relative inline-flex text-ro-text-muted transition-colors hover:text-ro-text focus:text-ro-text focus:outline-none"
+          >
+            <HelpCircle size={15} aria-hidden />
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-80 max-w-[85vw] rounded-md border border-ro-panel-border bg-ro-panel p-3 text-left text-xs font-normal shadow-lg group-hover:block group-focus-within:block"
+            >
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-ro-text-muted">
+                {t("formula.legend")}
+              </span>
+              {(["baseVct", "flat", "gear", "skill"] as const).map((k) => (
+                <span key={k} className="mt-1.5 block text-ro-text-muted first:mt-0">
+                  <span className="font-semibold text-ro-text">{t(`legend.${k}.term`)}</span>
+                  {" — "}
+                  {t(`legend.${k}.desc`)}
+                </span>
+              ))}
+            </span>
+          </button>
+        </div>
         <div className="mt-2 overflow-x-auto">
           <code className="block whitespace-nowrap text-sm text-ro-text">{FORMULA}</code>
         </div>
-        <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-ro-text-muted">
-          {t("formula.legend")}
-        </h3>
-        <ul className="space-y-1.5 text-sm text-ro-text-muted">
-          {(["baseVct", "flat", "gear", "skill"] as const).map((k) => (
-            <li key={k}>
-              <span className="font-semibold text-ro-text">{t(`legend.${k}.term`)}</span>
-              {" — "}
-              {t(`legend.${k}.desc`)}
-            </li>
-          ))}
-        </ul>
       </section>
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
