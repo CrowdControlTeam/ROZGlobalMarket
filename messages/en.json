@@ -6,6 +6,20 @@
     "vct": {
       "title": "VCT Calculator",
       "subtitle": "Compute a skill's Variable Casting Time (VCT), or the reduction percentage. Each group of the formula has its own result and they combine into the global one.",
+      "formula": {
+        "title": "Formula",
+        "legend": "Legend"
+      },
+      "legend": {
+        "baseVct": { "term": "BaseVCT", "desc": "Base Variable Cast Time of a skill." },
+        "flat": { "term": "Sum_VCT", "desc": "Sum of effects that directly subtract from Variable Cast Time (e.g. Shield Ring)." },
+        "gear": { "term": "Sum_GearVCTReduc", "desc": "Sum of Variable Cast Time reductions from gear and cards (e.g. Ghost Fire, Kathryne Keyron Card, Isilla Card)." },
+        "skill": { "term": "Sum_SkillVCTReduc", "desc": "Sum of Variable Cast Time reductions from skills and buffs (e.g. Magic Strings, Suffragium, 16th Night) and some items that reduce specific skills' VCT (Imp Card, Siroma Card, Cylinder Hairband, Autumn Headband)." }
+      },
+      "reset": {
+        "section": "Reset section",
+        "all": "Reset all"
+      },
       "section": {
         "base": {
           "title": "Skill and base cast",

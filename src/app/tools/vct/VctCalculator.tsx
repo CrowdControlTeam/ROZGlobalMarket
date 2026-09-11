@@ -2,10 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { RotateCcw } from "lucide-react";
 import { selectableJobs } from "@/lib/skill-planner";
 import { baseVctMs, computeVct, jobVctSkills, type SectionResult } from "@/lib/vct";
-import { inputBaseClass, inputClass, labelClass, selectClass } from "@/lib/ui";
+import { buttonClass, inputBaseClass, inputClass, labelClass, selectClass } from "@/lib/ui";
 import { ReductionRows, newRow, type ReductionRow } from "./ReductionRows";
+
+// La fórmula, tal cual, para mostrarla arriba (los símbolos matemáticos son
+// universales; solo el título/leyenda se traducen).
+const FORMULA =
+  "VCT = (BaseVCT − Sum_VCT) × (1 − √[(DEX × 2 + INT) ÷ 530]) × (1 − Sum_GearVCTReduc ÷ 100) × (1 − Sum_SkillVCTReduc ÷ 100)";
 
 // SUPERNOVICE / NINJA etc. vienen en mayúsculas en los datos; se muestran en
 // Title Case (mismo criterio que el planner).
@@ -80,18 +86,69 @@ export function VctCalculator() {
     setLevel(skills.find((s) => s.id === id)?.max ?? 1); // por defecto, nivel máximo
   }
 
+  // Reset por sección + reset global. Cada sección vuelve a sus valores por
+  // defecto (skill/base: sin skill; stats: vacíos; filas: una fila vacía).
+  function resetBase() {
+    setJobId("");
+    setSkillId("");
+    setLevel(1);
+    setSumFlat("");
+  }
+  function resetStat() {
+    setDex("");
+    setInt("");
+  }
+  function resetGear() {
+    setGearRows([newRow()]);
+  }
+  function resetSkillRed() {
+    setSkillRows([newRow()]);
+  }
+  function resetAll() {
+    resetBase();
+    resetStat();
+    resetGear();
+    resetSkillRed();
+  }
+
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="font-heading text-lg text-ro-text">{t("title")}</h1>
-        <p className="mt-1 text-sm text-ro-text-muted">{t("subtitle")}</p>
+      <header className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-lg text-ro-text">{t("title")}</h1>
+          <p className="mt-1 text-sm text-ro-text-muted">{t("subtitle")}</p>
+        </div>
+        <button type="button" onClick={resetAll} className={`shrink-0 ${buttonClass("outline")}`}>
+          <RotateCcw size={16} aria-hidden />
+          {t("reset.all")}
+        </button>
       </header>
+
+      {/* Fórmula + leyenda: para que se entienda cómo se calcula. */}
+      <section className="mb-6 rounded-lg border border-ro-panel-border bg-ro-panel/50 p-4">
+        <h2 className="font-heading text-sm text-ro-text">{t("formula.title")}</h2>
+        <div className="mt-2 overflow-x-auto">
+          <code className="block whitespace-nowrap text-sm text-ro-text">{FORMULA}</code>
+        </div>
+        <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-ro-text-muted">
+          {t("formula.legend")}
+        </h3>
+        <ul className="space-y-1.5 text-sm text-ro-text-muted">
+          {(["baseVct", "flat", "gear", "skill"] as const).map((k) => (
+            <li key={k}>
+              <span className="font-semibold text-ro-text">{t(`legend.${k}.term`)}</span>
+              {" — "}
+              {t(`legend.${k}.desc`)}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
         {/* Secciones (inputs) */}
         <div className="flex flex-col gap-4">
           {/* 1) Skill y cast base */}
-          <Section title={t("section.base.title")}>
+          <Section title={t("section.base.title")} onReset={resetBase} resetLabel={t("reset.section")}>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <label className={labelClass}>{t("field.job")}</label>
@@ -183,7 +240,7 @@ export function VctCalculator() {
           </Section>
 
           {/* 2) Stats */}
-          <Section title={t("section.stat.title")}>
+          <Section title={t("section.stat.title")} onReset={resetStat} resetLabel={t("reset.section")}>
             <div className="grid max-w-sm grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>{t("field.dex")}</label>
@@ -212,13 +269,13 @@ export function VctCalculator() {
           </Section>
 
           {/* 3) Reducción por equipo/cartas */}
-          <Section title={t("section.gear.title")}>
+          <Section title={t("section.gear.title")} onReset={resetGear} resetLabel={t("reset.section")}>
             <ReductionRows rows={gearRows} onChange={setGearRows} sum={gearSum} />
             <SectionResultView t={t} res={result.gear} />
           </Section>
 
           {/* 4) Reducción por skills/buffs */}
-          <Section title={t("section.skillred.title")}>
+          <Section title={t("section.skillred.title")} onReset={resetSkillRed} resetLabel={t("reset.section")}>
             <ReductionRows rows={skillRows} onChange={setSkillRows} sum={skillSum} />
             <SectionResultView t={t} res={result.skill} />
           </Section>
@@ -253,11 +310,35 @@ export function VctCalculator() {
   );
 }
 
-// Card de sección (mismo estilo que las secciones del planner).
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+// Card de sección (mismo estilo que las secciones del planner). Con un botón
+// opcional para resetear solo esa sección.
+function Section({
+  title,
+  onReset,
+  resetLabel,
+  children,
+}: {
+  title: string;
+  onReset?: () => void;
+  resetLabel?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="rounded-lg border-2 border-ro-panel-border bg-ro-panel/50 p-4">
-      <h3 className="mb-3 font-heading text-sm text-ro-text">{title}</h3>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="font-heading text-sm text-ro-text">{title}</h3>
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            aria-label={resetLabel}
+            title={resetLabel}
+            className="grid h-7 w-7 place-items-center rounded text-ro-text-muted transition-colors hover:bg-ro-panel-border/40 hover:text-ro-text"
+          >
+            <RotateCcw size={14} aria-hidden />
+          </button>
+        )}
+      </div>
       {children}
     </section>
   );
