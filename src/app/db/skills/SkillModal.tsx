@@ -66,9 +66,9 @@ export function SkillModal({
   const splashNow = atLv(st?.splash);
   if (splashNow) combat.push({ label: t("skillStats.area"), value: `${splashNow * 2 + 1}×${splashNow * 2 + 1}` });
   const castNow = secs(atLv(st?.castVar));
-  const castFixed = secs(st?.castFixed);
+  const castFixed = secs(atLv(st?.castFixed));
   if (castNow) combat.push({ label: t("skillStats.cast"), value: castFixed && castFixed !== "0.0" ? `${castNow}s +${castFixed}` : `${castNow}s` });
-  const afterCast = secs(st?.afterCast);
+  const afterCast = secs(atLv(st?.afterCast));
   if (afterCast) combat.push({ label: t("skillStats.delay"), value: `${afterCast}s` });
   const cooldown = secs(st?.cooldown);
   if (cooldown) combat.push({ label: t("skillStats.cooldown"), value: `${cooldown}s` });

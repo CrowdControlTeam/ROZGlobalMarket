@@ -61,8 +61,8 @@ describe("computeVct — clamps de %", () => {
 describe("baseVctMs / hasVct — escalar vs array por nivel", () => {
   it("Soul Strike (id 13) es escalar: mismo valor en todos los niveles", () => {
     expect(hasVct(13)).toBe(true);
-    expect(baseVctMs(13, 1)).toBe(400);
-    expect(baseVctMs(13, 10)).toBe(400);
+    expect(baseVctMs(13, 1)).toBe(200);
+    expect(baseVctMs(13, 10)).toBe(200);
   });
   it("Cold Bolt (id 14) es array y sube por nivel", () => {
     expect(hasVct(14)).toBe(true);

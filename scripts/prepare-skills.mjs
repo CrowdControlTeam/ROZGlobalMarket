@@ -35,6 +35,19 @@ jobs.forEach((j) => j.cells.forEach((c) => usedIds.add(c.id)));
 // el DETALLE de la skill (no el tooltip). Campos ausentes se omiten; los
 // por-nivel se guardan como array (o escalar si no varían). Los tiempos van en
 // ms (el detalle los pasa a segundos).
+//
+// Los tiempos de cast (variable/fijo/after-cast) vienen del CLIENTE como campos
+// de nivel superior del skill (castVariableDelay / castFixedDelay /
+// afterCastDelay), siempre como array por nivel (o [] si no aplica). normDelay
+// los normaliza: vacío o todo-cero → se omite; constante → escalar; si varía →
+// array. (La extracción antigua los sacaba de dbStats.castTime/fixedCastTime,
+// que ya no existen y además traían valores erróneos.)
+function normDelay(v) {
+  if (typeof v === "number") return v > 0 ? v : undefined;
+  if (!Array.isArray(v) || v.length === 0) return undefined;
+  if (v.every((x) => x === 0)) return undefined;
+  return v.every((x) => x === v[0]) ? v[0] : v;
+}
 function normHits(hc) {
   if (typeof hc === "number") return hc > 1 ? hc : undefined; // 1 golpe no aporta
   if (Array.isArray(hc)) {
@@ -54,9 +67,13 @@ function buildStats(s) {
   if (d.splashArea != null && !(Array.isArray(d.splashArea) && !d.splashArea.length)) st.splash = d.splashArea;
   const hits = normHits(d.hitCount);
   if (hits) st.hits = hits;
-  if (d.castTime != null && !(Array.isArray(d.castTime) && !d.castTime.length)) st.castVar = d.castTime;
-  if (typeof d.fixedCastTime === "number" && d.fixedCastTime > 0) st.castFixed = d.fixedCastTime;
-  if (typeof d.afterCastActDelay === "number" && d.afterCastActDelay > 0) st.afterCast = d.afterCastActDelay;
+  // Tiempos de cast: campos de nivel superior del skill (no de dbStats).
+  const castVar = normDelay(s.castVariableDelay);
+  if (castVar !== undefined) st.castVar = castVar;
+  const castFixed = normDelay(s.castFixedDelay);
+  if (castFixed !== undefined) st.castFixed = castFixed;
+  const afterCast = normDelay(s.afterCastDelay);
+  if (afterCast !== undefined) st.afterCast = afterCast;
   if (typeof d.cooldown === "number" && d.cooldown > 0) st.cooldown = d.cooldown;
   const r = d.requires || {};
   const cost = {};
