@@ -103,6 +103,8 @@
         "hits": "Hits",
         "area": "Area",
         "cast": "Cast",
+        "fct": "FCT",
+        "vct": "VCT",
         "delay": "Delay",
         "hp": "HP",
         "zeny": "Zeny",

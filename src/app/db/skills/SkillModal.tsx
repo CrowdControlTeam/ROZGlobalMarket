@@ -58,16 +58,27 @@ export function SkillModal({
       .filter(Boolean)
       .join(" · ") || skill.type;
 
-  // Rejilla de combate (solo las celdas con dato).
-  const combat: { label: string; value: string }[] = [];
+  // Rejilla de combate (solo las celdas con dato). `hint` = texto pequeño/atenuado
+  // bajo el valor (una aclaración, no parte del valor), p. ej. "FCT + VCT".
+  const combat: { label: string; value: string; hint?: string }[] = [];
   if (st?.range) combat.push({ label: t("skillStats.range"), value: String(st.range) });
   const hitsNow = atLv(st?.hits);
   if (hitsNow) combat.push({ label: t("skillStats.hits"), value: String(hitsNow) });
   const splashNow = atLv(st?.splash);
   if (splashNow) combat.push({ label: t("skillStats.area"), value: `${splashNow * 2 + 1}×${splashNow * 2 + 1}` });
-  const castNow = secs(atLv(st?.castVar));
-  const castFixed = secs(atLv(st?.castFixed));
-  if (castNow) combat.push({ label: t("skillStats.cast"), value: castFixed && castFixed !== "0.0" ? `${castNow}s +${castFixed}` : `${castNow}s` });
+  // Cast: notación estándar del juego = FCT + VCT (fijo primero, luego variable).
+  // El valor son los tiempos; el `hint` aclara qué es cada parte.
+  const vct = secs(atLv(st?.castVar));
+  const fct = secs(atLv(st?.castFixed));
+  const hasVct = vct != null && vct !== "0.0";
+  const hasFct = fct != null && fct !== "0.0";
+  if (hasVct || hasFct) {
+    const value = [hasFct ? `${fct}s` : null, hasVct ? `${vct}s` : null].filter(Boolean).join(" + ");
+    const hint = [hasFct ? t("skillStats.fct") : null, hasVct ? t("skillStats.vct") : null]
+      .filter(Boolean)
+      .join(" + ");
+    combat.push({ label: t("skillStats.cast"), value, hint });
+  }
   // En ROZ el retraso que cuenta es el after-cast delay (no hay cooldown estilo
   // Renewal), así que solo se muestra este.
   const afterCast = secs(atLv(st?.afterCast));
@@ -158,6 +169,7 @@ export function SkillModal({
               <div key={s.label} className="rounded-md bg-ro-panel-alt/50 px-2.5 py-1.5">
                 <p className="text-[10px] uppercase tracking-wide text-ro-text-muted">{s.label}</p>
                 <p className="mt-0.5 text-sm font-semibold tabular-nums text-ro-text">{s.value}</p>
+                {s.hint && <p className="text-[10px] font-normal normal-case text-ro-text-muted/80">{s.hint}</p>}
               </div>
             ))}
           </div>
