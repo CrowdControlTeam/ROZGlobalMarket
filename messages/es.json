@@ -1,4 +1,53 @@
 {
+  "tools": {
+    "nav": {
+      "vct": "VCT"
+    },
+    "vct": {
+      "title": "Calculadora de VCT",
+      "subtitle": "Calcula el Variable Casting Time (VCT) de una skill, o el porcentaje de reducción. Cada sección de la fórmula tiene su propio resultado y se combinan en el global.",
+      "section": {
+        "base": {
+          "title": "Skill y cast base",
+          "hint": "Sin skill seleccionada solo se calculan los porcentajes. Elige una skill para obtener el tiempo en segundos."
+        },
+        "stat": { "title": "Stats (DEX / INT)" },
+        "gear": { "title": "Reducción por equipo y cartas" },
+        "skillred": { "title": "Reducción por skills y buffs" }
+      },
+      "field": {
+        "job": "Job",
+        "jobPlaceholder": "Elige un job…",
+        "firstJobs": "1st jobs",
+        "secondJobs": "2nd jobs",
+        "skill": "Skill (opcional)",
+        "skillNone": "Sin skill (solo %)",
+        "level": "Nivel",
+        "baseVct": "Cast base (BaseVCT)",
+        "reducedBase": "Tras reducción plana",
+        "sumFlat": "Reducción plana (Sum_VCT)",
+        "dex": "DEX",
+        "int": "INT"
+      },
+      "rows": {
+        "add": "Añadir",
+        "remove": "Quitar",
+        "namePlaceholder": "Fuente (opcional)",
+        "valueLabel": "Reducción %",
+        "sum": "Suma"
+      },
+      "result": {
+        "title": "Resultado global",
+        "reduction": "Reducción",
+        "remaining": "VCT restante",
+        "sectionCast": "VCT (solo esta sección)",
+        "totalReduction": "Reducción total de VCT",
+        "totalRemaining": "VCT restante",
+        "finalCast": "VCT final",
+        "noSkill": "Elige una skill para ver el VCT final en segundos."
+      }
+    }
+  },
   "db": {
     "nav": {
       "items": "Items",
@@ -87,6 +136,7 @@
       "market": "Mercado",
       "builds": "Builds",
       "db": "DB",
+      "tools": "Tools",
       "expand": "Mostrar pestañas de {section}"
     },
     "account": {

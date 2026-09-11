@@ -22,6 +22,7 @@ export function HeaderNav() {
   const t = useTranslations("nav.sections");
   const tBuilds = useTranslations("builds.tabs");
   const tDb = useTranslations("db.nav");
+  const tTools = useTranslations("tools.nav");
   // Qué desplegable está abierto (por key), o null.
   const [open, setOpen] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -63,6 +64,13 @@ export function HeaderNav() {
         { href: "/db/items", label: tDb("items") },
         { href: "/db/skills", label: tDb("skills") },
       ],
+    },
+    {
+      key: "tools",
+      href: "/tools",
+      label: t("tools"),
+      active: isUnder(pathname, "/tools"),
+      subtabs: [{ href: "/tools/vct", label: tTools("vct") }],
     },
   ];
 
