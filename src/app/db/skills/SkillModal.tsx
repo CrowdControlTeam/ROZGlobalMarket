@@ -167,9 +167,13 @@ export function SkillModal({
           <div className="mt-3 grid grid-cols-3 gap-1.5">
             {combat.map((s) => (
               <div key={s.label} className="rounded-md bg-ro-panel-alt/50 px-2.5 py-1.5">
-                <p className="text-[10px] uppercase tracking-wide text-ro-text-muted">{s.label}</p>
+                <p className="text-[10px] uppercase tracking-wide text-ro-text-muted">
+                  {s.label}
+                  {/* Aclaración junto a la etiqueta (p. ej. "FCT + VCT"): normal-case
+                      y más atenuada para diferenciarla de la etiqueta en sí. */}
+                  {s.hint && <span className="ml-1 font-normal normal-case text-ro-text-muted/70">{s.hint}</span>}
+                </p>
                 <p className="mt-0.5 text-sm font-semibold tabular-nums text-ro-text">{s.value}</p>
-                {s.hint && <p className="text-[10px] font-normal normal-case text-ro-text-muted/80">{s.hint}</p>}
               </div>
             ))}
           </div>
