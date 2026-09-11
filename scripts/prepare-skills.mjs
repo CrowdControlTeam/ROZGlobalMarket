@@ -72,9 +72,10 @@ function buildStats(s) {
   if (castVar !== undefined) st.castVar = castVar;
   const castFixed = normDelay(s.castFixedDelay);
   if (castFixed !== undefined) st.castFixed = castFixed;
+  // En ROZ el retraso relevante entre lanzamientos es el AFTER-CAST DELAY, no el
+  // `cooldown` (mecánica de Renewal que no aplica aquí), así que no se extrae.
   const afterCast = normDelay(s.afterCastDelay);
   if (afterCast !== undefined) st.afterCast = afterCast;
-  if (typeof d.cooldown === "number" && d.cooldown > 0) st.cooldown = d.cooldown;
   const r = d.requires || {};
   const cost = {};
   if (r.hpCost != null) cost.hp = r.hpCost;

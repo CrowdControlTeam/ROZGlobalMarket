@@ -68,10 +68,10 @@ export function SkillModal({
   const castNow = secs(atLv(st?.castVar));
   const castFixed = secs(atLv(st?.castFixed));
   if (castNow) combat.push({ label: t("skillStats.cast"), value: castFixed && castFixed !== "0.0" ? `${castNow}s +${castFixed}` : `${castNow}s` });
+  // En ROZ el retraso que cuenta es el after-cast delay (no hay cooldown estilo
+  // Renewal), así que solo se muestra este.
   const afterCast = secs(atLv(st?.afterCast));
   if (afterCast) combat.push({ label: t("skillStats.delay"), value: `${afterCast}s` });
-  const cooldown = secs(st?.cooldown);
-  if (cooldown) combat.push({ label: t("skillStats.cooldown"), value: `${cooldown}s` });
 
   // Chips de coste (SP primero, luego el resto).
   const costChips: { key: string; text: string; accent?: boolean }[] = [];

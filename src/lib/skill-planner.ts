@@ -22,8 +22,9 @@ export type SkillStats = {
   hits?: number | number[];
   castVar?: number | number[]; // cast variable (ms), por nivel o escalar
   castFixed?: number | number[]; // cast fijo (ms), por nivel o escalar
-  afterCast?: number | number[]; // delay tras cast (ms), por nivel o escalar
-  cooldown?: number; // ms
+  // Retraso tras el cast (ms), por nivel o escalar. En ROZ es el retraso que
+  // realmente cuenta entre lanzamientos (el `cooldown` de Renewal no aplica).
+  afterCast?: number | number[];
   cost?: {
     hp?: number | number[];
     zeny?: number | number[];

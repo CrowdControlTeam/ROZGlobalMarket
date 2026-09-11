@@ -104,7 +104,6 @@
         "area": "Area",
         "cast": "Cast",
         "delay": "Delay",
-        "cooldown": "Cooldown",
         "hp": "HP",
         "zeny": "Zeny",
         "spirit": "{n, plural, one {# sphere} other {# spheres}}",
