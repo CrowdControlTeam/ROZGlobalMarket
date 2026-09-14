@@ -3,7 +3,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowLeftRight, Gift, Pencil, Plus, Search, ShoppingCart, Tag } from "lucide-react";
+import { ArrowLeftRight, Copy, Gift, Pencil, Plus, Search, ShoppingCart, Tag } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { BuildSlot, ListingType } from "@/db/enums";
 import { getJob } from "@/lib/skill-planner";
@@ -237,6 +237,12 @@ export function BuildDetailView({
               <Search size={16} aria-hidden />
             </Link>
           )}
+          {/* Duplicar: disponible para cualquiera (también builds de otros). Abre
+              el editor precargado; la copia se crea (mía) al Guardar. */}
+          <Link href={`/builds/new?from=${build.id}`} className={buttonClass("outline")}>
+            <Copy size={15} aria-hidden />
+            {t("detail.duplicate")}
+          </Link>
           {isOwner && (
             <Link href={`/builds/${build.id}/edit`} className={buttonClass("outline")}>
               <Pencil size={15} aria-hidden />

@@ -57,6 +57,13 @@
       "when": 1788976917726,
       "tag": "0007_build_skillcode",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789345860729,
+      "tag": "0008_builds_role_limit",
+      "breakpoints": true
     }
   ]
 }

@@ -309,7 +309,12 @@
       "builds": {
         "title": "Builds",
         "maxBuildsLabel": "Max builds per user",
-        "maxBuildsHint": "How many builds each user can save."
+        "maxBuildsHint": "How many builds each user can save.",
+        "roleLabel": "Role with its own limit",
+        "roleHint": "Optional role whose users get a different build limit than the general one.",
+        "roleNone": "None (no override)",
+        "roleMaxLabel": "Builds for that role",
+        "roleMaxHint": "Build limit for users with the role above. Empty = no override (the general one applies)."
       }
     },
     "stats": {
@@ -871,6 +876,7 @@
     "form": {
       "back": "Back to builds",
       "newTitle": "New build",
+      "duplicateTitle": "Duplicate build",
       "editTitle": "Edit build",
       "nameLabel": "Name",
       "namePlaceholder": "e.g. Knight PvP burst",
@@ -906,6 +912,7 @@
     },
     "detail": {
       "noPieces": "This build has no pieces yet.",
+      "duplicate": "Duplicate",
       "searchMarket": "Search the market",
       "searchAllMarket": "Search all in the market",
       "publishItem": "Publish on the market",
