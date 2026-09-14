@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeftRight, Copy, Gift, Pencil, Plus, Search, ShoppingCart, Tag } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -12,7 +13,7 @@ import { formatItemDisplayName } from "@/lib/card-slots-constants";
 import { LISTING_TYPE_BADGE_CLASS } from "@/lib/market-labels";
 import { ItemIcon } from "@/components/ItemIcon";
 import { SkillTreePreview } from "@/app/db/skills/SkillTreePreview";
-import { buttonClass } from "@/lib/ui";
+import { KebabMenu, type KebabItem } from "@/components/KebabMenu";
 import type { getBuild } from "@/lib/builds";
 
 // Detalle de una build (paperdoll estilo juego), reutilizado por la página de
@@ -46,8 +47,28 @@ export function BuildDetailView({
   const t = useTranslations("builds");
   const tSlot = useTranslations("builds.slots");
   const tTag = useTranslations("builds.tags");
+  const router = useRouter();
 
   const isOwner = build.owner.id === meId;
+
+  // Acciones del kebab (⋮): duplicar (cualquiera) y, si es mía, editar. Se usa
+  // router.push porque KebabMenu trabaja con callbacks, no con enlaces.
+  const menuItems: KebabItem[] = [
+    {
+      label: t("detail.duplicate"),
+      icon: <Copy size={15} aria-hidden />,
+      onSelect: () => router.push(`/builds/new?from=${build.id}`),
+    },
+    ...(isOwner
+      ? [
+          {
+            label: t("list.edit"),
+            icon: <Pencil size={15} aria-hidden />,
+            onSelect: () => router.push(`/builds/${build.id}/edit`),
+          },
+        ]
+      : []),
+  ];
   const jobName = getJob(build.jobId)?.name ?? "—";
   const bySlot = new Map(build.entries.map((e) => [e.slot, e]));
 
@@ -237,18 +258,9 @@ export function BuildDetailView({
               <Search size={16} aria-hidden />
             </Link>
           )}
-          {/* Duplicar: disponible para cualquiera (también builds de otros). Abre
-              el editor precargado; la copia se crea (mía) al Guardar. */}
-          <Link href={`/builds/new?from=${build.id}`} className={buttonClass("outline")}>
-            <Copy size={15} aria-hidden />
-            {t("detail.duplicate")}
-          </Link>
-          {isOwner && (
-            <Link href={`/builds/${build.id}/edit`} className={buttonClass("outline")}>
-              <Pencil size={15} aria-hidden />
-              {t("list.edit")}
-            </Link>
-          )}
+          {/* Duplicar (cualquiera) y editar (propia) van en el kebab para no
+              amontonar botones; "buscar en mercado" se queda fuera, visible. */}
+          <KebabMenu label={t("detail.moreActions")} items={menuItems} />
         </div>
       </div>
 

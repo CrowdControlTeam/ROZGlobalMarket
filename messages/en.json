@@ -912,6 +912,7 @@
     },
     "detail": {
       "noPieces": "This build has no pieces yet.",
+      "moreActions": "More actions",
       "duplicate": "Duplicate",
       "searchMarket": "Search the market",
       "searchAllMarket": "Search all in the market",

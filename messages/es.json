@@ -912,6 +912,7 @@
     },
     "detail": {
       "noPieces": "Esta build no tiene piezas todavía.",
+      "moreActions": "Más acciones",
       "duplicate": "Duplicar",
       "searchMarket": "Buscar en el mercado",
       "searchAllMarket": "Buscar todo en el mercado",
