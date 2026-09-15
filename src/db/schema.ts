@@ -166,6 +166,11 @@ export const marketConfig = pgTable("MarketConfig", {
 	listingExpirationDays: integer().default(7).notNull(),
 	// Máximo de builds que puede tener cada usuario.
 	maxBuildsPerUser: integer().default(5).notNull(),
+	// Override del tope de builds para un rol concreto: los usuarios que tengan
+	// `buildsRoleId` pueden crear `buildsRoleMax` builds en vez de maxBuildsPerUser.
+	// Ambos nullable: si falta cualquiera, no hay override (aplica el base a todos).
+	buildsRoleId: text(),
+	buildsRoleMax: integer(),
 });
 
 export const rateLimit = pgTable("RateLimit", {

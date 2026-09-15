@@ -74,7 +74,9 @@ type CardSel = { id: string; name: string; iconUrl: string } | null;
 export type SlotState = { item: SlotItem; refine: number; options: OptionSelection[]; cards: CardSel[] };
 
 export type BuildEditorInitial = {
-  id: string;
+  // Sin id = precarga para CREAR (duplicado): el editor guarda como creación.
+  // Con id = EDITAR esa build.
+  id?: string;
   name: string;
   jobId: number;
   tags: BuildTag[];
@@ -97,7 +99,8 @@ export function BuildEditor({
   const t = useTranslations("builds.form");
   const tTag = useTranslations("builds.tags");
   const router = useRouter();
-  const isEdit = !!initial;
+  // Editar (initial con id) vs crear (sin initial, o duplicado precargado sin id).
+  const isEdit = initial?.id != null;
 
   const [name, setName] = useState(initial?.name ?? "");
   const [jobId, setJobId] = useState<number | null>(initial?.jobId ?? null);
@@ -309,7 +312,7 @@ export function BuildEditor({
     };
     startTransition(async () => {
       try {
-        const res = isEdit ? await updateBuild(initial!.id, input) : await createBuild(input);
+        const res = initial?.id ? await updateBuild(initial.id, input) : await createBuild(input);
         router.push(`/builds/${res.id}`);
         router.refresh();
       } catch (err) {
@@ -319,11 +322,12 @@ export function BuildEditor({
   }
 
   function remove() {
-    if (!initial) return;
+    if (!initial?.id) return;
+    const buildId = initial.id;
     setError(null);
     startTransition(async () => {
       try {
-        await deleteBuild(initial.id);
+        await deleteBuild(buildId);
         router.push("/builds");
         router.refresh();
       } catch (err) {

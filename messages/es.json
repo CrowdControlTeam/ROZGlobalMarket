@@ -309,7 +309,12 @@
       "builds": {
         "title": "Builds",
         "maxBuildsLabel": "Máximo de builds por usuario",
-        "maxBuildsHint": "Cuántas builds puede guardar cada usuario."
+        "maxBuildsHint": "Cuántas builds puede guardar cada usuario.",
+        "roleLabel": "Rol con tope propio",
+        "roleHint": "Rol opcional cuyos usuarios tienen un tope de builds distinto al general.",
+        "roleNone": "Ninguno (sin override)",
+        "roleMaxLabel": "Builds para ese rol",
+        "roleMaxHint": "Tope de builds para los usuarios con el rol de arriba. Vacío = sin override (aplica el general)."
       }
     },
     "stats": {
@@ -871,6 +876,7 @@
     "form": {
       "back": "Volver a builds",
       "newTitle": "Nueva build",
+      "duplicateTitle": "Duplicar build",
       "editTitle": "Editar build",
       "nameLabel": "Nombre",
       "namePlaceholder": "p. ej. Knight PvP burst",
@@ -906,6 +912,9 @@
     },
     "detail": {
       "noPieces": "Esta build no tiene piezas todavía.",
+      "moreActions": "Más acciones",
+      "viewSkills": "Ver skills",
+      "duplicate": "Duplicar",
       "searchMarket": "Buscar en el mercado",
       "searchAllMarket": "Buscar todo en el mercado",
       "publishItem": "Publicar en el mercado",

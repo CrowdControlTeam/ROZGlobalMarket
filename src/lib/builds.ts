@@ -10,6 +10,7 @@ import {
   buildEntryOption,
   buildEntryCard,
   listing,
+  user,
 } from "@/db/schema";
 import { BUILD_SLOT_VALUES, BUILD_TAG_VALUES, ItemCategory, type EquipSlot, type ListingType, type WeaponType } from "@/db/enums";
 import { getItem, getItems } from "@/lib/item-store";
@@ -17,6 +18,7 @@ import { requireSession } from "@/lib/guard";
 import { loadMarketConfig } from "@/lib/market-config";
 import { loadMaxRefineLevel } from "@/lib/refine";
 import { getJob, decodeBuild } from "@/lib/skill-planner";
+import { effectiveBuildLimit } from "@/lib/build-limit";
 import { isTwoHandWeapon } from "@/lib/item-slots";
 import { loadMagicalWeaponTypes, getItemOptionGroup, validateOptions } from "@/lib/item-options";
 import {
@@ -142,6 +144,34 @@ export async function getMyBuild(id: string) {
   };
 }
 
+// Datos de CUALQUIER build (de cualquiera) con la forma que necesita el editor,
+// para DUPLICAR: se precarga el editor y, al Guardar, se crea una build NUEVA del
+// usuario actual (nada se persiste hasta entonces). A diferencia de getMyBuild no
+// exige ser el dueño (se puede partir de una build de la comunidad).
+export async function getBuildForDuplicate(id: string) {
+  await requireSession();
+  const row = await db.query.build.findFirst({
+    where: eq(build.id, id),
+    with: {
+      entries: {
+        with: {
+          options: { with: { def: true }, orderBy: (o) => asc(o.slotIndex) },
+          cards: { orderBy: (c) => asc(c.slotIndex) },
+        },
+      },
+    },
+  });
+  if (!row) return null;
+  return {
+    ...row,
+    entries: row.entries.map((e) => ({
+      ...e,
+      item: editPieceItem(e.itemId),
+      cards: e.cards.map((c) => ({ ...c, card: pieceItem(c.cardItemId) })),
+    })),
+  };
+}
+
 // Disponibilidad en el mercado de los items de una build: nº de publicaciones
 // activas (no caducadas) por itemId Y por tipo (venta/compra/intercambio/regalo).
 // Para los chips por tipo del detalle. Mismo criterio de "activo" que el grid del
@@ -183,6 +213,22 @@ export async function myBuildCount() {
     .from(build)
     .where(eq(build.ownerId, session.user.discordId));
   return n;
+}
+
+// Roles del guild del usuario (persistidos en la BD, se refrescan en cada login).
+async function guildRolesOf(discordId: string): Promise<string[]> {
+  const [u] = await db.select({ roles: user.guildRoles }).from(user).where(eq(user.id, discordId)).limit(1);
+  return u?.roles ?? [];
+}
+
+// Límite de builds del usuario actual (para la página de builds y el gate del botón).
+export async function myBuildLimit(): Promise<number> {
+  const session = await requireSession();
+  const [config, roles] = await Promise.all([
+    loadMarketConfig(),
+    guildRolesOf(session.user.discordId),
+  ]);
+  return effectiveBuildLimit(config, roles);
 }
 
 // Entrada del editor: una pieza por slot con item + refino + options aleatorias
@@ -335,9 +381,10 @@ export async function createBuild(input: unknown) {
   const t = await getTranslations("errors");
   const me = session.user.discordId;
 
-  const { maxBuildsPerUser } = await loadMarketConfig();
+  const [config, roles] = await Promise.all([loadMarketConfig(), guildRolesOf(me)]);
+  const limit = effectiveBuildLimit(config, roles);
   const [{ n } = { n: 0 }] = await db.select({ n: count() }).from(build).where(eq(build.ownerId, me));
-  if (n >= maxBuildsPerUser) throw new Error(t("buildLimitReached", { max: maxBuildsPerUser }));
+  if (n >= limit) throw new Error(t("buildLimitReached", { max: limit }));
 
   const data = await parseBuildInput(input, t);
 

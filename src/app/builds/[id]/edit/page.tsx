@@ -3,11 +3,9 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/guard";
 import { loadMaxRefineLevel } from "@/lib/refine";
 import { getAllOptionChoices } from "@/lib/listings";
-import { loadMagicalWeaponTypes, getItemOptionGroup } from "@/lib/item-options";
-import { MAX_OPTION_SLOTS, emptyOptionSelections } from "@/lib/item-options-constants";
 import { selectableJobs } from "@/lib/skill-planner";
 import { getMyBuild } from "@/lib/builds";
-import type { BuildSlot } from "@/db/enums";
+import { toEditorSlots } from "@/lib/build-editor-initial";
 import { BackLink } from "@/components/BackLink";
 import { BuildEditor, type BuildEditorInitial } from "../../BuildEditor";
 
@@ -23,47 +21,12 @@ export default async function EditBuildPage({ params }: { params: Promise<{ id: 
   await requireSession();
   const { id } = await params;
   const t = await getTranslations("builds.form");
-  const [maxRefine, optionDefs, magicalTypes, buildRow] = await Promise.all([
+  const [maxRefine, optionDefs, buildRow] = await Promise.all([
     loadMaxRefineLevel(),
     getAllOptionChoices(),
-    loadMagicalWeaponTypes(),
     getMyBuild(id),
   ]);
   if (!buildRow) notFound();
-
-  const slots: BuildEditorInitial["slots"] = {};
-  for (const e of buildRow.entries) {
-    const options = emptyOptionSelections();
-    for (const o of e.options) {
-      if (o.slotIndex >= 1 && o.slotIndex <= MAX_OPTION_SLOTS) {
-        options[o.slotIndex - 1] = { defId: o.defId, value: o.value };
-      }
-    }
-    const cards: ({ id: string; name: string; iconUrl: string } | null)[] = Array.from(
-      { length: e.item.slotCount },
-      () => null,
-    );
-    for (const c of e.cards) {
-      if (c.slotIndex >= 0 && c.slotIndex < cards.length) {
-        cards[c.slotIndex] = { id: c.card.id, name: c.card.name, iconUrl: c.card.iconUrl };
-      }
-    }
-    slots[e.slot as BuildSlot] = {
-      item: {
-        id: e.item.id,
-        name: e.item.name,
-        iconUrl: e.item.iconUrl,
-        slotCount: e.item.slotCount,
-        optionGroup: getItemOptionGroup(e.item, magicalTypes),
-        position: e.item.position,
-        category: e.item.category,
-        weaponType: e.item.weaponType,
-      },
-      refine: e.refineLevel,
-      options,
-      cards,
-    };
-  }
 
   const initial: BuildEditorInitial = {
     id: buildRow.id,
@@ -71,7 +34,7 @@ export default async function EditBuildPage({ params }: { params: Promise<{ id: 
     jobId: buildRow.jobId,
     tags: buildRow.tags,
     notes: buildRow.notes,
-    slots,
+    slots: await toEditorSlots(buildRow.entries),
     skillCode: buildRow.skillCode,
   };
 

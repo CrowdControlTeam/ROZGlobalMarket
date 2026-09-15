@@ -63,6 +63,8 @@ export async function getMarketConfig() {
     maxRefineLevel: config.maxRefineLevel,
     listingExpirationDays: config.listingExpirationDays,
     maxBuildsPerUser: config.maxBuildsPerUser,
+    buildsRoleId: config.buildsRoleId,
+    buildsRoleMax: config.buildsRoleMax,
     webhookEnabled: config.webhookEnabled,
     webhookUrlMasked: config.webhookUrl ? maskSecret(config.webhookUrl) : null,
     imageRecognitionEnabled: config.imageRecognitionEnabled,
@@ -107,6 +109,8 @@ export type ConfigFieldUpdate =
   | { field: "maxRefineLevel"; value: number }
   | { field: "listingExpirationDays"; value: number }
   | { field: "maxBuildsPerUser"; value: number }
+  | { field: "buildsRoleId"; value: string }
+  | { field: "buildsRoleMax"; value: number | null }
   | { field: "webhookUrl"; value: string }
   | { field: "geminiModel"; value: string }
   | { field: "accessRoleId"; value: string }
@@ -147,6 +151,18 @@ function buildFieldData(
       const n = z.coerce.number().int().min(1).max(50).safeParse(u.value);
       if (!n.success) throw new Error(t("invalidData"));
       return { maxBuildsPerUser: n.data };
+    }
+    case "buildsRoleId": {
+      // Rol del override de builds: snowflake o vacío (→ null, sin override).
+      const v = u.value.trim();
+      return { buildsRoleId: SNOWFLAKE.test(v) ? v : null };
+    }
+    case "buildsRoleMax": {
+      // null/vacío → sin override. Si hay valor: 1..50 como el base.
+      if (u.value === null) return { buildsRoleMax: null };
+      const n = z.coerce.number().int().min(1).max(50).safeParse(u.value);
+      if (!n.success) throw new Error(t("invalidData"));
+      return { buildsRoleMax: n.data };
     }
     case "webhookUrl": {
       const v = u.value.trim();
