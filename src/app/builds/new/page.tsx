@@ -36,16 +36,17 @@ export default async function NewBuildPage({
     from ? getBuildForDuplicate(from) : Promise.resolve(null),
   ]);
 
-  // Precarga de duplicado (si el origen existe): mismos datos, sin id y sin
-  // nombre (el usuario pone uno nuevo antes de guardar).
+  // Precarga de duplicado (si el origen existe): SOLO los items (con su refino/
+  // options/cartas) y la clase. Nombre, tags, notas y skills NO se copian — el
+  // usuario los pone de nuevo antes de guardar. Sin id → se guarda como creación.
   const initial: BuildEditorInitial | undefined = source
     ? {
         name: "",
         jobId: source.jobId,
-        tags: source.tags,
-        notes: source.notes,
+        tags: [],
+        notes: null,
         slots: await toEditorSlots(source.entries),
-        skillCode: source.skillCode,
+        skillCode: null,
       }
     : undefined;
 
