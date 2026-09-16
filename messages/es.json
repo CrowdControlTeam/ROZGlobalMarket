@@ -908,7 +908,11 @@
       "save": "Guardar",
       "saving": "Guardando…",
       "cancel": "Cancelar",
-      "deleteBuild": "Borrar build"
+      "deleteBuild": "Borrar build",
+      "missingFields": "Faltan campos obligatorios: {fields}",
+      "missingName": "el nombre",
+      "missingClass": "la clase",
+      "missingTag": "al menos una etiqueta"
     },
     "detail": {
       "noPieces": "Esta build no tiene piezas todavía.",

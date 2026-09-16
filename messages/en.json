@@ -908,7 +908,11 @@
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "deleteBuild": "Delete build"
+      "deleteBuild": "Delete build",
+      "missingFields": "Missing required fields: {fields}",
+      "missingName": "the name",
+      "missingClass": "the class",
+      "missingTag": "at least one tag"
     },
     "detail": {
       "noPieces": "This build has no pieces yet.",

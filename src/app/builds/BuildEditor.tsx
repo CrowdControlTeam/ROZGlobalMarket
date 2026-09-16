@@ -283,6 +283,14 @@ export function BuildEditor({
 
   const canSave = name.trim().length > 0 && jobId !== null && tags.length > 0 && !isPending;
 
+  // Campos obligatorios que faltan, para el tooltip del botón de guardar.
+  const missing = [
+    name.trim().length === 0 ? t("missingName") : null,
+    jobId === null ? t("missingClass") : null,
+    tags.length === 0 ? t("missingTag") : null,
+  ].filter((x): x is string => x !== null);
+  const missingMsg = missing.length > 0 ? t("missingFields", { fields: missing.join(", ") }) : undefined;
+
   function save() {
     if (jobId === null) return;
     setError(null);
@@ -489,9 +497,13 @@ export function BuildEditor({
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" disabled={!canSave} onClick={save} className={buttonClass("primary")}>
-          {isPending ? t("saving") : t("save")}
-        </button>
+        {/* span con title: el tooltip nativo se muestra al pasar el ratón aunque
+            el botón esté deshabilitado (los deshabilitados no reciben hover). */}
+        <span title={missingMsg} className="inline-flex">
+          <button type="button" disabled={!canSave} onClick={save} className={buttonClass("primary")}>
+            {isPending ? t("saving") : t("save")}
+          </button>
+        </span>
         <button type="button" onClick={() => router.back()} className={buttonClass("outline")}>
           {t("cancel")}
         </button>
