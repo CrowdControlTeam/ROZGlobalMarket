@@ -420,14 +420,23 @@ export function BuildEditor({
           <p className="text-xs text-ro-text-muted">{t("skillsHint")}</p>
         ) : (
           <>
+            {/* Botón (configurar en el modal) e input (pegar código) en la misma
+                línea: el botón fijo y el input ocupa el resto (envuelve en móvil). */}
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setSkillModalOpen(true)}
-                className={buttonClass("outline")}
+                className={`shrink-0 ${buttonClass("outline")}`}
               >
                 {skillCode ? t("skillsEdit") : t("skillsConfigure")}
               </button>
+              <input
+                type="text"
+                value={skillInput}
+                onChange={(e) => applySkillCode(e.target.value)}
+                placeholder={t("skillCodePlaceholder")}
+                className={`min-w-[14rem] flex-1 font-mono text-xs ${inputBaseClass}`}
+              />
               {skillCode && (
                 <>
                   <span className="text-xs text-ro-text-muted">{t("skillCodeSummary", { n: skillCount })}</span>
@@ -445,14 +454,6 @@ export function BuildEditor({
                 </>
               )}
             </div>
-            {/* Alternativa: pegar un código exportado directamente. */}
-            <input
-              type="text"
-              value={skillInput}
-              onChange={(e) => applySkillCode(e.target.value)}
-              placeholder={t("skillCodePlaceholder")}
-              className={`${inputClass} font-mono text-xs`}
-            />
             {skillErr && <p className="text-xs text-ro-red">{skillErr}</p>}
           </>
         )}
