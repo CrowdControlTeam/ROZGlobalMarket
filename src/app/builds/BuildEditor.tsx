@@ -74,7 +74,9 @@ type CardSel = { id: string; name: string; iconUrl: string } | null;
 export type SlotState = { item: SlotItem; refine: number; options: OptionSelection[]; cards: CardSel[] };
 
 export type BuildEditorInitial = {
-  id: string;
+  // Sin id = precarga para CREAR (duplicado): el editor guarda como creación.
+  // Con id = EDITAR esa build.
+  id?: string;
   name: string;
   jobId: number;
   tags: BuildTag[];
@@ -97,7 +99,8 @@ export function BuildEditor({
   const t = useTranslations("builds.form");
   const tTag = useTranslations("builds.tags");
   const router = useRouter();
-  const isEdit = !!initial;
+  // Editar (initial con id) vs crear (sin initial, o duplicado precargado sin id).
+  const isEdit = initial?.id != null;
 
   const [name, setName] = useState(initial?.name ?? "");
   const [jobId, setJobId] = useState<number | null>(initial?.jobId ?? null);
@@ -280,6 +283,14 @@ export function BuildEditor({
 
   const canSave = name.trim().length > 0 && jobId !== null && tags.length > 0 && !isPending;
 
+  // Campos obligatorios que faltan, para el tooltip del botón de guardar.
+  const missing = [
+    name.trim().length === 0 ? t("missingName") : null,
+    jobId === null ? t("missingClass") : null,
+    tags.length === 0 ? t("missingTag") : null,
+  ].filter((x): x is string => x !== null);
+  const missingMsg = missing.length > 0 ? t("missingFields", { fields: missing.join(", ") }) : undefined;
+
   function save() {
     if (jobId === null) return;
     setError(null);
@@ -309,7 +320,7 @@ export function BuildEditor({
     };
     startTransition(async () => {
       try {
-        const res = isEdit ? await updateBuild(initial!.id, input) : await createBuild(input);
+        const res = initial?.id ? await updateBuild(initial.id, input) : await createBuild(input);
         router.push(`/builds/${res.id}`);
         router.refresh();
       } catch (err) {
@@ -319,11 +330,12 @@ export function BuildEditor({
   }
 
   function remove() {
-    if (!initial) return;
+    if (!initial?.id) return;
+    const buildId = initial.id;
     setError(null);
     startTransition(async () => {
       try {
-        await deleteBuild(initial.id);
+        await deleteBuild(buildId);
         router.push("/builds");
         router.refresh();
       } catch (err) {
@@ -416,14 +428,23 @@ export function BuildEditor({
           <p className="text-xs text-ro-text-muted">{t("skillsHint")}</p>
         ) : (
           <>
+            {/* Botón (configurar en el modal) e input (pegar código) en la misma
+                línea: el botón fijo y el input ocupa el resto (envuelve en móvil). */}
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setSkillModalOpen(true)}
-                className={buttonClass("outline")}
+                className={`shrink-0 ${buttonClass("outline")}`}
               >
                 {skillCode ? t("skillsEdit") : t("skillsConfigure")}
               </button>
+              <input
+                type="text"
+                value={skillInput}
+                onChange={(e) => applySkillCode(e.target.value)}
+                placeholder={t("skillCodePlaceholder")}
+                className={`min-w-[14rem] flex-1 font-mono text-xs ${inputBaseClass}`}
+              />
               {skillCode && (
                 <>
                   <span className="text-xs text-ro-text-muted">{t("skillCodeSummary", { n: skillCount })}</span>
@@ -441,14 +462,6 @@ export function BuildEditor({
                 </>
               )}
             </div>
-            {/* Alternativa: pegar un código exportado directamente. */}
-            <input
-              type="text"
-              value={skillInput}
-              onChange={(e) => applySkillCode(e.target.value)}
-              placeholder={t("skillCodePlaceholder")}
-              className={`${inputClass} font-mono text-xs`}
-            />
             {skillErr && <p className="text-xs text-ro-red">{skillErr}</p>}
           </>
         )}
@@ -484,9 +497,13 @@ export function BuildEditor({
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" disabled={!canSave} onClick={save} className={buttonClass("primary")}>
-          {isPending ? t("saving") : t("save")}
-        </button>
+        {/* span con title: el tooltip nativo se muestra al pasar el ratón aunque
+            el botón esté deshabilitado (los deshabilitados no reciben hover). */}
+        <span title={missingMsg} className="inline-flex">
+          <button type="button" disabled={!canSave} onClick={save} className={buttonClass("primary")}>
+            {isPending ? t("saving") : t("save")}
+          </button>
+        </span>
         <button type="button" onClick={() => router.back()} className={buttonClass("outline")}>
           {t("cancel")}
         </button>

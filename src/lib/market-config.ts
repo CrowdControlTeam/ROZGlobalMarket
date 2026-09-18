@@ -27,6 +27,8 @@ export type MarketConfigValues = {
   maxRefineLevel: number;
   listingExpirationDays: number;
   maxBuildsPerUser: number;
+  buildsRoleId: string | null;
+  buildsRoleMax: number | null;
   webhookUrl: string | null;
   webhookEnabled: boolean;
   imageRecognitionEnabled: boolean;
@@ -89,6 +91,8 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
       maxRefineLevel: marketConfig.maxRefineLevel,
       listingExpirationDays: marketConfig.listingExpirationDays,
       maxBuildsPerUser: marketConfig.maxBuildsPerUser,
+      buildsRoleId: marketConfig.buildsRoleId,
+      buildsRoleMax: marketConfig.buildsRoleMax,
       webhookUrl: marketConfig.webhookUrl,
       webhookEnabled: marketConfig.webhookEnabled,
       imageRecognitionEnabled: marketConfig.imageRecognitionEnabled,
@@ -107,6 +111,8 @@ export const loadMarketConfig = ttlMemo(async (): Promise<MarketConfigValues> =>
     maxRefineLevel: config?.maxRefineLevel ?? DEFAULT_MAX_REFINE_LEVEL,
     listingExpirationDays: config?.listingExpirationDays ?? DEFAULT_LISTING_EXPIRATION_DAYS,
     maxBuildsPerUser: config?.maxBuildsPerUser ?? DEFAULT_MAX_BUILDS_PER_USER,
+    buildsRoleId: config?.buildsRoleId ?? null,
+    buildsRoleMax: config?.buildsRoleMax ?? null,
     webhookUrl: config?.webhookUrl ?? null,
     webhookEnabled: config?.webhookEnabled ?? false,
     imageRecognitionEnabled: config?.imageRecognitionEnabled ?? false,

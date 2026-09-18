@@ -1,15 +1,15 @@
 import { requireSession } from "@/lib/guard";
-import { listBuildsDetailed, buildMarketAvailability, myBuildCount } from "@/lib/builds";
-import { loadMarketConfig } from "@/lib/market-config";
+import { listBuildsDetailed, buildMarketAvailability, myBuildCount, myBuildLimit } from "@/lib/builds";
 import { BuildsBrowser } from "./BuildsBrowser";
 
 export const dynamic = "force-dynamic";
 
 export default async function BuildsPage() {
   const session = await requireSession();
-  const [builds, { maxBuildsPerUser }, myCount] = await Promise.all([
+  // Límite EFECTIVO del usuario (override por rol si lo tiene, si no el base).
+  const [builds, maxBuildsPerUser, myCount] = await Promise.all([
     listBuildsDetailed(),
-    loadMarketConfig(),
+    myBuildLimit(),
     myBuildCount(),
   ]);
 
