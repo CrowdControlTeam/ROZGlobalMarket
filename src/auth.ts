@@ -71,6 +71,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Discord({
       clientId: process.env.DISCORD_CLIENT_ID,
       clientSecret: process.env.DISCORD_CLIENT_SECRET,
+      // Discord empezó a devolver el parámetro `iss` en el callback (RFC 9207).
+      // oauth4webapi valida ese `iss` contra `as.issuer`; sin este campo,
+      // @auth/core usa el centinela "https://authjs.dev" y la comprobación falla
+      // ("unexpected iss"). Como el provider de Discord define endpoints
+      // explícitos, fijar `issuer` solo ajusta la metadata (NO dispara discovery
+      // OIDC) y hace que `iss=https://discord.com` cuadre.
+      issuer: "https://discord.com",
       authorization: {
         // "guilds" (además de guilds.members.read) para poder calcular si
         // el usuario es administrador del servidor — ver isGuildAdmin.
